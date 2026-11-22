@@ -1,0 +1,17 @@
+# 临时文件、截图、一次性探测脚本（全是 _ 开头的）
+_*
+
+# 日志与备份
+*.log
+*.bak-*
+XiaoJingVoice/logs/
+_backup-startup/
+tray-watchdog-hidden/
+
+# 嵌套的独立仓库（各自有自己的 .git）
+dsh_douyin_tools/
+_chengtools_push/
+
+# 唱歌输出（大文件，按需再放）
+XiaoJingVoice/songs/
+room-sync-state.json
