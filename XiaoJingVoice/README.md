@@ -50,7 +50,11 @@
 xiaojing.cmd <命令> [参数]
 ```
 
-`xiaojing.cmd` 是 `xiaojing-cli.ps1` 的包装器，直接调用不用打 `powershell -File`。
+`xiaojing.cmd` 是包装器，直接调用不用打 `powershell -File`。
+
+**`say` 走 Node 快路**：`xiaojing.cmd say` 会先看 `xiaojing.mjs`（Node 版），直接 POST 8137 合成，省掉每次拉起 PowerShell 的 ~1.6 秒。实测一句话 3.5 秒 → **2.0 秒**。
+- Node 不在、或服务没起时，自动退回 `xiaojing-cli.ps1`（托盘拉起、清重复环境变量这些还得它干）。
+- `sing` / `status` / `start` / `stop` 没动，还是走 ps1。
 
 ### 命令
 
