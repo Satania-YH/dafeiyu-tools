@@ -15,6 +15,12 @@
 # ═══════════════════════════════════════════════════════════════
 param(
     [Parameter(Position = 0)][string]$Action = 'status',
+    # 显式声明常用选项，否则 PowerShell 会把 -Out 当成 -OutVariable 的
+    # 前缀而报 "parameter name 'Out' is ambiguous"。
+    [Alias('o')][string]$Out,
+    [Alias('j')][switch]$Json,
+    [Alias('n')][switch]$NoPlay,
+    [int]$SemiTone = 0,
     [Parameter(Position = 1, ValueFromRemainingArguments = $true)][string[]]$Rest
 )
 
@@ -44,10 +50,10 @@ Clear-DupEnv
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 
 # ─── 解析选项 ───────────────────────────────────────────────
-$optOut     = $null
-$optNoPlay  = $false
-$optJson    = $false
-$optSemi    = 0
+$optOut     = $Out          # 来自 param 块（-Out / -o）
+$optNoPlay  = [bool]$NoPlay
+$optJson    = [bool]$Json
+$optSemi    = $SemiTone
 $positional = @()
 
 for ($i = 0; $i -lt $Rest.Count; $i++) {
@@ -94,7 +100,9 @@ if (Test-Path $cfgPath) {
     if ($cfg['EngineDir']) { $BinDir = $cfg['EngineDir'] } else { $BinDir = Join-Path $Root 'app\breeze-engine' }
     if ($cfg['Model'])     { $Model  = $cfg['Model'] }     else { $Model  = Join-Path $Root 'models\breeze-tts-2-q4_k.gguf' }
     if ($cfg['Voices'])    { $Voices = $cfg['Voices'] }    else { $Voices = Join-Path $Root 'voices' }
-    if ($cfg['LogDir'])    { $LogDir = $cfg['LogDir'] }    else { $LogDir = Join-Path $Root 'logs' }
+    # LogDir 默认跟脚本走，不跟 Root —— 否则 Root 指到别处时，
+    # 日志会悄悄写到引擎目录，在外壳文件夹里永远找不到。
+    if ($cfg['LogDir'])    { $LogDir = $cfg['LogDir'] }    else { $LogDir = Join-Path $ScriptDir 'logs' }
     if ($cfg['FFmpeg'])    { $FFmpeg = $cfg['FFmpeg'] }
     if ($cfg['SeedVC'])    { $SeedVC = $cfg['SeedVC'] }
     if ($cfg['Port'])      { $Port   = [int]$cfg['Port'] }
@@ -102,7 +110,12 @@ if (Test-Path $cfgPath) {
     if ($cfg['MinFreeMiB']){ $MinFreeMiB = [int]$cfg['MinFreeMiB'] }
 }
 $Server = Join-Path $BinDir 'breeze-server.exe'
-if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
+# 日志目录建不出来时不要在这里炸 —— 这里只是初始化，
+# 真正需要写日志的地方（Cmd-Sing / Cmd-Say）会自己报明确错误。
+if (-not (Test-Path $LogDir)) {
+    try { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
+    catch { }
+}
 
 # ─── 工具函数 ───────────────────────────────────────────────
 function Write-Log([string]$m) {
@@ -312,10 +325,47 @@ function Cmd-Sing {
            '--diffusion-steps','30','--f0-condition','True','--fp16','True')
     if ($optSemi -ne 0) { $a += @('--semi-tone-shift', [string]$optSemi) }
 
+    # 唱歌要 4.8-5.5G 显存。如果说话服务还占着，先停掉，否则必然 OOM。
+    # 注意：不能调 Cmd-Stop —— 它内部 exit，会把整个 CLI 进程带走。
+    if (Test-Ready) {
+        Write-Log '[sing] 说话服务在占用显存，先停掉'
+        $sid = Get-ServerPid
+        if ($sid) { Stop-Process -Id $sid -Force -ErrorAction SilentlyContinue }
+        Get-Process breeze-server -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+        for ($k = 0; $k -lt 20; $k++) {
+            Start-Sleep -Milliseconds 250
+            if (-not (Get-ServerPid)) { break }
+        }
+        Start-Sleep -Milliseconds 500
+    }
+
+    # 日志文件写不进去时，Start-Process 会直接抛异常。必须捕获，
+    # 否则脚本静默退出，python 已经在后台跑，谁也看不见结果。
+    try {
+        if (-not (Test-Path $LogDir)) {
+            New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+        }
+        $logOut = Join-Path $LogDir 'sing.out.log'
+        $logErr = Join-Path $LogDir 'sing.err.log'
+        foreach ($lf in @($logOut, $logErr)) {
+            [System.IO.File]::WriteAllText($lf, '')
+        }
+    } catch {
+        Write-Log ('日志目录不可用: ' + $LogDir)
+        Write-Log ('原因: ' + $_.Exception.Message)
+        Write-Log '改 config.ini 里的 LogDir，或者删掉那一行让它跟着脚本走'
+        exit 1
+    }
+
     $sw = [Diagnostics.Stopwatch]::StartNew()
-    $p = Start-Process -FilePath $py -ArgumentList $a -WindowStyle Hidden -PassThru -WorkingDirectory $SeedVC `
-         -RedirectStandardOutput (Join-Path $LogDir 'sing.out.log') `
-         -RedirectStandardError  (Join-Path $LogDir 'sing.err.log')
+    try {
+        $p = Start-Process -FilePath $py -ArgumentList $a -WindowStyle Hidden -PassThru -WorkingDirectory $SeedVC `
+             -RedirectStandardOutput $logOut `
+             -RedirectStandardError  $logErr
+    } catch {
+        Write-Log ('无法启动唱歌引擎: ' + $_.Exception.Message)
+        exit 1
+    }
     $p.WaitForExit()
     $sw.Stop()
 

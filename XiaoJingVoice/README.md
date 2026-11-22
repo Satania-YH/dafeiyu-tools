@@ -171,7 +171,7 @@ MinFreeMiB = 2600
 | `EngineDir` | `Root\app\breeze-engine` | 单独指定引擎目录 |
 | `Model` | `Root\models\breeze-tts-2-q4_k.gguf` | 单独指定模型文件 |
 | `Voices` | `Root\voices` | 音色目录 |
-| `LogDir` | `Root\logs` | 日志目录 |
+| `LogDir` | `脚本目录\logs` | 日志目录（**跟脚本走，不跟 Root**） |
 | `Icon` | `脚本目录\xiaojing.ico` | 托盘图标 |
 | `FFmpeg` | 内置默认 | ffmpeg 路径 |
 | `SeedVC` | `E:\seed-vc` | 唱歌引擎路径 |
@@ -295,6 +295,32 @@ MinFreeMiB = 2600
 **Q: 换资源位置？**
 改 `config.ini` 的 `Root` 或对应的 `EngineDir` / `Model` / `Voices`。
 
+**Q: 唱歌没反应，日志里啥都没有？**
+以前会出现"脚本悄悄退出、python 在后台空转、谁也看不到结果"。现在不会了 —— 如果是日志目录写不进去，会直接告诉你：
+
+```
+日志目录不可用: Z:\nope\logs
+原因: 找不到驱动器。名为"Z"的驱动器不存在。
+改 config.ini 里的 LogDir，或者删掉那一行让它跟着脚本走
+```
+
+**Q: 日志到底在哪个文件夹？**
+在**脚本旁边**的 `logs\`，不在引擎目录。即使 `config.ini` 的 `Root` 指向别处（比如 `E:\BreezeTTS`），日志也留在你自己这份文件夹里。
+只有显式写 `LogDir = ...` 才会改。
+
+**Q: 唱歌时显存不够？**
+`sing` 现在会**自动先停掉说话服务**再跑。你会在 stderr 看到 `[sing] 说话服务在占用显存，先停掉`。
+如果想说话和唱歌都留着，就得接受 8G 卡同时跑会 OOM。
+
+**Q: `-Out` 报 "parameter name 'Out' is ambiguous"？**
+旧版会。现在 `-Out` / `-o` 是正式参数，直接写就行：
+
+```cmd
+xiaojing.cmd sing "D:\歌.mp3" -Out "D:\输出目录" -Json
+```
+
+原来的 `-Action sing -Rest @(...)` 写法也还兼容。
+
 ---
 
 ## 七、技术说明
@@ -333,6 +359,36 @@ if ($others.Count -gt 0) { exit }
 ### 为什么没有流式播放
 
 WebSocket 接口实测首字 478ms（比整段合成快 22 倍），但 PowerShell 的 `SoundPlayer` 只能播完整文件。要做得装 NAudio，工作量大，暂未实现。
+
+### 唱歌为什么曾经"卡死"（已修）
+
+2026-11-22 排查过一例：`sing` 跑三分钟不出 wav，日志一片空白。
+
+**实测结论：引擎没问题。** 同一个 30 秒素材，三种方式各跑一次：
+
+| 方式 | 耗时 | 输出 |
+|---|---|---|
+| 直调 `python -u inference.py` | 63 秒 | 5,290,064 字节 |
+| 照抄 `Start-Process -Redirect*` | 59 秒 | 同上 |
+| `xiaojing-cli.ps1 sing` | 61 秒 | 同上 |
+
+`RTF ≈ 1.26`，稳定。
+
+**真正的坑有三个：**
+
+1. **LogDir 跟着 Root 跑** —— `Root` 被配成 `E:\BreezeTTS` 时，日志也跑去了 E 盘，在脚本文件夹里永远找不到。现在改成跟脚本走。
+
+2. **日志目录建不出来时静默退出** —— 配置加载阶段那句 `New-Item -Path $LogDir` 没包 try/catch，报错直接终止，而 python 已经被 `Start-Process` 拉起来了。父进程一死，子进程还在空转，谁也收不到结果。现在会明确报错并返回退出码 1。
+
+3. **唱歌和说话抢显存** —— Seed-VC 要 4.8–5.5G，breeze-server 常驻占 2.8G，8G 卡同时跑必然不够。现在 `sing` 开始前自动停服务。
+
+顺带修了 `-Out` 被 PowerShell 当成 `-OutVariable` 前缀而报 ambiguous 的问题。
+
+**排除掉的怀疑**（都不成立，别再往这几个方向查）：
+
+- 缓存路径不一致：`inference.py:3` 用 `hf_cache`、`hf_utils.py:7` 用 `checkpoints`，确实不一致，但两边模型都齐（whisper 923M / bigvgan 467M），日志确认加载成功
+- 卡在联网：代理 `127.0.0.1:7897` 和直连 huggingface 都返回 200；`HF_ENDPOINT` 本来就未设置
+- 输出被缓冲吞掉：`python -u` 和 `-RedirectStandard*` 都能正常写日志
 
 ### 音色是怎么来的
 
