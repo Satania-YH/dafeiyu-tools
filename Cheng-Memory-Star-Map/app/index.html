@@ -1835,9 +1835,17 @@ function applyShape(){
         const phi = g() * Math.PI * 2;
         const s = Math.sqrt(Math.max(0, 1 - u * u));
         const rr2 = rad * Math.cbrt(g());      // 0..rad，体积均匀
-        n.tx = (cxx + Math.cos(phi) * s * rr2) * OPTS.spread;
-        n.ty = (cyy + u * rr2) * OPTS.spread;
-        n.tz = (czz + Math.sin(phi) * s * rr2) * OPTS.spread;
+        /* 存"相对团心的偏移"，不是绝对坐标 ——
+           分类星会移动（新增分类时整壳重排），
+           存绝对坐标的话子星就不会跟着走，会脱队。
+           实际位置每帧由 loop 里的 followClusterCenters() 重新算。 */
+        n.ox = Math.cos(phi) * s * rr2;
+        n.oy = u * rr2;
+        n.oz = Math.sin(phi) * s * rr2;
+        n.clusterGi = gi;
+        n.tx = (cxx + n.ox) * OPTS.spread;
+        n.ty = (cyy + n.oy) * OPTS.spread;
+        n.tz = (czz + n.oz) * OPTS.spread;
         nodeGroup[i] = gi;
       }
       clusterInfo.push({ x:cxx, y:cyy, z:czz, rad, gi, label:grp.label, count:grp.idx.length, color:grp.color });
@@ -3636,12 +3644,30 @@ function loop(t){
       n.pz += (n.tz - n.pz)*k;
     }
 
-    // 分类星平滑追位：新增分类时整个球壳会缓缓重排，不是瞬间跳
-    for (const c of clusterInfo) {
-      if (typeof c.tx !== 'number') continue;
-      c.x += (c.tx - c.x) * k;
-      c.y += (c.ty - c.y) * k;
-      c.z += (c.tz - c.z) * k;
+    /* 分类星平滑追位 + 子星跟随。
+       分类星移动时必须同步更新它名下所有子星的目标位置（tx/ty/tz），
+       否则分类星跑了、子星还留在原地 —— 就是"子星不跟着走"的 bug。
+
+       子星存的是相对团心的偏移 (ox,oy,oz)，所以这里只要：
+         tx = 团心.x + 偏移
+       偏移本身不动，所以子星在团里的相对位置保持不变（形状不散）。 */
+    if (baseShape() === 'cluster' && clusterInfo.length) {
+      for (const c of clusterInfo) {
+        if (typeof c.tx !== 'number') continue;
+        c.x += (c.tx - c.x) * k;
+        c.y += (c.ty - c.y) * k;
+        c.z += (c.tz - c.z) * k;
+      }
+      // 子星跟着团心走
+      for (let i = 0; i < N; i++) {
+        const n = nodes[i];
+        if (n.ox === undefined || n.clusterGi == null) continue;
+        const c = clusterInfo.find(x => x.gi === n.clusterGi);
+        if (!c) continue;
+        n.tx = (c.x + n.ox) * OPTS.spread;
+        n.ty = (c.y + n.oy) * OPTS.spread;
+        n.tz = (c.z + n.oz) * OPTS.spread;
+      }
     }
 
     // 时间滑条：显现进度平滑推进（滑过去是长出来，不是瞬间开关）
@@ -5045,7 +5071,7 @@ function initLive() {
         id, kind, text: '【' + label + '】第 1 条',
         ts: new Date().toISOString(),
         date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
-        importance: 4, topic: label,
+        topic: label,
       }, [{ source: id, target: seed.id, cos: 0.5 }]);
 
       grown.push({ label, kind, count: 1 });
@@ -5063,7 +5089,7 @@ function initLive() {
           id, kind: g.kind, text: '【' + g.label + '】第 ' + g.count + ' 条',
           ts: new Date().toISOString(),
           date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
-          importance: 4, topic: g.label,
+          topic: g.label,
         }, [{ source: id, target: anchor.id, cos: 0.8 }]);
       }
     }, 500);
@@ -5097,6 +5123,7 @@ function addStarToScene(node, edges) {
      改成：先找这颗星所属分类的团心，然后在团心周围的球壳里取点，
      并且主动避开已经占了位置的其他星。 */
   let px = 0, py = 0, pz = 0;
+  let newOx = null, newOy = 0, newOz = 0, newGi = null;
 
   // 1) 先看这个 kind 有没有对应的分类团心
   const kindOfNew = node.kind || 'fact';
@@ -5134,7 +5161,14 @@ function addStarToScene(node, edges) {
       // 已经足够空就直接用
       if (bestD > spreadR * 0.5) break;
     }
-    if (best) { px = best[0]; py = best[1]; pz = best[2]; }
+    if (best) {
+      px = best[0]; py = best[1]; pz = best[2];
+      // 记下相对团心的偏移，之后团心移动时子星才能跟着走
+      newOx = px - catInfo.x;
+      newOy = py - catInfo.y;
+      newOz = pz - catInfo.z;
+      newGi = catInfo.gi;
+    }
   } else {
     // 没有分类团心（非分区形态 / 全新分类）：退回锚在最强邻居旁边
     const bestE = (edges || []).slice().sort((a, b) => b.cos - a.cos)[0];
@@ -5182,6 +5216,7 @@ function addStarToScene(node, edges) {
     tags: node.topic ? [node.topic] : [],
     degree: (edges || []).length,
     px, py, pz, tx: px, ty: py, tz: pz,
+    ox: newOx, oy: newOy, oz: newOz, clusterGi: newGi,
     freshAt: Date.now(),        // 标记新星，画的时候淡入
   });
   N = nodes.length;
