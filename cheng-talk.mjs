@@ -9,8 +9,16 @@
 //   node cheng-talk.mjs say "话" --no-wait     只投进去，不等回话
 //   node cheng-talk.mjs read [--limit 20]      读最近几条对话（她说的/我说的）
 //   node cheng-talk.mjs watch                  盯着，来一句打一句（Ctrl+C 退）
+//   node cheng-talk.mjs serve [--port 17801]   起一个常驻小服务，别的程序用 HTTP 说（推荐给 Alma）
 //
 // 选项：--json 输出结构化结果；--timeout <秒> 等回话的上限（默认 240）
+//
+// serve 的 HTTP 接口（只认 127.0.0.1）：
+//   GET  /health                 → 现在接的是哪间、活着没
+//   POST /say   {text, wait?, timeoutMs?}  → 说一句；wait=true 会等回话
+//   POST /ask   {text, timeoutMs?}         → 说一句并等回话（= say + wait）
+//   GET  /read?limit=20          → 最近几条对话
+// 房间切换不用管：每次请求都现读 discovery 文件，DSH 重启/换房自己就跟上了。
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -102,7 +110,8 @@ async function 读事件(c, { maxMessages = 200, beforeSeq } = {}) {
 }
 
 // 等一轮对话完成。session/wait 会一直挂到会话安静下来，并把 afterSeq 之后的回话带回来
-async function 等回话(c, baselineSeq, deadline) {
+async function 等回话(c, baselineSeq, deadline, 总时长) {
+  const 上限 = 总时长 || TIMEOUT;
   let after = baselineSeq;
   const texts = [];
   let reason = null;
@@ -110,7 +119,7 @@ async function 等回话(c, baselineSeq, deadline) {
   await new Promise((r) => setTimeout(r, 1200));
   for (;;) {
     const left = deadline - Date.now();
-    if (left <= 0) throw new Error('等回话超时（' + Math.round(TIMEOUT / 1000) + ' 秒）');
+    if (left <= 0) throw new Error('等回话超时（' + Math.round(上限 / 1000) + ' 秒，她这轮还没说完）');
     const res = await c.rpc('session/wait', {
       request: {
         sessionId: c.sessionId,
@@ -129,18 +138,30 @@ async function 等回话(c, baselineSeq, deadline) {
       if (e.seq > lastSeq) lastSeq = e.seq;
       if (e.type === 'assistant/message' && e.data && !e.data.interrupted) {
         const t = 正文(e.data.message && e.data.message.content);
-        if (t) texts.push(t);
+        if (t) texts.push({ turn: e.data.turn, text: t });
       }
     }
     after = lastSeq;
-    if (reason === 'input-required') return { text: texts.join('\n\n'), turns: texts.length, reason, needInput: true };
+    const 收 = () => 收尾(texts, reason);
+    if (reason === 'input-required') return { ...收(), needInput: true };
     if (reason === 'idle') {
       const st = res.state || {};
       // 刚投进去那一下可能还是 idle，等它真的跑完再算
-      if (!st.running && texts.length > 0) return { text: texts.join('\n\n'), turns: texts.length, reason };
-      if (!st.running && Date.now() > deadline - TIMEOUT + 15000) return { text: texts.join('\n\n'), turns: texts.length, reason };
+      if (!st.running && texts.length > 0) return 收();
+      if (!st.running && Date.now() > deadline - 上限 + 15000) return 收();
     }
   }
+}
+
+// 只留最后一轮的话——中间步骤的碎话不给别人看
+function 收尾(texts, reason) {
+  if (!texts.length) return { text: '', turns: 0, reason };
+  const lastTurn = texts[texts.length - 1].turn;
+  const 这轮 = texts.filter((x) => x.turn === lastTurn);
+  const seen = new Set();
+  const parts = [];
+  for (const x of 这轮) if (!seen.has(x.text)) { seen.add(x.text); parts.push(x.text); }
+  return { text: parts.join('\n\n'), turns: parts.length, turn: lastTurn, reason };
 }
 
 // ── 命令 ────────────────────────────────────────────────────
@@ -174,7 +195,7 @@ async function cmdSay(text, wait) {
     out({ ok: true, requestId, accepted: true, sessionId: c.sessionId }, '✓ 投进去了（不等回话）');
     return;
   }
-  const res = await 等回话(c, before.cursor, Date.now() + TIMEOUT);
+  const res = await 等回话(c, before.cursor, Date.now() + TIMEOUT, TIMEOUT);
   if (AS_JSON) out({ ok: true, requestId, reply: res.text, reason: res.reason, ms: Date.now() - t0 });
   else console.log(res.text || '（这轮没有文字回话）');
 }
@@ -235,8 +256,106 @@ async function cmdWatch() {
   }
 }
 
+// ── serve：给别的程序（Alma）用的常驻 HTTP 小门 ──────────────
+async function cmdServe() {
+  const { createServer } = await import('node:http');
+  const port = Number(opt('port', '17801'));
+  const host = '127.0.0.1';
+
+  const send = (res, code, obj) => {
+    const body = JSON.stringify(obj);
+    res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(body) });
+    res.end(body);
+  };
+  const readBody = (req) => new Promise((resolve, reject) => {
+    let raw = '';
+    req.on('data', (c) => { raw += c; if (raw.length > 200000) { reject(new Error('body 太大')); req.destroy(); } });
+    req.on('end', () => {
+      if (!raw.trim()) return resolve({});
+      try { resolve(JSON.parse(raw)); } catch { reject(new Error('body 不是 JSON')); }
+    });
+    req.on('error', reject);
+  });
+
+  async function 说话(text, wait, timeoutMs) {
+    const c = connect();
+    const before = await c.rpc('session/state', { request: { sessionId: c.sessionId } });
+    if (!before.active) throw new Error('那间会话现在没开着（' + c.sessionId + '）');
+    const requestId = 'alma-' + randomUUID();
+    const t0 = Date.now();
+    await c.rpc('session/prompt', {
+      request: { requestId, sessionId: c.sessionId, mode: 'queue', content: [{ type: 'text', text }] },
+    });
+    const base = { ok: true, requestId, sessionId: c.sessionId, origin: c.origin, accepted: true };
+    if (!wait) return base;
+    const 上限 = Math.min(Math.max(5000, timeoutMs || TIMEOUT), 600000);
+    const res = await 等回话(c, before.cursor, Date.now() + 上限, 上限);
+    return { ...base, reply: res.text, needInput: !!res.needInput, reason: res.reason, ms: Date.now() - t0 };
+  }
+
+  const server = createServer(async (req, res) => {
+    const u = new URL(req.url, 'http://' + host + ':' + port);
+    const route = req.method + ' ' + u.pathname.replace(/\/+$/, '');
+    try {
+      if (route === 'GET /health' || route === 'GET ') {
+        try {
+          const c = connect();
+          const st = await c.rpc('session/state', { request: { sessionId: c.sessionId } });
+          return send(res, 200, { ok: true, room: { origin: c.origin, sessionId: c.sessionId, bridgeVersion: c.d.bridgeVersion }, alive: st.active, running: st.running, cursor: st.cursor });
+        } catch (err) {
+          return send(res, 200, { ok: false, room: null, error: err && err.message ? err.message : String(err) });
+        }
+      }
+      if (route === 'POST /say' || route === 'POST /ask') {
+        const b = await readBody(req);
+        const text = String(b.text || '').trim();
+        if (!text) return send(res, 400, { ok: false, error: 'text 是空的' });
+        const wait = route === 'POST /ask' ? true : b.wait === true;
+        const r = await 说话(text, wait, Number(b.timeoutMs) || TIMEOUT);
+        return send(res, 200, r);
+      }
+      if (route === 'GET /read') {
+        const c = connect();
+        const limit = Math.min(200, Number(u.searchParams.get('limit') || '20'));
+        let beforeSeq;
+        const events = [];
+        for (let i = 0; i < 12; i += 1) {
+          const page = await 读事件(c, { maxMessages: 200, beforeSeq });
+          if (!page.events.length) break;
+          events.unshift(...page.events);
+          const n = events.filter((e) => e.type === 'user/message' || e.type === 'assistant/message').length;
+          if (n >= limit || !page.hasMore) break;
+          beforeSeq = page.events[0].seq;
+        }
+        const msgs = [];
+        for (const e of events) {
+          if (e.type === 'user/message' && e.data) {
+            const t = 正文(e.data.content);
+            const k = (e.data.source && e.data.source.kind) || '?';
+            if (t && k !== 'time-context') msgs.push({ who: 'user', source: k, text: t, at: e.time });
+          } else if (e.type === 'assistant/message' && e.data && !e.data.interrupted) {
+            const t = 正文(e.data.message && e.data.message.content);
+            if (t) msgs.push({ who: 'cheng', text: t, at: e.time });
+          }
+        }
+        return send(res, 200, { ok: true, sessionId: c.sessionId, messages: msgs.slice(-limit) });
+      }
+      return send(res, 404, { ok: false, error: '没有这个路口：' + route });
+    } catch (err) {
+      return send(res, 500, { ok: false, error: err && err.message ? err.message : String(err) });
+    }
+  });
+
+  server.listen(port, host, () => {
+    console.log('cheng-talk serve · http://' + host + ':' + port + '  （Ctrl+C 退出）');
+    try { const d = discovery(); console.log('现在接 ' + d.url + ' / ' + d.sessionId); } catch {}
+  });
+  process.on('SIGINT', () => { console.log('\n收摊'); server.close(); process.exit(0); });
+}
+
 try {
   if (cmd === 'status' || cmd === 'whoami') await cmdStatus();
+  else if (cmd === 'serve') await cmdServe();
   else if (cmd === 'say') {
     const words = [];
     for (let i = 1; i < argv.length; i += 1) {

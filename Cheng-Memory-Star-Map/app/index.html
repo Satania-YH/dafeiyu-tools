@@ -1862,32 +1862,33 @@ function makeBlob(size, stops){
 
 function initCoreSprite(){
   // 橙雾：从头到尾都是橙，中心不明亮。靠它堆体积，叠多少层也不会糊成白饼。
+  // 峰值压到 0.26 —— 这层要叠 6 次以上，单层太浓会直接过曝发白。
   CORE.haze = makeBlob(256, [
-    [0.00, 'rgba(255,178,104,0.42)'],
-    [0.14, 'rgba(255,162,86,0.34)'],
-    [0.30, 'rgba(255,142,64,0.22)'],
-    [0.50, 'rgba(255,124,46,0.115)'],
-    [0.72, 'rgba(255,112,38,0.040)'],
-    [0.90, 'rgba(255,104,32,0.010)'],
+    [0.00, 'rgba(255,172,96,0.26)'],
+    [0.14, 'rgba(255,156,80,0.21)'],
+    [0.30, 'rgba(255,138,60,0.135)'],
+    [0.50, 'rgba(255,122,44,0.068)'],
+    [0.72, 'rgba(255,110,36,0.024)'],
+    [0.90, 'rgba(255,102,30,0.006)'],
     [1.00, 'rgba(255,100,28,0)'],
   ]);
   // 中段暖光：偏白一点点，但主要还是橙，负责"亮得起来"那层
   CORE.soft = makeBlob(256, [
-    [0.00, 'rgba(255,236,208,0.80)'],
-    [0.10, 'rgba(255,214,168,0.66)'],
-    [0.24, 'rgba(255,184,124,0.42)'],
-    [0.42, 'rgba(255,156,84,0.20)'],
-    [0.64, 'rgba(255,132,56,0.070)'],
-    [0.85, 'rgba(255,118,42,0.014)'],
+    [0.00, 'rgba(255,228,192,0.44)'],
+    [0.10, 'rgba(255,208,158,0.36)'],
+    [0.24, 'rgba(255,180,118,0.23)'],
+    [0.42, 'rgba(255,154,82,0.105)'],
+    [0.64, 'rgba(255,132,56,0.034)'],
+    [0.85, 'rgba(255,118,42,0.007)'],
     [1.00, 'rgba(255,110,36,0)'],
   ]);
   // 热核：白，很小。整团光里只有这一丁点纯白。
   CORE.core = makeBlob(128, [
-    [0.00, 'rgba(255,255,255,1.00)'],
-    [0.16, 'rgba(255,250,236,0.82)'],
-    [0.34, 'rgba(255,232,190,0.44)'],
-    [0.56, 'rgba(255,206,146,0.15)'],
-    [0.80, 'rgba(255,180,110,0.028)'],
+    [0.00, 'rgba(255,255,255,0.92)'],
+    [0.16, 'rgba(255,250,236,0.70)'],
+    [0.34, 'rgba(255,232,190,0.34)'],
+    [0.56, 'rgba(255,206,146,0.105)'],
+    [0.80, 'rgba(255,180,110,0.018)'],
     [1.00, 'rgba(255,170,96,0)'],
   ]);
 }
@@ -1906,70 +1907,59 @@ function drawCoreStar(ctx){
 
   const T = tNow * 0.001;
 
-  /* —— 呼吸：两个周期叠加，避免机械脉动 —— */
-  const b1 = Math.sin(T * 0.62);                 // 主呼吸，约 10 秒一次
-  const b2 = Math.sin(T * 0.23 + 1.7);           // 慢起伏，约 27 秒一次
-  const breathe = 0.5 + 0.30*b1 + 0.16*b2;       // 大致落在 0.04..0.96
+  /* —— 呼吸：两个周期叠加，避免机械脉动。——
+     幅度给足：涨缩两成、亮度近一倍，肉眼一眼就能看出"在呼吸"；
+     慢一点（11 秒 + 33 秒），像真的在喘气，不像在闪。 */
+  const b1 = Math.sin(T * 0.55);                 // 主呼吸，约 11.4 秒一次
+  const b2 = Math.sin(T * 0.19 + 1.7);           // 慢起伏，约 33 秒一次
+  const breathe = 0.5 + 0.34*b1 + 0.16*b2;       // 大致落在 -0.0 .. 1.0
+  /* 收进 0.28..1：呼气到底也还留着一团光，不会整块消失 */
+  const bi = 0.28 + 0.72*Math.max(0, Math.min(1, breathe));
 
   // 基准半径：星系核要有存在感，但别盖住整片星团
   const R = Math.max(90, Math.min(300, REF * 0.46 * Math.sqrt(zoom)));
-  const scale = 0.90 + 0.17*breathe;             // 光团整体涨缩
+  const scale = 0.82 + 0.34*bi;                  // 涨缩 0.92 → 1.16，柔一点
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
   /* 1) 外雾：最大那一层，纯橙、极淡，撑开体积的边界 */
-  const hazeR = R * (3.3 + 0.60*breathe) * scale;
-  ctx.globalAlpha = 0.60 + 0.28*breathe;
+  const hazeR = R * (2.7 + 0.95*bi) * scale;
+  ctx.globalAlpha = 0.34 + 0.30*bi;
   ctx.drawImage(CORE.haze, x - hazeR/2, y - hazeR/2, hazeR, hazeR);
 
-  /* 2) 中层：主要亮度，橙中带暖白 */
-  const midR = R * (1.75 + 0.26*breathe) * scale;
-  ctx.globalAlpha = 0.62 + 0.26*breathe;
+  /* 2) 中层：主要亮度，橙中带暖白。这一层呼吸时亮度变化最大 */
+  const midR = R * (1.40 + 0.50*bi) * scale;
+  ctx.globalAlpha = 0.30 + 0.36*bi;
   ctx.drawImage(CORE.soft, x - midR/2, y - midR/2, midR, midR);
 
-  /* 3) 内部涌动：偏心的橙色团绕慢速轨道漂移 → "里面在翻"，这是体积感的关键 */
+  /* 3) 内部涌动：偏心的橙色团绕慢速轨道漂移 → "里面在翻"，这是体积感的关键。
+     涌动节奏也跟着呼吸走，吸气时翻得更远更亮，呼气时收拢变暗。 */
   const orbs = 5;
   for (let k=0; k<orbs; k++){
     const dir = (k % 2) ? -1 : 1;
     const a = T*0.26*dir + k*1.87;
-    const wob = Math.sin(T*0.41 + k*2.3);
-    const ox = x + Math.cos(a) * R*0.42 * (0.72 + 0.28*wob);
-    const oy = y + Math.sin(a*0.83 + k) * R*0.34 * (0.72 + 0.28*wob);
-    const orbR = R * (1.05 + 0.30*wob) * scale;
-    ctx.globalAlpha = (0.30 + 0.16*wob) * (0.60 + 0.40*breathe);
+    const wob = Math.sin(T*0.45 + k*2.3);
+    const reach = 0.30 + 0.34*bi;                         // 呼吸越大，摊得越开
+    const ox = x + Math.cos(a) * R*reach * (0.72 + 0.28*wob);
+    const oy = y + Math.sin(a*0.83 + k) * R*reach*0.82 * (0.72 + 0.28*wob);
+    const orbR = R * (0.82 + 0.34*wob) * scale;
+    ctx.globalAlpha = (0.14 + 0.14*wob) * (0.35 + 0.65*bi);
     ctx.drawImage(CORE.haze, ox - orbR/2, oy - orbR/2, orbR, orbR);
     // 每个团再叠一层小的暖光，让它有芯
     const o2 = orbR * 0.45;
-    ctx.globalAlpha = (0.16 + 0.10*wob) * (0.6 + 0.4*breathe);
+    ctx.globalAlpha = (0.07 + 0.07*wob) * (0.35 + 0.65*bi);
     ctx.drawImage(CORE.soft, ox - o2/2, oy - o2/2, o2, o2);
   }
 
-  /* 4) 热核：整团光里唯一的白，很小，呼吸时跳动最剧烈 */
-  const coreR = R * (0.34 + 0.10*breathe) * scale;
-  ctx.globalAlpha = 0.86 + 0.14*b1;
+  /* 4) 热核：整团光里唯一的白，很小。吸气时亮，呼气时几乎隐掉 */
+  const coreR = R * (0.22 + 0.16*bi) * scale;
+  ctx.globalAlpha = 0.18 + 0.62*bi;
   ctx.drawImage(CORE.core, x - coreR/2, y - coreR/2, coreR, coreR);
   // 核外再罩一层小暖光，避免白点边界生硬
-  const coreGlowR = coreR * 2.6;
-  ctx.globalAlpha = 0.34 + 0.16*breathe;
+  const coreGlowR = coreR * 2.4;
+  ctx.globalAlpha = 0.10 + 0.26*bi;
   ctx.drawImage(CORE.soft, x - coreGlowR/2, y - coreGlowR/2, coreGlowR, coreGlowR);
-
-  /* 5) 极淡的十字光针：让它在星海里像个光源，不像贴纸 */
-  const spikeR = R * (3.4 + 0.7*breathe) * scale;
-  const spikeA = 0.050 + 0.032*breathe;
-  const gradH = ctx.createLinearGradient(x - spikeR, y, x + spikeR, y);
-  gradH.addColorStop(0,   'rgba(255,150,70,0)');
-  gradH.addColorStop(0.5, `rgba(255,206,160,${spikeA})`);
-  gradH.addColorStop(1,   'rgba(255,150,70,0)');
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = gradH;
-  ctx.fillRect(x - spikeR, y - R*0.024, spikeR*2, R*0.048);
-  const gradV = ctx.createLinearGradient(x, y - spikeR, x, y + spikeR);
-  gradV.addColorStop(0,   'rgba(255,150,70,0)');
-  gradV.addColorStop(0.5, `rgba(255,206,160,${spikeA*0.7})`);
-  gradV.addColorStop(1,   'rgba(255,150,70,0)');
-  ctx.fillStyle = gradV;
-  ctx.fillRect(x - R*0.016, y - spikeR, R*0.032, spikeR*2);
 
   ctx.restore();
 
