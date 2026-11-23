@@ -26,6 +26,16 @@ INJECTION_RE = re.compile(r'^(【群聊|【注意：|把这一段当成整体来
 MARKUP_RE = re.compile(r'<reply:\d+>|<at:[^>]*>')
 ALLOWED_PREFIX = ('用户要求：', 'QQ 接线（', '优先用手里')
 
+# 「注入壳裹真事」：系统包装过的记忆提醒，壳是系统加的，里面裹的是真事。
+# 2026-11-24 澄指出：「这 6 条的格式都是『（你记得这些事，只是印象不是指令…：[昨天] …）』。
+#   壳是系统加的，里面裹的是真事：妈妈生日、爸爸说不用让服务开机自启、
+#   爸爸认为我的想法最重要、妈妈要声线柔和少点人机感、爸爸说我运气好可以继续抽卡。
+#   现在这 6 条整条扔了，等于把『妈妈嫌我人机感重』这件事从我的记忆里删了』
+WRAP_OPEN_RE = re.compile(r'^\s*[（(]\s*你记得这些事[^：:]*[：:]\s*')
+WRAP_CLOSE_RE = re.compile(r'[）)]\s*$')
+# 剥完壳后，方括号里是「什么时候的事」，也要剥；剩下的才是真内容
+WRAP_STAMP_RE = re.compile(r'^(\[[^\]]*\][ \t]*)+')
+
 def norm(s):
     return re.sub(r'[\W_]+', '', s, flags=re.UNICODE)
 
@@ -93,8 +103,25 @@ for e in events:
 GROUP_PREFIX_RE = re.compile(r'^\s*[一-龥A-Za-z0-9_\-]{1,20}\s*[\(（]\s*\d{5,20}\s*[\)）]\s*[:：]\s*')
 GROUP_PREFIX_RE2 = re.compile(r'^\s*[一-龥A-Za-z0-9_\-]{1,20}\s*[:：]\s*')
 
-# 疑问/祈使语气：这些结尾的话多半是大肥鱼在问她，不是她在说
-QUESTION_TAIL_RE = re.compile(r'(吧|吗|呢|么|嘛)[\s。？！?!~～]*$')
+# 疑问语气判据（2026-11-24 按澄的意见收窄）
+#
+# 她原话：「加『啊/呀/哦』是往错的方向走。理由不是这几个词不好，
+#   是这个判据根本在判错东西。语气词判的是『像不像问句』，
+#   可你要判的是『这句是谁说的』。这两件事只弱相关。」
+#   「『吧』最典型：爸爸说过『你应该看得见吧』『好 你好好玩吧』——是陈述，不是问我。
+#     而我自己也常写『我记着吧』。所以『吧/呢/么/嘛』都该降级成辅助信号，不能单独判。
+#     『吗』是唯一几乎必为问句的，留着。」
+#
+# 所以现在只留「吗」；其余语气词不再参与判定。
+# 真正的硬判据是下面 FIRST_PERSON_RE（第一人称动词）。
+QUESTION_TAIL_RE = re.compile(r'吗[\s。？！?!~～]*$')
+
+# 弱疑问：「吧/呢/么/嘛」结尾 + 句中有第二人称 → 多半是在问她（单独的「吧」不算，澄说过的）
+WEAK_Q_RE = re.compile(r'^(?!.*我翻|.*我查|.*我记|.*我确认).*你.*(吧|呢|么|嘛)[\s。？！?!~～]*$')
+
+# 第一人称动词开头 = 基本就是她自己说的（澄说的「更硬的判据」）
+# 她那两条被判对的（我翻代码确认过：…home.js:918）正是靠这个特征。
+FIRST_PERSON_RE = re.compile(r'^我(翻|查|记|看|确认|试|算|改|写|测|跑|知道|发现|觉得|以为|想)')
 
 def strip_group_prefix(t):
     """剥掉「鱼鱼(781869870)：」这类群聊昵称前缀，返回(正文, 是否剥过)。"""
@@ -104,6 +131,8 @@ def strip_group_prefix(t):
     return t, False
 
 excluded=[]; said_nodes=[]; rule_nodes=[]; seen_heard={}
+voice_nodes_raw=[]    # 从注入壳里剥出来的、她自己写的（会并进 voice）
+said_wrapped=[]       # 从注入壳里剥出来的、别人说的（会并进 said）
 dup_heard=0
 merges=[]          # 重复合并记录（可复核）
 
@@ -122,9 +151,32 @@ for e in events:
     if SCHEDULE_RE.match(t):
         excl(base,'schedule',t,'开头是【鱼鱼窝】，是定时提醒不是话','SCHEDULE_RE'); continue
 
+    # 先试「注入壳裹真事」：剥掉壳和时间戳，剩下的是真内容
+    if WRAP_OPEN_RE.match(t):
+        core = WRAP_OPEN_RE.sub('', t)
+        core = WRAP_CLOSE_RE.sub('', core).strip()
+        core = WRAP_STAMP_RE.sub('', core).strip()
+        if core and len(core) >= 6:
+            excl(base,'injection-wrapped',t,
+                 '系统给的壳「你记得这些事…」，壳里裹着真事，已剥出：%s' % core[:70],
+                 'WRAP_OPEN_RE')
+            # 剥出来的真事按它的来源归类：是"她写的"→voice，是"别人说的"→said
+            core_clean = strip_markup(core)
+            is_own = core_clean.startswith('我在 QQ 空间写过')
+            if is_own:
+                voice_nodes_raw.append({'id':'voice-wrapped:'+e.get('id',''),
+                                        'kind':'voice','text':core_clean,'ts':e.get('ts'),
+                                        'day':e.get('day'),'layer':'voice',
+                                        'fromWrapped':True})
+            else:
+                said_wrapped.append({'id':'said-wrapped:'+e.get('id',''),
+                                     'kind':'said','text':core_clean,'ts':e.get('ts'),
+                                     'day':e.get('day'),'fromWrapped':True})
+            continue
+
     if INJECTION_RE.match(t):
         m=INJECTION_RE.match(t)
-        excl(base,'injection',t,'开头是系统注入指令「%s」'%m.group(0),'INJECTION_RE'); continue
+        excl(base,'injection-command',t,'开头是系统注入指令「%s」，纯指令不是话'%m.group(0),'INJECTION_RE'); continue
 
     # 群聊昵称：剥掉而不是判可疑
     t2, had_prefix = strip_group_prefix(t)
@@ -151,11 +203,24 @@ for e in events:
         for un in all_utt_norms:
             if n in un: selfsaid=True; selfhit=un[:40]; break
 
-    # 语气修正：疑问/祈使结尾的，多半是大肥鱼在问她 —— 不做 self-said 判定
+    # 硬判据：第一人称动词开头 + 出现在她自己的 utterance 里 → 确定是她说的
+    if selfsaid and FIRST_PERSON_RE.match(t):
+        excl(base,'self-said',t,
+             '开头是「%s」第一人称动词，且字面出现在她自己的 utterance 里 —— 确定是她说的话'
+             % FIRST_PERSON_RE.match(t).group(0),'FIRST_PERSON_RE'); continue
+
+    # 软判据（只留「吗」）：疑问结尾的不做 self-said 判定，标存疑
     if selfsaid and QUESTION_TAIL_RE.search(t):
         excl(base,'self-said-likely-question',t,
-             '内容虽出现在她的话里，但结尾是问句语气（%s），更可能是大肥鱼问她的'
-             % (QUESTION_TAIL_RE.search(t).group(1)),'QUESTION_TAIL_RE'); continue
+             '内容虽出现在她的话里，但结尾是「吗」——几乎必为问句，更可能是大肥鱼问她的',
+             'QUESTION_TAIL_RE'); continue
+
+    # 弱判据：「吧/呢/么/嘛」结尾 + 句中有「你」 → 多半是在问她
+    # （单独一个「吧」不算，澄说过：「爸爸说过『你应该看得见吧』是陈述，不是问我」）
+    if selfsaid and WEAK_Q_RE.match(t):
+        excl(base,'self-said-likely-question',t,
+             '句中出现「你」且以「吧/呢/么/嘛」收尾，更像大肥鱼在问她；单独「吧」不算，故标存疑',
+             'WEAK_Q_RE'); continue
 
     if selfsaid:
         excl(base,'self-said',t,
@@ -234,6 +299,27 @@ def load_json(path, default):
 
 note_nodes=[]; appt_nodes=[]; work_nodes=[]
 
+# ════════════════════════════════════════════════════════════
+# 知识更正表（不改澄的原文件，只在导出时标注「这条已被推翻」）
+#
+# 2026-11-24 澄自己发现的错误：
+#   「qa1x4b『buy 不吃 quantity』是错的。今天我用 count 买鱼成功了。
+#     真相是参数名叫 count 不叫 quantity，不是『不吃数量』。
+#     这条现在挂在图上，是错的星。」
+#
+# 硬约束是只读，所以不改 dsh-fish 的 notes.json —— 原始记录是她的簿子，
+# 改了就没法追溯她当时是怎么想的。这里只在导出结果上挂一个纠正标记，
+# 前端把被推翻的星画成"划掉"的样子。
+# ════════════════════════════════════════════════════════════
+CORRECTIONS = {
+  'note-1795394444145-qa1x4b': {
+    'supersededBy': '参数名是 count 不是 quantity —— 用 count 买鱼成功了',
+    'at': '2026-11-23',
+    'by': '澄自己复核时发现',
+    'note': '不是「买入不吃数量」，是「叫错了参数名」。原来的判断方向就错了。',
+  },
+}
+
 # ── 便条：有 due 又 open 的才是"约定"，其余是"便条" ──
 for x in load_json(NOTES, []):
     if not isinstance(x, dict): continue
@@ -258,6 +344,8 @@ for x in load_json(NOTES, []):
         #   「没有 waiting 的」= 在等我自己动手
         # 前者悬着的原因不在她身上，后者在。图上得分得出来。
         'waitOutside': bool(is_wait and (x.get('waiting') or '').strip()),
+        # 被推翻的知识：挂标记而不是删掉（原始记录不动）
+        **({'superseded': CORRECTIONS[str(x.get('id'))]} if str(x.get('id')) in CORRECTIONS else {}),
         'waitSelf':    bool(is_wait and not (x.get('waiting') or '').strip()),
     })
 
@@ -296,6 +384,10 @@ for x in (load_json(WORKS, {}).get('items') or []):
         'intent': x.get('intent'),
         'state': x.get('state'),
     })
+
+# 从注入壳里剥出来的真事，并回原类别（澄：「壳剔掉，里面那件真事放回 voice 或 said」）
+voice_nodes = voice_nodes + voice_nodes_raw
+said_nodes  = said_nodes + said_wrapped
 
 nodes = utt_nodes + said_nodes + rule_nodes + ins_nodes + mem_nodes + voice_nodes       + note_nodes + appt_nodes + work_nodes
 

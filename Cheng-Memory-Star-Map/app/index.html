@@ -443,6 +443,8 @@
   .ex-tag.injection{ background:rgba(255,110,110,.13); color:#ff8a8a; }
   .ex-tag.schedule{ background:rgba(255,190,80,.13); color:#ffc45e; }
   .ex-tag.self-said{ background:rgba(160,120,255,.15); color:#b49bff; }
+  .ex-tag.injection-command{ background:rgba(255,110,110,.13); color:#ff8a8a; }
+  .ex-tag.injection-wrapped{ background:rgba(120,200,255,.14); color:#7cc8ff; }
   .ex-tag.self-said-likely-question{ background:rgba(120,220,180,.14); color:#7fe0b4; }
   .ex-tag.markup{ background:rgba(150,150,150,.12); color:#9a9a9a; }
   .ex-item .ex-time{ font-size:10.5px; color:#4e5a75; }
@@ -972,7 +974,8 @@
       intent: n.intent || '',
       doneNote: n.doneNote || '',
       waitOutside: n.waitOutside === true,   // 在等外面一件事
-      waitSelf: n.waitSelf === true,         // 在等她自己动手
+      waitSelf: n.waitSelf === true,         // 在等她自已动手
+      superseded: n.superseded || null,      // 被推翻的知识（画成划掉）
     }));
 
     const kinds = {};
@@ -3090,6 +3093,21 @@ function draw(){
       ctx.globalAlpha = Math.min(1, alpha);
     }
 
+    /* 被推翻的知识：画一道斜杠划掉。
+       2026-11-24 澄自己发现的：「qa1x4b『buy 不吃 quantity』是错的——
+       真相是参数名叫 count」。原始记录不改，只在图上标出来。 */
+    if (n.superseded){
+      const sr = size*1.05 + 4;
+      ctx.globalAlpha = Math.min(1, alpha) * 0.62;
+      ctx.strokeStyle = 'rgba(255,120,120,.85)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x - sr*0.7, y - sr*0.7);
+      ctx.lineTo(x + sr*0.7, y + sr*0.7);
+      ctx.stroke();
+      ctx.globalAlpha = Math.min(1, alpha);
+    }
+
     /* 还开着的便条：两种「等」要分开画。
        2026-11-24 澄的原话：
          「open 36 条里其实分两种：有 waiting 的（在等外面一件事：等下一轮农活额度、
@@ -3889,6 +3907,11 @@ function openCard(i){
   // 便条：状态 / 到期 / 在等谁 / 推进了多少次
   if (n.k === 'note'){
     push('时间', n.ts ? fmtLocalTs(n.ts, true) : '');
+    if (n.superseded){
+      push('已推翻', n.superseded.supersededBy || '—');
+      push('谁发现的', n.superseded.by || '—');
+      push('为什么', n.superseded.note || '—');
+    }
     push('状态', n.open === true ? '还开着（没做完）' : '已了结');
     push('到期', n.due || '—');
     push('在等', n.waiting || '—');
@@ -5202,6 +5225,8 @@ function tlRegroup(days) {
 
 const EX_REASON_CN = {
   'injection': '系统注入·不是话',
+  'injection-command': '系统指令·不是话',
+  'injection-wrapped': '注入壳·已剥出真事',
   'schedule': '定时提醒·不是话',
   'self-said': '她说的·记成听到',
   'self-said-likely-question': '疑似问她·存疑',
@@ -5209,7 +5234,8 @@ const EX_REASON_CN = {
   'group-format': '群聊格式剥不净',
   'unknown': '其它',
 };
-const EX_REASON_ORDER = ['injection','schedule','self-said','self-said-likely-question','markup','group-format','unknown'];
+const EX_REASON_ORDER = ['injection-command','injection-wrapped','injection','schedule',
+  'self-said','self-said-likely-question','markup','group-format','unknown'];
 
 let EX_DATA = null;
 let EX_FILTER = null;

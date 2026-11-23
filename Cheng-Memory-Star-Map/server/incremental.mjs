@@ -143,6 +143,7 @@ export class GraphState {
     if (n.doneNote) out.doneNote = String(n.doneNote);
     if (n.waitOutside !== undefined) out.waitOutside = !!n.waitOutside;
     if (n.waitSelf !== undefined) out.waitSelf = !!n.waitSelf;
+    if (n.superseded) out.superseded = n.superseded;
 
     // voice 单独一层
     if (kind === 'voice') out.layer = 'voice';
@@ -380,6 +381,7 @@ export class GraphState {
         ...(n.doneNote ? { doneNote: n.doneNote } : {}),
         ...(n.waitOutside !== undefined ? { waitOutside: !!n.waitOutside } : {}),
         ...(n.waitSelf !== undefined ? { waitSelf: !!n.waitSelf } : {}),
+        ...(n.superseded ? { superseded: n.superseded } : {}),
       });
     }
     // 边必须两端都在 nodes 里，否则前端按 id 找索引会落空

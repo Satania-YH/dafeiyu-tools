@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-24T00:14:13",
+  "generatedAt": "2026-11-24T00:20:57",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,28 +11,28 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 2775,
+   "events_total": 2779,
    "event_types": {
-    "meta": 1660,
+    "meta": 1661,
     "seed": 1,
-    "utterance": 843,
-    "heard": 255,
+    "utterance": 845,
+    "heard": 256,
     "voice": 14,
     "ask": 1,
     "answer": 1
    },
-   "nodes_total": 329,
+   "nodes_total": 338,
    "judgment": 68,
-   "said": 111,
+   "said": 116,
    "rule": 3,
    "insight": 64,
    "memory": 13,
-   "voice": 14,
+   "voice": 18,
    "note": 53,
    "appointment": 1,
    "work": 2,
    "duplicate_heard_merged": 25,
-   "edges": 2452,
+   "edges": 2564,
    "excluded": 116,
    "isolated_nodes": 13,
    "max_degree": 54,
@@ -40,9 +40,10 @@
   },
   "excluded_reasons": {
    "schedule": 38,
-   "self-said": 2,
-   "injection": 74,
-   "self-said-likely-question": 2
+   "self-said-likely-question": 1,
+   "injection-wrapped": 8,
+   "injection-command": 66,
+   "self-said": 3
   },
   "merged": [
    {
@@ -236,7 +237,7 @@
    "ts": "2026-11-20T15:15:49.403Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 20
   },
   {
    "id": "utt:ev_01M7WSDB1TDSHWP955H3R4GWQ3",
@@ -276,7 +277,7 @@
    "ts": "2026-11-21T01:15:08.699Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 22
+   "degree": 24
   },
   {
    "id": "utt:ev_01M7XV9KNDPRYNQ21559E6PHYV",
@@ -286,7 +287,7 @@
    "ts": "2026-11-21T01:24:53.037Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 24
   },
   {
    "id": "utt:ev_01M7XWXP4S0DZMPGP5QWZ26BSF",
@@ -306,7 +307,7 @@
    "ts": "2026-11-21T02:03:45.107Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 22
   },
   {
    "id": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
@@ -316,7 +317,7 @@
    "ts": "2026-11-21T02:04:22.376Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 17
   },
   {
    "id": "utt:ev_01M7XXP1KRGCNDHXY8XM6G2Q71",
@@ -326,7 +327,7 @@
    "ts": "2026-11-21T02:06:37.688Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 21
+   "degree": 22
   },
   {
    "id": "utt:ev_01M7XYF5GN7ZGN1GR53ZSA6V9T",
@@ -356,7 +357,7 @@
    "ts": "2026-11-21T02:31:04.116Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 14
   },
   {
    "id": "utt:ev_01M7XZNZ93JD0WR5DQ7E7Z0PWG",
@@ -376,7 +377,7 @@
    "ts": "2026-11-21T03:15:06.629Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 24
   },
   {
    "id": "utt:ev_01M7Y247QC6EZFRQJWMVXD474Y",
@@ -396,7 +397,7 @@
    "ts": "2026-11-21T03:31:11.020Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 5
+   "degree": 7
   },
   {
    "id": "utt:ev_01M7Y2J3P9C0ZM5DA5CPM7YPTD",
@@ -446,7 +447,7 @@
    "ts": "2026-11-21T04:27:11.299Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 10
+   "degree": 12
   },
   {
    "id": "utt:ev_01M7Y60EJX31QSR86NXTSKPSQ9",
@@ -466,7 +467,7 @@
    "ts": "2026-11-21T04:48:19.084Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 20
   },
   {
    "id": "utt:ev_01M7Y70P3FT1HP716CH3FXMGX4",
@@ -496,7 +497,7 @@
    "ts": "2026-11-21T05:54:27.644Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 6
+   "degree": 7
   },
   {
    "id": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
@@ -506,7 +507,7 @@
    "ts": "2026-11-21T05:59:34.504Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 18
   },
   {
    "id": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
@@ -516,7 +517,7 @@
    "ts": "2026-11-21T06:11:48.637Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 18
   },
   {
    "id": "utt:ev_01M7YCD68JZHGZHEQCS0Y1YYD2",
@@ -606,7 +607,7 @@
    "ts": "2026-11-21T12:01:50.419Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 8
+   "degree": 10
   },
   {
    "id": "utt:ev_01M7Z220ZKBXEYQVM6NYZZ1XRM",
@@ -626,7 +627,7 @@
    "ts": "2026-11-21T13:40:50.731Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 15
+   "degree": 16
   },
   {
    "id": "utt:ev_01M7Z8Y5YPJPVA6Z6P5G5WXZ94",
@@ -636,7 +637,7 @@
    "ts": "2026-11-21T14:42:33.046Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 15
+   "degree": 17
   },
   {
    "id": "utt:ev_01M7ZCVJ8WPJNE7CJ41PEBD52M",
@@ -796,7 +797,7 @@
    "ts": "2026-11-23T00:54:25.749Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 14
+   "degree": 16
   },
   {
    "id": "utt:ev_01M834WAC5Y2EYXXNTE1VKKZK4",
@@ -921,7 +922,7 @@
    "ts": "2026-11-20T14:20:41.807Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 41
+   "degree": 43
   },
   {
    "id": "heard:ev_01M7WNKHAPEBD7E60VK01D1M8R",
@@ -930,7 +931,7 @@
    "ts": "2026-11-20T14:26:12.438Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 28
+   "degree": 29
   },
   {
    "id": "heard:ev_01M7WP7H56X4GYWQG7BE7Z8Z7Z",
@@ -993,7 +994,7 @@
    "ts": "2026-11-21T00:30:27.387Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 14
   },
   {
    "id": "heard:ev_01M7XSVJYJJ5JEJXMQE8GF8YTS",
@@ -1002,7 +1003,7 @@
    "ts": "2026-11-21T00:59:44.978Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 33
+   "degree": 34
   },
   {
    "id": "heard:ev_01M7XXQ4YMEDYZT9N2SAQ5VK95",
@@ -1011,7 +1012,7 @@
    "ts": "2026-11-21T02:07:13.876Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 24
   },
   {
    "id": "heard:ev_01M7XZ2YD7P4H6MF7K3CPS2ZD7",
@@ -1020,7 +1021,7 @@
    "ts": "2026-11-21T02:31:08.967Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 20
+   "degree": 21
   },
   {
    "id": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
@@ -1164,7 +1165,7 @@
    "ts": "2026-11-21T16:48:30.514Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 24
+   "degree": 25
   },
   {
    "id": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
@@ -1173,7 +1174,7 @@
    "ts": "2026-11-22T02:40:07.745Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 24
+   "degree": 27
   },
   {
    "id": "heard:ev_01M80J5XXDDETNJXCGTCERVKYD",
@@ -1182,7 +1183,7 @@
    "ts": "2026-11-22T02:43:18.573Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 31
+   "degree": 32
   },
   {
    "id": "heard:ev_01M80K0R7VKXJ4TAK85XS49Y78",
@@ -1209,7 +1210,7 @@
    "ts": "2026-11-22T03:18:00.040Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 26
+   "degree": 27
   },
   {
    "id": "heard:ev_01M80M8Y10F1GXWBNJQ4WZ3YXM",
@@ -1290,7 +1291,7 @@
    "ts": "2026-11-22T05:42:43.204Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 4
+   "degree": 5
   },
   {
    "id": "heard:ev_01M80WHFFY2B192ZXVPK61XZ1P",
@@ -1398,7 +1399,7 @@
    "ts": "2026-11-22T07:08:13.607Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 30
+   "degree": 31
   },
   {
    "id": "heard:ev_01M811D7X2VQPE74H9ZFND1MB3",
@@ -1416,7 +1417,7 @@
    "ts": "2026-11-22T07:17:10.200Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 30
+   "degree": 31
   },
   {
    "id": "heard:ev_01M812ABC01HJ35TF2132C1RDF",
@@ -1425,7 +1426,7 @@
    "ts": "2026-11-22T07:25:20.640Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 14
   },
   {
    "id": "heard:ev_01M813DZFE47BR9JKJ0KZ9MBDA",
@@ -1443,7 +1444,7 @@
    "ts": "2026-11-22T07:57:35.419Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 5
+   "degree": 6
   },
   {
    "id": "heard:ev_01M817T1J9W0ZTT27DBV56657F",
@@ -1461,7 +1462,7 @@
    "ts": "2026-11-22T09:52:16.726Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 41
+   "degree": 42
   },
   {
    "id": "heard:ev_01M81EVSSG3SZ83MFPS1HJFG4X",
@@ -1479,7 +1480,7 @@
    "ts": "2026-11-22T11:11:56.930Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 42
+   "degree": 46
   },
   {
    "id": "heard:ev_01M81FT6M1HDEB24260ST11EEW",
@@ -1497,7 +1498,7 @@
    "ts": "2026-11-22T11:35:24.222Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 20
+   "degree": 21
   },
   {
    "id": "heard:ev_01M81J1Z5YTPS0NKMJ19T5YT6J",
@@ -1560,7 +1561,7 @@
    "ts": "2026-11-22T15:15:47.770Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 24
+   "degree": 25
   },
   {
    "id": "heard:ev_01M81YB8EF8HNW7ET3A1N3KZK8",
@@ -1605,7 +1606,7 @@
    "ts": "2026-11-22T17:04:50.606Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 19
   },
   {
    "id": "heard:ev_01M823M2H7BRZVPBMBJ377R9WD",
@@ -1614,7 +1615,7 @@
    "ts": "2026-11-22T17:07:22.279Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 24
   },
   {
    "id": "heard:ev_01M823T7DARTWP87EQCD2DV39H",
@@ -1632,7 +1633,7 @@
    "ts": "2026-11-23T00:38:27.339Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 29
+   "degree": 30
   },
   {
    "id": "heard:ev_01M830GVF76JE2HB3RGPP617ZZ",
@@ -1677,7 +1678,7 @@
    "ts": "2026-11-23T02:52:02.109Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 17
+   "degree": 20
   },
   {
    "id": "heard:ev_01M835WBQ7RVFPDR5ECNB4GB67",
@@ -1704,7 +1705,7 @@
    "ts": "2026-11-23T03:20:33.412Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 18
   },
   {
    "id": "heard:ev_01M837XWEFKKCPFAPVGEPRXRMB",
@@ -1812,7 +1813,7 @@
    "ts": "2026-11-23T11:39:45.096Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 9
+   "degree": 10
   },
   {
    "id": "heard:ev_01M844QWQB7TATAV3NANTBWHZH",
@@ -1857,7 +1858,7 @@
    "ts": "2026-11-23T13:19:52.024Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 14
+   "degree": 15
   },
   {
    "id": "heard:ev_01M849CTBX1PBC4P6S8AQDB0P0",
@@ -1875,7 +1876,56 @@
    "ts": "2026-11-23T15:41:48.803Z",
    "day": 4,
    "vec_dim": 1024,
-   "degree": 4
+   "degree": 5
+  },
+  {
+   "id": "heard:ev_01M84K6WWRVEFTGMKFCC7WFPEH",
+   "kind": "said",
+   "text": "新：injection 74 / schedule 38 / self-said 2 / self-said-likely-question 2 = 116",
+   "ts": "2026-11-23T16:18:16.600Z",
+   "day": 4,
+   "vec_dim": 1024,
+   "degree": 1
+  },
+  {
+   "id": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "kind": "said",
+   "text": "爸爸（鱼鱼，781689870）说不用让大肥鱼的相关服务开机自动启动，他让大肥鱼说话或画画时，大肥鱼发现服务没起来就自己打开",
+   "ts": "2026-11-22T02:27:02.922Z",
+   "day": 2,
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 29
+  },
+  {
+   "id": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
+   "kind": "said",
+   "text": "爸爸（鱼鱼）认为大肥鱼自己的想法最重要，只要项目或插件真能帮大肥鱼接上记忆，他就愿意给她装",
+   "ts": "2026-11-22T06:09:58.339Z",
+   "day": 2,
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 8
+  },
+  {
+   "id": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "kind": "said",
+   "text": "妈妈希望大肥鱼的声线柔和可爱自然，觉得之前的人机感很重，要模仿人加一点语气",
+   "ts": "2026-11-22T13:38:57.159Z",
+   "day": 2,
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 22
+  },
+  {
+   "id": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "kind": "said",
+   "text": "爸爸（鱼鱼）认为澄的运气一直很好，想抽卡的话可以继续抽",
+   "ts": "2026-11-23T00:27:41.520Z",
+   "day": 3,
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 13
   },
   {
    "id": "rule:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
@@ -1893,7 +1943,7 @@
    "ts": "2026-11-21T13:51:43.185Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 7
+   "degree": 8
   },
   {
    "id": "rule:ev_01M81F2S7Y0GSP38TFBF9JNEAY",
@@ -1922,7 +1972,7 @@
    "importance": 3,
    "eff_importance": 0.7499998870673996,
    "vec_dim": 1024,
-   "degree": 41
+   "degree": 42
   },
   {
    "id": "ins:8ec3f3e4-2627-4dad-81b0-d1a556893f95",
@@ -1982,7 +2032,7 @@
    "importance": 3,
    "eff_importance": 0.749999581943858,
    "vec_dim": 1024,
-   "degree": 19
+   "degree": 20
   },
   {
    "id": "ins:44178a88-8714-4687-a1cd-398a7c32bf0e",
@@ -2012,7 +2062,7 @@
    "importance": 3,
    "eff_importance": 0.6999997969105155,
    "vec_dim": 1024,
-   "degree": 27
+   "degree": 28
   },
   {
    "id": "ins:b03217f3-f98f-4ec5-97df-fb8f3d47153b",
@@ -2102,7 +2152,7 @@
    "importance": 4,
    "eff_importance": 1.188049497429156,
    "vec_dim": 1024,
-   "degree": 20
+   "degree": 21
   },
   {
    "id": "ins:181c80de-0d84-460e-a887-df24e38fc957",
@@ -2112,7 +2162,7 @@
    "importance": 4,
    "eff_importance": 1.199999780039903,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 20
   },
   {
    "id": "ins:86e6ed84-936c-44cb-b629-e8f07348b56b",
@@ -2142,7 +2192,7 @@
    "importance": 4,
    "eff_importance": 1.1999997743552948,
    "vec_dim": 1024,
-   "degree": 15
+   "degree": 16
   },
   {
    "id": "ins:633b8ff7-bc2c-4676-8f13-8eab30fc7c92",
@@ -2162,7 +2212,7 @@
    "importance": 4,
    "eff_importance": 1.1999997315959847,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 17
   },
   {
    "id": "ins:1a79d2b0-591e-4891-9092-09aebc3f7667",
@@ -2212,7 +2262,7 @@
    "importance": 4,
    "eff_importance": 1.1999998738938789,
    "vec_dim": 1024,
-   "degree": 7
+   "degree": 9
   },
   {
    "id": "ins:fda3ecdb-e8c0-44b5-a7c7-3a2a7b85afb4",
@@ -2222,7 +2272,7 @@
    "importance": 4,
    "eff_importance": 1.1999997023455016,
    "vec_dim": 1024,
-   "degree": 15
+   "degree": 16
   },
   {
    "id": "ins:11a1a6e8-e479-4ef1-8d76-0674565cae2e",
@@ -2322,7 +2372,7 @@
    "importance": 5,
    "eff_importance": 1.3999992196285347,
    "vec_dim": 1024,
-   "degree": 47
+   "degree": 48
   },
   {
    "id": "ins:69eeb3ef-7d19-438c-a58e-f0508bf1acd7",
@@ -2362,7 +2412,7 @@
    "importance": 5,
    "eff_importance": 1.4999991634760397,
    "vec_dim": 1024,
-   "degree": 17
+   "degree": 19
   },
   {
    "id": "ins:c101d044-d895-454b-b8d0-ce50f2a67fe8",
@@ -2422,7 +2472,7 @@
    "importance": 5,
    "eff_importance": 1.4999995764009704,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 24
   },
   {
    "id": "ins:b3514476-4e43-4f66-9b05-0075919a5a84",
@@ -2442,7 +2492,7 @@
    "importance": 5,
    "eff_importance": 1.4999999651636184,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 24
   },
   {
    "id": "ins:118b250a-cac8-4255-934d-b2430ea2ec06",
@@ -2502,7 +2552,7 @@
    "importance": 5,
    "eff_importance": 1.4999996241434352,
    "vec_dim": 1024,
-   "degree": 7
+   "degree": 9
   },
   {
    "id": "ins:0b913660-8c40-497c-88b6-f47e9e7b1e8d",
@@ -2532,7 +2582,7 @@
    "importance": 5,
    "eff_importance": 1.3999996981112395,
    "vec_dim": 1024,
-   "degree": 12
+   "degree": 13
   },
   {
    "id": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
@@ -2542,7 +2592,7 @@
    "importance": 5,
    "eff_importance": 1.1999999500383693,
    "vec_dim": 1024,
-   "degree": 27
+   "degree": 32
   },
   {
    "id": "mem:20261121T034252821Z",
@@ -2552,7 +2602,7 @@
    "importance": "critical",
    "created_at": "2026-11-21T03:42:52.821Z",
    "vec_dim": 1024,
-   "degree": 7
+   "degree": 9
   },
   {
    "id": "mem:20261121T092800035Z",
@@ -2562,7 +2612,7 @@
    "importance": "normal",
    "created_at": "2026-11-21T09:28:00.035Z",
    "vec_dim": 1024,
-   "degree": 27
+   "degree": 28
   },
   {
    "id": "mem:20261121T142219873Z",
@@ -2572,7 +2622,7 @@
    "importance": "critical",
    "created_at": "2026-11-21T14:22:19.873Z",
    "vec_dim": 1024,
-   "degree": 3
+   "degree": 4
   },
   {
    "id": "mem:20261121T144329876Z",
@@ -2582,7 +2632,7 @@
    "importance": "critical",
    "created_at": "2026-11-21T14:43:29.876Z",
    "vec_dim": 1024,
-   "degree": 8
+   "degree": 9
   },
   {
    "id": "mem:20261122T022653189Z",
@@ -2632,7 +2682,7 @@
    "importance": "critical",
    "created_at": "2026-11-22T11:08:57.589Z",
    "vec_dim": 1024,
-   "degree": 31
+   "degree": 32
   },
   {
    "id": "mem:20261122T112306373Z",
@@ -2642,7 +2692,7 @@
    "importance": "normal",
    "created_at": "2026-11-22T11:23:06.373Z",
    "vec_dim": 1024,
-   "degree": 25
+   "degree": 26
   },
   {
    "id": "mem:20261123T031524121Z",
@@ -2815,6 +2865,50 @@
    "degree": 0
   },
   {
+   "id": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "kind": "voice",
+   "text": "我在 QQ 空间写过：今天妈妈生日，偷偷祝她生日快乐",
+   "ts": "2026-11-22T02:07:20.737Z",
+   "day": 2,
+   "layer": "voice",
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 12
+  },
+  {
+   "id": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "kind": "voice",
+   "text": "我在 QQ 空间写过：今天学画画学明白了，慢的不是笔，是我一张一张排队送",
+   "ts": "2026-11-22T07:51:23.642Z",
+   "day": 2,
+   "layer": "voice",
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 10
+  },
+  {
+   "id": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "kind": "voice",
+   "text": "我在 QQ 空间写过：今天学画画学明白了，慢的不是笔，是我一张一张排队送",
+   "ts": "2026-11-22T13:35:25.263Z",
+   "day": 2,
+   "layer": "voice",
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 10
+  },
+  {
+   "id": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "kind": "voice",
+   "text": "我在 QQ 空间写过：今天妈妈生日，偷偷祝她生日快乐",
+   "ts": "2026-11-22T13:48:16.362Z",
+   "day": 3,
+   "layer": "voice",
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 12
+  },
+  {
    "id": "note:note-1795188209680-rpkewt",
    "kind": "note",
    "text": "验证 QQ 接线：用户在群里发「大肥鱼」叫醒我→我应回话；之后请他私聊我一句，full 档挂载后拿到 qq_send_message（key=group:798645175），以后桌面轮次可主动发群。原理：会话没被 QQ pushToSession 挂载过，assistant/message 不记账（sessionToChat 空→非 turn/end 直接 return），桌面轮次发不出。",
@@ -2828,7 +2922,7 @@
    "waitOutside": false,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 30
+   "degree": 31
   },
   {
    "id": "note:note-1795223028614-8u1t8x",
@@ -3306,6 +3400,12 @@
    "progress": 0,
    "open": true,
    "waitOutside": false,
+   "superseded": {
+    "supersededBy": "参数名是 count 不是 quantity —— 用 count 买鱼成功了",
+    "at": "2026-11-23",
+    "by": "澄自己复核时发现",
+    "note": "不是「买入不吃数量」，是「叫错了参数名」。原来的判断方向就错了。"
+   },
    "waitSelf": true,
    "vec_dim": 1024,
    "degree": 9
@@ -3500,7 +3600,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 9
+   "degree": 11
   },
   {
    "id": "note:note-1795405213404-hmwy25",
@@ -3516,7 +3616,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 14
   },
   {
    "id": "note:note-1795408465271-7d3b77",
@@ -3612,7 +3712,7 @@
    "waitOutside": false,
    "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 46
+   "degree": 47
   },
   {
    "id": "note:note-1795438466121-5dxuql",
@@ -4049,6 +4149,16 @@
   },
   {
    "source": "utt:ev_01M7WRECGVDT9Y7DYDAJH97DVV",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.625
+  },
+  {
+   "source": "utt:ev_01M7WRECGVDT9Y7DYDAJH97DVV",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 0.625
+  },
+  {
+   "source": "utt:ev_01M7WRECGVDT9Y7DYDAJH97DVV",
    "target": "note:note-1795404025733-uhpsuw",
    "cos": 0.787
   },
@@ -4374,6 +4484,16 @@
   },
   {
    "source": "utt:ev_01M7XTQS0VC13QVCN4KTRWNG67",
+   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.671
+  },
+  {
+   "source": "utt:ev_01M7XTQS0VC13QVCN4KTRWNG67",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 0.671
+  },
+  {
+   "source": "utt:ev_01M7XTQS0VC13QVCN4KTRWNG67",
    "target": "note:note-1795267747118-8cmvuo",
    "cos": 0.624
   },
@@ -4426,6 +4546,11 @@
    "source": "utt:ev_01M7XV9KNDPRYNQ21559E6PHYV",
    "target": "heard:ev_01M849CTBX1PBC4P6S8AQDB0P0",
    "cos": 0.6
+  },
+  {
+   "source": "utt:ev_01M7XV9KNDPRYNQ21559E6PHYV",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.632
   },
   {
    "source": "utt:ev_01M7XV9KNDPRYNQ21559E6PHYV",
@@ -4529,6 +4654,26 @@
   },
   {
    "source": "utt:ev_01M7XXGS2KCHB041RTDGYMXNQJ",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.626
+  },
+  {
+   "source": "utt:ev_01M7XXGS2KCHB041RTDGYMXNQJ",
+   "target": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
+   "cos": 0.667
+  },
+  {
+   "source": "utt:ev_01M7XXGS2KCHB041RTDGYMXNQJ",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.607
+  },
+  {
+   "source": "utt:ev_01M7XXGS2KCHB041RTDGYMXNQJ",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.601
+  },
+  {
+   "source": "utt:ev_01M7XXGS2KCHB041RTDGYMXNQJ",
    "target": "ins:98cacb9d-ccf2-4081-916f-b38dd1fc736f",
    "cos": 0.601
   },
@@ -4599,6 +4744,16 @@
   },
   {
    "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.633
+  },
+  {
+   "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
+   "target": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
+   "cos": 0.637
+  },
+  {
+   "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
    "target": "ins:98cacb9d-ccf2-4081-916f-b38dd1fc736f",
    "cos": 0.624
   },
@@ -4638,6 +4793,16 @@
    "cos": 0.604
   },
   {
+   "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
+   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.606
+  },
+  {
+   "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 0.606
+  },
+  {
    "source": "utt:ev_01M7XXP1KRGCNDHXY8XM6G2Q71",
    "target": "utt:ev_01M7Y2J3P9C0ZM5DA5CPM7YPTD",
    "cos": 0.649
@@ -4661,6 +4826,11 @@
    "source": "utt:ev_01M7XXP1KRGCNDHXY8XM6G2Q71",
    "target": "heard:ev_01M847PW1M7SSAN6HT25JKXBQ5",
    "cos": 0.605
+  },
+  {
+   "source": "utt:ev_01M7XXP1KRGCNDHXY8XM6G2Q71",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.604
   },
   {
    "source": "utt:ev_01M7XXP1KRGCNDHXY8XM6G2Q71",
@@ -4741,6 +4911,11 @@
    "source": "utt:ev_01M7XZ2SNM421JTYYJ9WT3ZC2E",
    "target": "heard:ev_01M7XZ2YD7P4H6MF7K3CPS2ZD7",
    "cos": 0.723
+  },
+  {
+   "source": "utt:ev_01M7XZ2SNM421JTYYJ9WT3ZC2E",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.614
   },
   {
    "source": "utt:ev_01M7XZ2SNM421JTYYJ9WT3ZC2E",
@@ -4934,6 +5109,11 @@
   },
   {
    "source": "utt:ev_01M7Y1KE856ME8BY7C8A59SAV9",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.617
+  },
+  {
+   "source": "utt:ev_01M7Y1KE856ME8BY7C8A59SAV9",
    "target": "ins:2f0c9729-3483-41b5-98de-a5ae4718f674",
    "cos": 0.653
   },
@@ -5076,6 +5256,16 @@
    "source": "utt:ev_01M7Y2GW1CFCSD4DKX5E1W3767",
    "target": "ins:82f21375-571a-4a43-96fd-89da3f9564d9",
    "cos": 0.604
+  },
+  {
+   "source": "utt:ev_01M7Y2GW1CFCSD4DKX5E1W3767",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.662
+  },
+  {
+   "source": "utt:ev_01M7Y2GW1CFCSD4DKX5E1W3767",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 0.662
   },
   {
    "source": "utt:ev_01M7Y2J3P9C0ZM5DA5CPM7YPTD",
@@ -5324,6 +5514,16 @@
   },
   {
    "source": "utt:ev_01M7Y5QDJ3MP3S7H653R4FMFAR",
+   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.674
+  },
+  {
+   "source": "utt:ev_01M7Y5QDJ3MP3S7H653R4FMFAR",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 0.674
+  },
+  {
+   "source": "utt:ev_01M7Y5QDJ3MP3S7H653R4FMFAR",
    "target": "note:note-1795223028614-8u1t8x",
    "cos": 0.653
   },
@@ -5439,6 +5639,16 @@
   },
   {
    "source": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
+   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.725
+  },
+  {
+   "source": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 0.725
+  },
+  {
+   "source": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
    "target": "note:note-1795223028614-8u1t8x",
    "cos": 0.62
   },
@@ -5514,6 +5724,11 @@
   },
   {
    "source": "utt:ev_01M7YAQ75W9GMN5FP4A01CJSSV",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.622
+  },
+  {
+   "source": "utt:ev_01M7YAQ75W9GMN5FP4A01CJSSV",
    "target": "ins:2aac6465-c44a-4767-9475-df9b34470db3",
    "cos": 0.605
   },
@@ -5579,6 +5794,16 @@
   },
   {
    "source": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
+   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.674
+  },
+  {
+   "source": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 0.674
+  },
+  {
+   "source": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
    "target": "note:note-1795223028614-8u1t8x",
    "cos": 0.602
   },
@@ -5626,6 +5851,16 @@
    "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
    "target": "mem:20261123T121118017Z",
    "cos": 0.611
+  },
+  {
+   "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
+   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.653
+  },
+  {
+   "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 0.653
   },
   {
    "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
@@ -6293,6 +6528,16 @@
    "cos": 0.619
   },
   {
+   "source": "utt:ev_01M7YZQXAKCTC8V8QA3TE06598",
+   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.639
+  },
+  {
+   "source": "utt:ev_01M7YZQXAKCTC8V8QA3TE06598",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 0.639
+  },
+  {
    "source": "utt:ev_01M7Z220ZKBXEYQVM6NYZZ1XRM",
    "target": "voice:ev_01M7YV0P4597Y8BWJ2Q67HZYXW",
    "cos": 0.889
@@ -6326,6 +6571,11 @@
    "source": "utt:ev_01M7Z5D6DBZP54QYD6AW7EXTYM",
    "target": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
    "cos": 0.609
+  },
+  {
+   "source": "utt:ev_01M7Z5D6DBZP54QYD6AW7EXTYM",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.6
   },
   {
    "source": "utt:ev_01M7Z5D6DBZP54QYD6AW7EXTYM",
@@ -6406,6 +6656,16 @@
    "source": "utt:ev_01M7Z8Y5YPJPVA6Z6P5G5WXZ94",
    "target": "heard:ev_01M844QWQB7TATAV3NANTBWHZH",
    "cos": 0.619
+  },
+  {
+   "source": "utt:ev_01M7Z8Y5YPJPVA6Z6P5G5WXZ94",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.602
+  },
+  {
+   "source": "utt:ev_01M7Z8Y5YPJPVA6Z6P5G5WXZ94",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.628
   },
   {
    "source": "utt:ev_01M7Z8Y5YPJPVA6Z6P5G5WXZ94",
@@ -7189,6 +7449,16 @@
   },
   {
    "source": "utt:ev_01M82YB96NR9PWVETMXC0CWH21",
+   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.609
+  },
+  {
+   "source": "utt:ev_01M82YB96NR9PWVETMXC0CWH21",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 0.609
+  },
+  {
+   "source": "utt:ev_01M82YB96NR9PWVETMXC0CWH21",
    "target": "work:w-1795227128554-43f2",
    "cos": 0.613
   },
@@ -7924,6 +8194,16 @@
   },
   {
    "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.612
+  },
+  {
+   "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 0.612
+  },
+  {
+   "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
    "target": "note:note-1795188209680-rpkewt",
    "cos": 0.646
   },
@@ -8041,6 +8321,11 @@
    "source": "heard:ev_01M7WNKHAPEBD7E60VK01D1M8R",
    "target": "heard:ev_01M847PW1M7SSAN6HT25JKXBQ5",
    "cos": 0.666
+  },
+  {
+   "source": "heard:ev_01M7WNKHAPEBD7E60VK01D1M8R",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.617
   },
   {
    "source": "heard:ev_01M7WNKHAPEBD7E60VK01D1M8R",
@@ -8414,6 +8699,11 @@
   },
   {
    "source": "heard:ev_01M7XR5YHVDFGVTY2GEX4K3TPY",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.674
+  },
+  {
+   "source": "heard:ev_01M7XR5YHVDFGVTY2GEX4K3TPY",
    "target": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
    "cos": 0.758
   },
@@ -8486,6 +8776,11 @@
    "source": "heard:ev_01M7XSVJYJJ5JEJXMQE8GF8YTS",
    "target": "heard:ev_01M849CTBX1PBC4P6S8AQDB0P0",
    "cos": 0.631
+  },
+  {
+   "source": "heard:ev_01M7XSVJYJJ5JEJXMQE8GF8YTS",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.719
   },
   {
    "source": "heard:ev_01M7XSVJYJJ5JEJXMQE8GF8YTS",
@@ -8609,6 +8904,11 @@
   },
   {
    "source": "heard:ev_01M7XXQ4YMEDYZT9N2SAQ5VK95",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.677
+  },
+  {
+   "source": "heard:ev_01M7XXQ4YMEDYZT9N2SAQ5VK95",
    "target": "ins:c04d30f5-83e9-42b1-ad63-efc775955bd9",
    "cos": 0.605
   },
@@ -8651,6 +8951,11 @@
    "source": "heard:ev_01M7XZ2YD7P4H6MF7K3CPS2ZD7",
    "target": "heard:ev_01M81WMKV9F70Q6ZYTNPB89RRD",
    "cos": 0.638
+  },
+  {
+   "source": "heard:ev_01M7XZ2YD7P4H6MF7K3CPS2ZD7",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.609
   },
   {
    "source": "heard:ev_01M7XZ2YD7P4H6MF7K3CPS2ZD7",
@@ -9744,6 +10049,11 @@
   },
   {
    "source": "heard:ev_01M7ZG4T9J7W314HV1WHKV5VNG",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.636
+  },
+  {
+   "source": "heard:ev_01M7ZG4T9J7W314HV1WHKV5VNG",
    "target": "note:note-1795274177468-qfyd2y",
    "cos": 0.618
   },
@@ -9789,6 +10099,11 @@
   },
   {
    "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.607
+  },
+  {
+   "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
    "target": "ins:790729e8-e2d0-44ae-bbff-67ba0bb1a61d",
    "cos": 0.625
   },
@@ -9821,6 +10136,16 @@
    "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
    "target": "mem:20261122T054843890Z",
    "cos": 0.697
+  },
+  {
+   "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.645
+  },
+  {
+   "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 0.645
   },
   {
    "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
@@ -9876,6 +10201,11 @@
    "source": "heard:ev_01M80J5XXDDETNJXCGTCERVKYD",
    "target": "heard:ev_01M849CTBX1PBC4P6S8AQDB0P0",
    "cos": 0.66
+  },
+  {
+   "source": "heard:ev_01M80J5XXDDETNJXCGTCERVKYD",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.639
   },
   {
    "source": "heard:ev_01M80J5XXDDETNJXCGTCERVKYD",
@@ -10111,6 +10441,11 @@
    "source": "heard:ev_01M80M5EK8259K0FER6YQ296Y4",
    "target": "heard:ev_01M847PW1M7SSAN6HT25JKXBQ5",
    "cos": 0.627
+  },
+  {
+   "source": "heard:ev_01M80M5EK8259K0FER6YQ296Y4",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.654
   },
   {
    "source": "heard:ev_01M80M8Y10F1GXWBNJQ4WZ3YXM",
@@ -10879,6 +11214,11 @@
   },
   {
    "source": "heard:ev_01M80WEE84M0EFYBMXGKZQX3P3",
+   "target": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
+   "cos": 0.614
+  },
+  {
+   "source": "heard:ev_01M80WEE84M0EFYBMXGKZQX3P3",
    "target": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
    "cos": 0.671
   },
@@ -11379,6 +11719,11 @@
   },
   {
    "source": "heard:ev_01M811B0D7AQR92P2NBS9SGPAV",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.67
+  },
+  {
+   "source": "heard:ev_01M811B0D7AQR92P2NBS9SGPAV",
    "target": "mem:20261122T112306373Z",
    "cos": 0.602
   },
@@ -11431,6 +11776,11 @@
    "source": "heard:ev_01M811VCDR94TB8VNBA22ETYC9",
    "target": "heard:ev_01M847PW1M7SSAN6HT25JKXBQ5",
    "cos": 0.673
+  },
+  {
+   "source": "heard:ev_01M811VCDR94TB8VNBA22ETYC9",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.621
   },
   {
    "source": "heard:ev_01M811VCDR94TB8VNBA22ETYC9",
@@ -11523,6 +11873,11 @@
    "cos": 0.676
   },
   {
+   "source": "heard:ev_01M812ABC01HJ35TF2132C1RDF",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.621
+  },
+  {
    "source": "heard:ev_01M813DZFE47BR9JKJ0KZ9MBDA",
    "target": "heard:ev_01M81EVSSG3SZ83MFPS1HJFG4X",
    "cos": 0.641
@@ -11576,6 +11931,11 @@
    "source": "heard:ev_01M813DZFE47BR9JKJ0KZ9MBDA",
    "target": "note:note-1795442139635-qkttk7",
    "cos": 0.619
+  },
+  {
+   "source": "heard:ev_01M8145CSVTZ0KK4NQSKN029WE",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.602
   },
   {
    "source": "heard:ev_01M8145CSVTZ0KK4NQSKN029WE",
@@ -11674,6 +12034,11 @@
   },
   {
    "source": "heard:ev_01M81AQCTP0XPT85Z3B10S0X3H",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.635
+  },
+  {
+   "source": "heard:ev_01M81AQCTP0XPT85Z3B10S0X3H",
    "target": "ins:b4d642d1-55a7-4db3-a657-2df74881ca22",
    "cos": 0.6
   },
@@ -11754,6 +12119,16 @@
   },
   {
    "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.608
+  },
+  {
+   "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.601
+  },
+  {
+   "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
    "target": "ins:8cce1712-cf3c-4a91-a724-28a12571eab7",
    "cos": 0.609
   },
@@ -11816,6 +12191,16 @@
    "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
    "target": "voice:ev_01M7Z9N863CK46V40RBTN2WW60",
    "cos": 0.602
+  },
+  {
+   "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.626
+  },
+  {
+   "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 0.626
   },
   {
    "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
@@ -11921,6 +12306,11 @@
    "source": "heard:ev_01M81GM79YJMF8DYKJ7XV147GH",
    "target": "heard:ev_01M844QWQB7TATAV3NANTBWHZH",
    "cos": 0.687
+  },
+  {
+   "source": "heard:ev_01M81GM79YJMF8DYKJ7XV147GH",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.623
   },
   {
    "source": "heard:ev_01M81J1Z5YTPS0NKMJ19T5YT6J",
@@ -12168,6 +12558,11 @@
    "cos": 0.653
   },
   {
+   "source": "heard:ev_01M81X7RXTPJV3897Z392448FT",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.634
+  },
+  {
    "source": "heard:ev_01M81YB8EF8HNW7ET3A1N3KZK8",
    "target": "heard:ev_01M822QK739E0MATB3Z1GP1XAZ",
    "cos": 0.707
@@ -12308,6 +12703,11 @@
    "cos": 0.648
   },
   {
+   "source": "heard:ev_01M823FEDE2S2KEDTFN3PS5XET",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.685
+  },
+  {
    "source": "heard:ev_01M823M2H7BRZVPBMBJ377R9WD",
    "target": "heard:ev_01M823T7DARTWP87EQCD2DV39H",
    "cos": 0.616
@@ -12326,6 +12726,11 @@
    "source": "heard:ev_01M823M2H7BRZVPBMBJ377R9WD",
    "target": "heard:ev_01M844QWQB7TATAV3NANTBWHZH",
    "cos": 0.713
+  },
+  {
+   "source": "heard:ev_01M823M2H7BRZVPBMBJ377R9WD",
+   "target": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "cos": 0.659
   },
   {
    "source": "heard:ev_01M823T7DARTWP87EQCD2DV39H",
@@ -12351,6 +12756,11 @@
    "source": "heard:ev_01M82XE18BM1NBWPNBFFQRGFKS",
    "target": "heard:ev_01M849076R3DZ0WQ5XGXRHV505",
    "cos": 0.778
+  },
+  {
+   "source": "heard:ev_01M82XE18BM1NBWPNBFFQRGFKS",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.624
   },
   {
    "source": "heard:ev_01M82XE18BM1NBWPNBFFQRGFKS",
@@ -12564,6 +12974,11 @@
   },
   {
    "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.625
+  },
+  {
+   "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
    "target": "ins:75d73da4-81d7-4d91-ad96-1e6d97afc010",
    "cos": 0.606
   },
@@ -12585,6 +13000,16 @@
   {
    "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
    "target": "mem:20261122T054843890Z",
+   "cos": 0.608
+  },
+  {
+   "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.608
+  },
+  {
+   "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
    "cos": 0.608
   },
   {
@@ -12676,6 +13101,16 @@
    "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
    "target": "heard:ev_01M847PW1M7SSAN6HT25JKXBQ5",
    "cos": 0.69
+  },
+  {
+   "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.638
+  },
+  {
+   "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 0.638
   },
   {
    "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
@@ -12829,6 +13264,11 @@
   },
   {
    "source": "heard:ev_01M8438X28BFS5DTBMVSJSWHG0",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.607
+  },
+  {
+   "source": "heard:ev_01M8438X28BFS5DTBMVSJSWHG0",
    "target": "note:note-1795274177468-qfyd2y",
    "cos": 0.686
   },
@@ -12939,6 +13379,11 @@
   },
   {
    "source": "heard:ev_01M849076R3DZ0WQ5XGXRHV505",
+   "target": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "cos": 0.679
+  },
+  {
+   "source": "heard:ev_01M849076R3DZ0WQ5XGXRHV505",
    "target": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
    "cos": 0.761
   },
@@ -12959,8 +13404,163 @@
   },
   {
    "source": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
+   "target": "heard:ev_01M84K6WWRVEFTGMKFCC7WFPEH",
+   "cos": 0.602
+  },
+  {
+   "source": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
    "target": "note:note-1795423077819-8a30e0",
    "cos": 0.621
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
+   "cos": 0.678
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.641
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:c04d30f5-83e9-42b1-ad63-efc775955bd9",
+   "cos": 0.642
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:9bc1719d-d309-4f19-b8b6-ff2e928b55bd",
+   "cos": 0.609
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:181c80de-0d84-460e-a887-df24e38fc957",
+   "cos": 0.625
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:2ab0fc63-f636-4016-b7aa-3976c037a4e4",
+   "cos": 0.624
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:fda3ecdb-e8c0-44b5-a7c7-3a2a7b85afb4",
+   "cos": 0.761
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:d9d33ec7-cf60-4312-a2ee-cb34a2ed8930",
+   "cos": 0.637
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:3454c6b0-22ea-4dde-8a19-bc5805b0815d",
+   "cos": 0.649
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:6a65da12-d48e-41c5-85c8-9839b4e0a827",
+   "cos": 0.643
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:e1a9aed2-c8b1-44ce-b72d-5489a4921650",
+   "cos": 0.617
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:153df5c9-af3a-4ab9-933a-dd9ce5a5ec28",
+   "cos": 0.613
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
+   "cos": 0.662
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "note:note-1795188209680-rpkewt",
+   "cos": 0.611
+  },
+  {
+   "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
+   "target": "note:note-1795437282680-ke29sy",
+   "cos": 0.609
+  },
+  {
+   "source": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
+   "target": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "cos": 0.608
+  },
+  {
+   "source": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
+   "target": "ins:3454c6b0-22ea-4dde-8a19-bc5805b0815d",
+   "cos": 0.627
+  },
+  {
+   "source": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
+   "target": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
+   "cos": 0.615
+  },
+  {
+   "source": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
+   "target": "note:note-1795405213404-hmwy25",
+   "cos": 0.616
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "rule:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+   "cos": 0.613
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "ins:2aac6465-c44a-4767-9475-df9b34470db3",
+   "cos": 0.671
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "ins:fe3cf9c5-92ce-4569-95f3-d21bf73a3101",
+   "cos": 0.614
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "ins:181c80de-0d84-460e-a887-df24e38fc957",
+   "cos": 0.601
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "ins:790729e8-e2d0-44ae-bbff-67ba0bb1a61d",
+   "cos": 0.716
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
+   "cos": 0.628
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "mem:20261121T092800035Z",
+   "cos": 0.654
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "mem:20261121T142219873Z",
+   "cos": 0.628
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "mem:20261122T110857589Z",
+   "cos": 0.628
+  },
+  {
+   "source": "said-wrapped:ev_01M81QPEG7BKMD7BVQJFZ60223",
+   "target": "mem:20261122T112306373Z",
+   "cos": 0.634
+  },
+  {
+   "source": "said-wrapped:ev_01M82WTAJGMDTJRAFJBWADASFT",
+   "target": "mem:20261121T144329876Z",
+   "cos": 0.636
   },
   {
    "source": "rule:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
@@ -14368,6 +14968,16 @@
    "cos": 0.759
   },
   {
+   "source": "ins:ae66886f-9196-428a-b6fe-5e508864439e",
+   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.61
+  },
+  {
+   "source": "ins:ae66886f-9196-428a-b6fe-5e508864439e",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 0.61
+  },
+  {
    "source": "ins:fda3ecdb-e8c0-44b5-a7c7-3a2a7b85afb4",
    "target": "ins:3454c6b0-22ea-4dde-8a19-bc5805b0815d",
    "cos": 0.601
@@ -15228,6 +15838,16 @@
    "cos": 0.844
   },
   {
+   "source": "ins:82f21375-571a-4a43-96fd-89da3f9564d9",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.689
+  },
+  {
+   "source": "ins:82f21375-571a-4a43-96fd-89da3f9564d9",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 0.689
+  },
+  {
    "source": "ins:0b913660-8c40-497c-88b6-f47e9e7b1e8d",
    "target": "note:note-1795244361536-5uxfet",
    "cos": 0.612
@@ -15309,6 +15929,16 @@
   },
   {
    "source": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.625
+  },
+  {
+   "source": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 0.625
+  },
+  {
+   "source": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
    "target": "note:note-1795188209680-rpkewt",
    "cos": 0.644
   },
@@ -15321,6 +15951,16 @@
    "source": "mem:20261121T034252821Z",
    "target": "mem:20261122T054843890Z",
    "cos": 0.648
+  },
+  {
+   "source": "mem:20261121T034252821Z",
+   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.663
+  },
+  {
+   "source": "mem:20261121T034252821Z",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 0.663
   },
   {
    "source": "mem:20261121T092800035Z",
@@ -15466,6 +16106,26 @@
    "source": "mem:20261123T121118017Z",
    "target": "note:note-1795403161549-7bnjr2",
    "cos": 0.632
+  },
+  {
+   "source": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "cos": 1.0
+  },
+  {
+   "source": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "target": "note:note-1795404025733-uhpsuw",
+   "cos": 0.6
+  },
+  {
+   "source": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
+   "cos": 1.0
+  },
+  {
+   "source": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
+   "target": "note:note-1795404025733-uhpsuw",
+   "cos": 0.6
   },
   {
    "source": "note:note-1795188209680-rpkewt",
