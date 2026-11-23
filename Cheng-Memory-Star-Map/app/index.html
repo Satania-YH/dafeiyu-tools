@@ -3571,6 +3571,9 @@ function loop(t){
       n.pz += (n.tz - n.pz)*k;
     }
 
+    // 团内局部重排：把排队中的分类团松弛一步（只动本团，别的团不碰）
+    try { stepClusterRelayout(); } catch (e) { /* 重排出错不影响画面 */ }
+
     // 时间滑条：显现进度平滑推进（滑过去是长出来，不是瞬间开关）
     tbEase(1 - Math.pow(0.86, dt/16.7));
 
@@ -5155,9 +5158,105 @@ function addStarToScene(node, edges) {
      新星归进已有分类 → 更新那个标签的条数（原来 count 是快照，永远不变）；
      是全新分类 → 现场算一个位置放一颗分类星，不重排已有的。 */
   if (typeof registerNewNodeToCluster === 'function') registerNewNodeToCluster(nodes.length - 1);
+  // 这个团变大了就局部重排一次（只动本团，别的团不碰）
+  if (typeof scheduleClusterRelayout === 'function') scheduleClusterRelayout(nodes.length - 1);
 
   if (typeof updateHud === 'function') updateHud();
   if (typeof toast === 'function') toast(`新记忆：${(node.text || '').slice(0, 20)}…`);
+}
+
+/* ══════ 局部重排 ══════
+   团里的星越加越多，只在加入时"挑个空位"迟早会挤（实测 0.0043 的重合）。
+   这里做一个**只动本团**的松弛：把团内的星当成互相排斥的小球，
+   往"团心 + 舒展开的球壳"里推。
+
+   关键：
+   - 只改本团成员的 tx/ty/tz（目标位置），px/py/pz 由主循环平滑追过去，
+     所以画面上看到的是"慢慢散开"的动画，不是瞬间跳变
+   - 每帧只跑一小步（不是一次算完），配一个"跑多少帧"的预算
+   - 团心位置不动，别的团完全不受影响 */
+
+const RELAYOUT = {
+  queue: new Set(),      // 待重排的 kind
+  budget: 0,             // 这一帧还能跑多少步
+};
+
+/* 排队：某个 kind 的团变大了，标记它需要松弛 */
+function scheduleClusterRelayout(i) {
+  const n = nodes[i];
+  if (!n) return;
+  RELAYOUT.queue.add(n.k || 'fact');
+}
+
+/* 每帧调用：给排队的团跑几步松弛 */
+function stepClusterRelayout() {
+  if (!RELAYOUT.queue.size) return;
+  if (baseShape() !== 'cluster') { RELAYOUT.queue.clear(); return; }
+
+  const STEP_PER_FRAME = 2;      // 每帧最多跑几个团（每个团内部再算一轮）
+  let done = 0;
+  for (const kind of [...RELAYOUT.queue]) {
+    if (done++ >= STEP_PER_FRAME) break;
+
+    const label = KIND_CN[kind] || kind;
+    const cat = clusterInfo.find(c => c.label === label);
+    if (!cat) { RELAYOUT.queue.delete(kind); continue; }
+
+    // 收集本团成员
+    const idx = [];
+    for (let k = 0; k < N; k++) if (nodes[k].k === kind) idx.push(k);
+    if (idx.length < 2) { RELAYOUT.queue.delete(kind); continue; }
+
+    /* 目标半径：按颗数开方增长（面积均分）。
+       20 颗以内给 0.06，之后 sqrt 长。 */
+    const targetR = 0.055 * Math.sqrt(idx.length) + 0.02;
+
+    // 对每个成员：沿"从团心向外"的方向，把它推向目标半径上
+    // 再叠一点点互相排斥，避免同半径处扎堆
+    const cx0 = cat.x, cy0 = cat.y, cz0 = cat.z;
+    for (let a = 0; a < idx.length; a++) {
+      const A = nodes[idx[a]];
+      // A 相对团心的位置
+      let dx = A.px - cx0, dy = A.py - cy0, dz = A.pz - cz0;
+      let r = Math.hypot(dx, dy, dz);
+      if (r < 1e-6) {
+        // 正好在团心：给个随机方向
+        const u = Math.random() * 2 - 1, phi = Math.random() * Math.PI * 2;
+        const s = Math.sqrt(Math.max(0, 1 - u * u));
+        dx = Math.cos(phi) * s; dy = u; dz = Math.sin(phi) * s;
+        r = 1;
+      }
+      const ux = dx / r, uy = dy / r, uz = dz / r;
+
+      // ① 径向：推向目标半径（软，一次只走 35%）
+      const rNew = r + (targetR - r) * 0.35;
+
+      // ② 切向排斥：和本团其他星太近就互相推开一点
+      let px = 0, py = 0, pz = 0;
+      for (let b = 0; b < idx.length; b++) {
+        if (b === a) continue;
+        const B = nodes[idx[b]];
+        const ex = A.px - B.px, ey = A.py - B.py, ez = A.pz - B.pz;
+        const d2 = ex * ex + ey * ey + ez * ez;
+        const d = Math.sqrt(d2) || 1e-4;
+        const minGap = targetR * 0.42;      // 希望彼此间隔
+        if (d < minGap) {
+          const f = (minGap - d) / minGap * 0.5;
+          px += (ex / d) * f;
+          py += (ey / d) * f;
+          pz += (ez / d) * f;
+        }
+      }
+
+      // ③ 写回目标位置（主循环会平滑追过去 → 看到的是动画）
+      A.tx = cx0 + ux * rNew + px;
+      A.ty = cy0 + uy * rNew + py;
+      A.tz = cz0 + uz * rNew + pz;
+    }
+
+    /* 松弛完一轮就出队。如果之后还加星，会重新入队。 */
+    RELAYOUT.queue.delete(kind);
+  }
 }
 
 /* 把新加入的节点登记到分类里（只补差量，不动已有布局） */
