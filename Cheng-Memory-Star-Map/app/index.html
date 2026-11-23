@@ -4955,8 +4955,12 @@ function initLive() {
 
   if (window.__DEMO_GROW !== false) {
     // 造出来的分类，每个自己有个计数器
-    const catNames = ['抖音', 'B站', '知乎', '微博', '小红书', '播客', '游戏', '小说', '日记本', '相册', '代码库', '歌单'];
+    const catNames = ['抖音','B站','知乎','微博','小红书','播客','游戏','小说','日记本','相册',
+                      '代码库','歌单','电影','漫画','读书','咖啡','跑步','旅行','散步','猫',
+                      '雨天','夏天','深夜','清晨','工作台','键盘','显示器','耳机','相机','手账',
+                      '菜谱','花','树','星空','海','山','风','雪','旧事','新想法'];
     let catIdx = 0;
+    let DEMO_ROUND = 0;
     const grown = [];        // [{ label, kind, count }]
 
     // ① 每 2 秒：新增大分类
@@ -4982,15 +4986,17 @@ function initLive() {
       }, [{ source: id, target: seedAnchor.id, cos: 0.5 }]);
 
       grown.push({ label, kind, count: 1 });
-    }, 2000);
+    }, 1000);
 
     // ② 每 1 秒：每个已有分类长一颗小星
     setInterval(() => {
       if (currentView !== 'starmap' || !nodes.length) return;
       if (!grown.length) return;
-      // 轮流给各个分类加星，避免每轮所有分类同时暴涨
-      for (const g of grown) {
-        if (g.count >= 8) continue;          // 每个分类最多 8 颗星，别无限涨
+      /* 每 0.5 秒这一轮：给最近出现的 3 个分类各加一颗。
+         只加最近的，是因为老分类已经长大了不必一直喂，
+         这样新分类长起来的速度跟得上，又能持续施压。 */
+      const tail = grown.slice(-3);
+      for (const g of tail) {
         g.count++;
         const id = 'GROW-' + g.kind + '-' + g.count;
         // 锚定到本分类里已有的星（取最后一颗）
@@ -5004,7 +5010,7 @@ function initLive() {
           importance: 3.5, topic: g.label,
         }, [{ source: id, target: anchor.id, cos: 0.8 }]);
       }
-    }, 1000);
+    }, 500);
   }
 }
 
