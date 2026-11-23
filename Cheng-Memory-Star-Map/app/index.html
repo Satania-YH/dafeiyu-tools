@@ -4948,32 +4948,63 @@ function initLive() {
 
   live.connect();
 
-  /* ══ 临时演示：每 3 秒放一颗新星，看加入效果 ══
-     只是给用户看效果用的，确认满意后整段删掉即可。
-     为了看得清，故意挑「规则」那片（只有 3 颗星，很空）。 */
-  if (window.__DEMO_NEW_STAR !== false) {
-    let demoN = 0;
+  /* ══════ 临时压力测试：大分类 + 小星同时长出来 ══════
+     规则：每 2 秒新增一个大分类，每个大分类每 1 秒长一颗小星。
+     只是给用户看位置挤不挤、会不会打架，确认后整段删掉。
+     开关：window.__DEMO_GROW = false 关闭 */
+
+  if (window.__DEMO_GROW !== false) {
+    // 造出来的分类，每个自己有个计数器
+    const catNames = ['抖音', 'B站', '知乎', '微博', '小红书', '播客', '游戏', '小说', '日记本', '相册', '代码库', '歌单'];
+    let catIdx = 0;
+    const grown = [];        // [{ label, kind, count }]
+
+    // ① 每 2 秒：新增大分类
     setInterval(() => {
-      // 只在星图页、且已经载入数据时才演示
       if (currentView !== 'starmap' || !nodes.length) return;
-      if (demoN >= 12) return;                 // 加 12 颗就停，别把图塞爆
-      demoN++;
-      const anchors = nodes.filter(n => n.k === 'rule');
-      const anchor = anchors.length
-        ? anchors[demoN % anchors.length]
-        : nodes[demoN % nodes.length];
-      if (!anchor) return;
-      const id = 'DEMO-' + Date.now();
+      if (catIdx >= catNames.length) return;
+      const label = catNames[catIdx];
+      const kind = 'demo_cat_' + catIdx;
+      catIdx++;
+
+      // 先把中文名登记好，再建星 —— 否则标签会先读到 demo_cat_N
+      KIND_CN[kind] = label;
+
+      // 第一颗星 = 这个分类的种子
+      const seedAnchor = nodes.find(n => n.k === 'said') || nodes[0];
+      const id = 'GROW-' + kind + '-0';
       addStarToScene({
-        id,
-        kind: 'rule',
-        text: '★ 演示新星 #' + demoN + '（3 秒一颗）',
+        id, kind,
+        text: '【' + label + '】第 1 条',
         ts: new Date().toISOString(),
         date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
-        importance: 5,
-        topic: '',
-      }, [{ source: id, target: anchor.id, cos: 0.95 }]);
-    }, 3000);
+        importance: 4, topic: label,
+      }, [{ source: id, target: seedAnchor.id, cos: 0.5 }]);
+
+      grown.push({ label, kind, count: 1 });
+    }, 2000);
+
+    // ② 每 1 秒：每个已有分类长一颗小星
+    setInterval(() => {
+      if (currentView !== 'starmap' || !nodes.length) return;
+      if (!grown.length) return;
+      // 轮流给各个分类加星，避免每轮所有分类同时暴涨
+      for (const g of grown) {
+        if (g.count >= 8) continue;          // 每个分类最多 8 颗星，别无限涨
+        g.count++;
+        const id = 'GROW-' + g.kind + '-' + g.count;
+        // 锚定到本分类里已有的星（取最后一颗）
+        const same = nodes.filter(n => n.k === g.kind);
+        const anchor = same[same.length - 1] || nodes[0];
+        addStarToScene({
+          id, kind: g.kind,
+          text: '【' + g.label + '】第 ' + g.count + ' 条',
+          ts: new Date().toISOString(),
+          date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
+          importance: 3.5, topic: g.label,
+        }, [{ source: id, target: anchor.id, cos: 0.8 }]);
+      }
+    }, 1000);
   }
 }
 
@@ -5108,18 +5139,55 @@ function registerNewNodeToCluster(i) {
 
   /* 2) 全新分类 → 现场在球壳上找个空位放一颗分类星。
         做法：按已有的分类数算黄金角，插在空隙里，不重排旧的。 */
-  const gs = CL_LABEL_IDX.size + 1;
+  /* 位置：把第 gi 个点按斐波那契球面铺开。
+     ⚠️ gi 必须是一个只增不减的全局计数器 ——
+     如果拿 CL_LABEL_IDX.size 现算，连续新建时算出来的角度会撞
+     （实测前两个分类距离是 0，完全重叠）。 */
+  if (typeof CORE.clusterSeq !== 'number') CORE.clusterSeq = CL_LABEL_IDX.size;
+  const gi = CORE.clusterSeq++;
+
   const GOLD = Math.PI * (3 - Math.sqrt(5));
-  const gi = gs - 1;
-  const t = (gi + 0.5) / Math.max(2, gs);
+  // 分类越多，壳撑得越大，否则一挤就重叠
+  const nCat = CL_LABEL_IDX.size + 1;
+  const shell = 0.80 * (1 + 0.55 * Math.pow(Math.max(0, nCat - 5) / 15, 0.7));
+  const rr = shell * 0.86;
+
+  /* 纬度分布：用 gi 对"预计总数"取模做螺旋，不能直接 gi/gs ——
+     gi 是只增计数器，会比当前分类数还大，那样 t 会超过 1 被夹到顶，
+     所有新分类就全挤在球顶端了（第一次实跑就是这样）。
+     这里改成让点在 0..1 之间持续螺旋上升，转满一轮再从头。 */
+  const SPIRAL_N = 26;                     // 一圈容纳多少个分类
+  const tRaw = (gi % SPIRAL_N) / SPIRAL_N; // 0..1 之间循环
+  // 加一个 +0.5 的偏移让每轮错开，避免第二轮和第一轮完全重合
+  const layer = Math.floor(gi / SPIRAL_N); // 第几圈
+  const t = Math.min(1, Math.max(0, tRaw + (layer % 2) * 0.5 / SPIRAL_N));
   const uy = 1 - 2 * t;
   const ring = Math.sqrt(Math.max(0, 1 - uy * uy));
   const ang = GOLD * gi;
-  const R = 0.80;
-  const rr = R * 0.86;
-  const cxx = Math.cos(ang) * ring * rr;
-  const cyy = uy * rr * 0.72;
-  const czz = Math.sin(ang) * ring * rr;
+  // 第二圈起把半径稍微缩一点，错开层次
+  const rr2 = rr * (1 - 0.10 * Math.min(3, layer));
+  let cxx = Math.cos(ang) * ring * rr2;
+  let cyy = uy * rr2 * 0.72;
+  let czz = Math.sin(ang) * ring * rr2;
+
+  /* 最小间距排斥：如果落点和已有分类太近（<0.22），
+     沿着"从球心往外"的方向把它推出去一点，直到不挤为止。 */
+  const MIN_SEP = 0.22;
+  for (let iter = 0; iter < 12; iter++) {
+    let moved = false;
+    for (const c of clusterInfo) {
+      const d = Math.hypot(cxx - c.x, cyy - c.y, czz - c.z);
+      if (d >= MIN_SEP) continue;
+      const len = Math.hypot(cxx, cyy, czz) || 1;
+      // 优先沿球面法向外推；同向则横向错开
+      const push = (MIN_SEP - d) * 0.85;
+      cxx += (cxx - c.x) / (d || 1) * push + (cxx / len) * push * 0.4;
+      cyy += (cyy - c.y) / (d || 1) * push + (cyy / len) * push * 0.4;
+      czz += (czz - c.z) / (d || 1) * push + (czz / len) * push * 0.4;
+      moved = true;
+    }
+    if (!moved) break;
+  }
 
   const sz = Math.sqrt(Math.max(1, N));
   const rad = 0.052 + 0.100 * Math.sqrt(1 / sz);
