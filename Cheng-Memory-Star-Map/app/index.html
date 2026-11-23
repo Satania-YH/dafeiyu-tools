@@ -100,8 +100,9 @@
   }
 
   .sb-inner{
-    display:flex; align-items:center; gap:9px; height:38px; padding:0 13px;
-    border-radius:11px;
+    /* 高度和底部播放条对齐（播放条 = 36px 轨道 + 7/9px 内边距 + 2px 边框 = 54px） */
+    display:flex; align-items:center; gap:9px; height:54px; padding:0 15px;
+    border-radius:12px;
     /* 透明底：几乎不挡星图，只靠一圈细边和轻微模糊区分层次 */
     background:rgba(10,15,26,.34);
     border:1px solid rgba(140,170,255,.16);
@@ -121,14 +122,14 @@
   }
 
   .sb-ico{
-    flex:none; font-size:15px; color:#6d7b9a; line-height:1;
+    flex:none; font-size:17px; color:#6d7b9a; line-height:1;
     transition:color .2s;
   }
   #searchBox.focus .sb-ico{ color:#9fb8e8; }
 
   #sbInput{
     flex:1; min-width:0; height:100%; border:none; outline:none; background:transparent;
-    color:#dbe6fa; font-size:12.5px; font-family:inherit; letter-spacing:.02em;
+    color:#dbe6fa; font-size:13.5px; font-family:inherit; letter-spacing:.02em;
   }
   #sbInput::placeholder{ color:#5a6a88; }
   #sbInput::-webkit-search-cancel-button{ display:none; }
