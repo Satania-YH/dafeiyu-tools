@@ -4912,6 +4912,34 @@ function initLive() {
   });
 
   live.connect();
+
+  /* ══ 临时演示：每 3 秒放一颗新星，看加入效果 ══
+     只是给用户看效果用的，确认满意后整段删掉即可。
+     为了看得清，故意挑「规则」那片（只有 3 颗星，很空）。 */
+  if (window.__DEMO_NEW_STAR !== false) {
+    let demoN = 0;
+    setInterval(() => {
+      // 只在星图页、且已经载入数据时才演示
+      if (currentView !== 'starmap' || !nodes.length) return;
+      if (demoN >= 12) return;                 // 加 12 颗就停，别把图塞爆
+      demoN++;
+      const anchors = nodes.filter(n => n.k === 'rule');
+      const anchor = anchors.length
+        ? anchors[demoN % anchors.length]
+        : nodes[demoN % nodes.length];
+      if (!anchor) return;
+      const id = 'DEMO-' + Date.now();
+      addStarToScene({
+        id,
+        kind: 'rule',
+        text: '★ 演示新星 #' + demoN + '（3 秒一颗）',
+        ts: new Date().toISOString(),
+        date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
+        importance: 5,
+        topic: '',
+      }, [{ source: id, target: anchor.id, cos: 0.95 }]);
+    }, 3000);
+  }
 }
 
 /** 更新「上次更新 X 分钟前」 */
@@ -4986,6 +5014,15 @@ function addStarToScene(node, edges) {
   });
   N = nodes.length;
 
+  /* proj 是按 N 一次性分配的，新星进来后 N 变大了就必须扩容，
+     否则绘制时 proj[N*4] 越界得到 undefined —— 新星根本画不出来。
+     （之前的"看不到新星"就是这个原因，不是落点问题） */
+  if (proj.length < N * 4) {
+    const bigger = new Float32Array(N * 4);
+    bigger.set(proj);
+    proj = bigger;
+  }
+
   // 新边（前端格式是 {a, b, w} 索引）
   for (const e of (edges || [])) {
     const a = nodes.findIndex(n => n.id === e.source);
@@ -4997,8 +5034,74 @@ function addStarToScene(node, edges) {
   if (typeof buildAdj === 'function') buildAdj();
   if (typeof buildFlowList === 'function') buildFlowList();
   if (typeof tbExtendForNew === 'function') tbExtendForNew();   // 滑条槽位跟着扩，别重排
+
+  /* ══ 分类星：只补差量 ══
+     新星归进已有分类 → 更新那个标签的条数（原来 count 是快照，永远不变）；
+     是全新分类 → 现场算一个位置放一颗分类星，不重排已有的。 */
+  if (typeof registerNewNodeToCluster === 'function') registerNewNodeToCluster(nodes.length - 1);
+
   if (typeof updateHud === 'function') updateHud();
   if (typeof toast === 'function') toast(`新记忆：${(node.text || '').slice(0, 20)}…`);
+}
+
+/* 把新加入的节点登记到分类里（只补差量，不动已有布局） */
+function registerNewNodeToCluster(i) {
+  const n = nodes[i];
+  if (!n) return;
+
+  // 只对「分区」形态有效——其他形态的分类标签来自 EVOLVE，语义不同
+  if (baseShape() !== 'cluster') return;
+
+  const kindKey = n.k || 'fact';
+  const label = KIND_CN[kindKey] || kindKey;
+
+  // 1) 已有这个分类 → 条数 +1，索引表追加
+  const idxList = CL_LABEL_IDX.get(label);
+  if (idxList) {
+    idxList.push(i);
+    const info = clusterInfo.find(c => c.label === label);
+    if (info) info.count = idxList.length;
+    // 星团半径稍微撑大一点点，因为装的东西多了
+    if (info) {
+      const sz = Math.sqrt(Math.max(1, N));
+      info.rad = 0.052 + 0.100 * Math.sqrt(idxList.length / sz);
+    }
+    return;
+  }
+
+  /* 2) 全新分类 → 现场在球壳上找个空位放一颗分类星。
+        做法：按已有的分类数算黄金角，插在空隙里，不重排旧的。 */
+  const gs = CL_LABEL_IDX.size + 1;
+  const GOLD = Math.PI * (3 - Math.sqrt(5));
+  const gi = gs - 1;
+  const t = (gi + 0.5) / Math.max(2, gs);
+  const uy = 1 - 2 * t;
+  const ring = Math.sqrt(Math.max(0, 1 - uy * uy));
+  const ang = GOLD * gi;
+  const R = 0.80;
+  const rr = R * 0.86;
+  const cxx = Math.cos(ang) * ring * rr;
+  const cyy = uy * rr * 0.72;
+  const czz = Math.sin(ang) * ring * rr;
+
+  const sz = Math.sqrt(Math.max(1, N));
+  const rad = 0.052 + 0.100 * Math.sqrt(1 / sz);
+
+  const color = themeRGB.kinds[kindKey] || themeRGB.nebula;
+
+  clusterInfo.push({
+    x: cxx, y: cyy, z: czz, rad,
+    gi: gi,
+    label, count: 1, color,
+  });
+  CL_LABEL_IDX.set(label, [i]);
+
+  // 新分类星的位置直接给这颗星，不用等下一帧
+  n.tx = cxx * OPTS.spread;
+  n.ty = cyy * OPTS.spread;
+  n.tz = czz * OPTS.spread;
+
+  if (typeof toast === 'function') toast(`新分类：${label}`);
 }
 
 /** 时间轴追加一条（不重载整个列表） */
