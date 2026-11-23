@@ -2695,8 +2695,21 @@ function draw(){
     let alpha = depthA * confA * (0.55 + 0.45*OPTS.glow) * v;
     if (n.arch) alpha *= 0.35;
     if (focus>=0 && i!==focus && !focusSet.has(i)) alpha *= 0.42;
+
+    /* 新推来的星要"跳出来"一下，否则它悄悄出现在星团里根本看不见。
+       freshAt 是加入时刻：前 0.5 秒放大 1.9 倍并加白光晕，2.4 秒内收回。
+       （之前 freshAt 只在加入时写了个值，绘制逻辑没读它 —— 白记了。） */
+    const ageMs = n.freshAt ? (Date.now() - n.freshAt) : 1e9;
+    const isNew = ageMs < 2400;
+    const newPulse = isNew ? Math.max(0, 1 - ageMs / 2400) : 0;
+
     // 刚长出来的星：多一层白热光晕，1.2 秒内逐渐收回
-    const flash = (v > 0.01 && v < 0.999) ? (1 - v) : 0;
+    const flash = Math.max(
+      (v > 0.01 && v < 0.999) ? (1 - v) : 0,
+      newPulse * 1.6
+    );
+    if (isNew) size *= 1 + 0.9 * newPulse;
+    alpha = Math.min(1, alpha * (isNew ? (0.7 + 0.3 * (1 - newPulse)) : 1) + newPulse * 0.5);
 
     const big = !n.disk && OPTS.fx.rays && (n.ball || size > 6.0 || imp > 0.62);
     const spr = big ? (sprites[n.k] || sprites.__miss) : (spritesDim[n.k] || spritesDim.__miss);
@@ -4927,9 +4940,13 @@ function addStarToScene(node, edges) {
     const anchorId = best.source === node.id ? best.target : best.source;
     const anchor = nodes.find(n => n.id === anchorId);
     if (anchor) {
-      px = anchor.px + (Math.random() - 0.5) * 0.06;
-      py = anchor.py + (Math.random() - 0.5) * 0.06;
-      pz = anchor.pz + (Math.random() - 0.5) * 0.06;
+      /* 偏移量要够大才看得见。原来 0.06 实际只偏 0.02~0.03，
+         而星星离中心普遍 0.5~0.9，新星等于贴在邻居身上，肉眼分不出。
+         改成 0.16（实际偏 0.05~0.08），能看清是颗新星，又仍在同一团里。 */
+      const sp = 0.16;
+      px = anchor.px + (Math.random() - 0.5) * sp;
+      py = anchor.py + (Math.random() - 0.5) * sp;
+      pz = anchor.pz + (Math.random() - 0.5) * sp;
     }
   }
 
