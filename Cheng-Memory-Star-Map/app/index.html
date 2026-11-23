@@ -2767,6 +2767,20 @@ function extraEdges(i){
 }
 
 /* ---------------- 交互 ---------------- */
+
+/* ── 自转的"让手"机制 ──
+   一直在转的话根本点不中星星。所以：
+   - 任何一次交互（拖动/滚轮/点星/悬停命中）都刷新 lastInteractAt
+   - 交互后 SPIN_HOLD_MS(3秒) 内完全不转
+   - 之后再用 SPIN_RAMP_MS(1.2秒) 平滑加速回去，不是"啪"一下开始转 */
+let lastInteractAt = -1e9;          // 上次动手的时间（performance.now）
+const SPIN_HOLD_MS = 3000;          // 停手多久后开始恢复
+const SPIN_RAMP_MS = 1200;          // 恢复用了多久（渐入）
+
+function touchInteraction(){
+  lastInteractAt = performance.now();
+}
+
 /* 拾取：mx/my 是视口坐标（clientX/clientY），
    而 labelsCv 里存的是画布内坐标 —— 必须先减掉画布在页面里的偏移，
    否则整张图会偏掉（左侧导航 186px、顶部标题栏 52px），
@@ -2786,6 +2800,7 @@ function pick(clientX, clientY){
 
 stage.addEventListener('pointerdown', e=>{
   if (e.target !== cv) return;
+  touchInteraction();                 // 一按下就停转，别让它边转边被拖
   if (e.button === 1){ panning = true; lastX=e.clientX; lastY=e.clientY; e.preventDefault(); stage.classList.add('panning'); return; }
   dragging = true; lastX=e.clientX; lastY=e.clientY; stage.classList.add('dragging');
 });
@@ -2795,6 +2810,7 @@ stage.addEventListener('pointermove', e=>{
     const dx=e.clientX-lastX, dy=e.clientY-lastY;
     lastX=e.clientX; lastY=e.clientY;
     panX += dx; panY += dy;
+    touchInteraction();
     return;
   }
   if (dragging){
@@ -2802,6 +2818,7 @@ stage.addEventListener('pointermove', e=>{
     lastX=e.clientX; lastY=e.clientY;
     yaw += dx*0.006;
     pitch = Math.max(-1.35, Math.min(1.35, pitch + dy*0.005));
+    touchInteraction();
     return;
   }
   // 鼠标在搜索框上时不做拾取，避免背后星图的提示气泡乱弹
@@ -2812,6 +2829,7 @@ stage.addEventListener('pointermove', e=>{
   }
   const i = pick(e.clientX, e.clientY);
   hovered = i;
+  if (i >= 0 || i === -2) touchInteraction();   // 悬停到星星上：先停下，好点
   // 气泡是 fixed 定位，边界要用视口宽高来夹，不能用画布的 W/H
   const VW = window.innerWidth, VH = window.innerHeight;
   const putTip = () => {
@@ -2838,6 +2856,7 @@ stage.addEventListener('wheel', e=>{
   // 在搜索框 / 搜索结果里滚轮应该滚列表，不是缩放星图
   if (e.target.closest && e.target.closest('#searchBox')) return;
   e.preventDefault();
+  touchInteraction();
   zoom *= (e.deltaY>0 ? 0.92 : 1.08);
   zoom = Math.max(0.45, Math.min(4.5, zoom));
 }, {passive:false});
@@ -2847,6 +2866,7 @@ stage.addEventListener('dblclick', ()=>{
 stage.addEventListener('click', e=>{
   if (e.target !== cv) return;
   if (dragging) return;
+  touchInteraction();
   const i = pick(e.clientX, e.clientY);
   if (i >= 0 || i === -2) openCard(i); else closeCard();
 });
@@ -3431,8 +3451,14 @@ function loop(t){
     }
     if (++spriteTick % 6 === 0) initSprites();
 
-    // 分区形态也转了：团心散在三维壳上，转起来才看得出前后层次
-    if (!dragging && OPTS.autoRotate) yaw += OPTS.autoRotate*0.001*dt;
+    /* 自转：动过手就停，停手 3 秒后慢慢恢复。
+       规则——拖动/缩放/点星/悬停命中，任何一次交互都重置计时；
+       计时没到就一直不转，免得"想点它却一直在跑"。 */
+    const idleMs = performance.now() - lastInteractAt;
+    const calm = Math.max(0, Math.min(1, (idleMs - SPIN_HOLD_MS) / SPIN_RAMP_MS));
+    if (!dragging && OPTS.autoRotate && calm > 0) {
+      yaw += OPTS.autoRotate * 0.001 * dt * calm;
+    }
     // 设置页盖住时不用画，省 CPU（切回来第一帧照常）
     if (currentView !== 'settings') draw();
   } catch (err) {
