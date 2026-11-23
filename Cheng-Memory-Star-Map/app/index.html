@@ -1848,6 +1848,18 @@ const CORE = {
   t0: null,        // 首次绘制的时间戳：光芒从正十字开始游走，不接着上次的相位
 };
 
+/* 平滑噪声：把正弦堆在一起，得到"无周期感"的平滑随机。
+   纯 sin 会有明显的机械节奏；这个函数出来的是连续、不可预测的起伏。 */
+function smoothNoise(x, seed) {
+  // 4 个不可公约的频率，加权叠加
+  return (
+    Math.sin(x * 1.0000 + seed * 1.7) * 0.42 +
+    Math.sin(x * 2.3184 + seed * 3.1) * 0.28 +
+    Math.sin(x * 4.7613 + seed * 5.9) * 0.18 +
+    Math.sin(x * 8.1274 + seed * 9.3) * 0.12
+  );
+}
+
 function makeBlob(size, stops){
   // 生成一个边缘完全软化的径向光斑；stops = [[位置, 'rgba(...)'], ...]
   const c = document.createElement('canvas');
@@ -1907,14 +1919,12 @@ function drawCoreStar(ctx){
 
   const T = tNow * 0.001;
 
-  /* —— 呼吸：两个周期叠加，避免机械脉动。——
-     幅度给足：涨缩两成、亮度近一倍，肉眼一眼就能看出"在呼吸"；
-     慢一点（11 秒 + 33 秒），像真的在喘气，不像在闪。 */
-  const b1 = Math.sin(T * 0.55);                 // 主呼吸，约 11.4 秒一次
-  const b2 = Math.sin(T * 0.19 + 1.7);           // 慢起伏，约 33 秒一次
-  const breathe = 0.5 + 0.34*b1 + 0.16*b2;       // 大致落在 -0.0 .. 1.0
-  /* 收进 0.28..1：呼气到底也还留着一团光，不会整块消失 */
-  const bi = 0.28 + 0.72*Math.max(0, Math.min(1, breathe));
+  /* —— 呼吸 ——
+     用平滑噪声而不是固定正弦：真实的光不会精确地按 11 秒一次起伏，
+     呼吸间隔、深浅都该有点不一样，才不像机器。 */
+  const breathe = 0.5 + 0.5 * smoothNoise(T * 0.52, 1.0);
+  /* 收进 0.24..1：呼气到底也还留着一团光，不会整块消失 */
+  const bi = 0.24 + 0.76 * breathe;
 
   /* 太阳的结构：一个紧凑的亮球 + 一圈不夸张的冕 + 短光芒。
      关键是"日面"半径要小而实，光晕只在它外面薄薄一层，
@@ -1935,17 +1945,21 @@ function drawCoreStar(ctx){
   ctx.globalAlpha = 0.80 + 0.20*bi;
   ctx.drawImage(CORE.soft, x - discR/2, y - discR/2, discR, discR);
 
-  /* 3) 表面翻腾：两个刚过日面的亮区缓慢移动，太阳表面那种不均匀 */
-  const orbs = 3;
+  /* 3) 表面翻腾：几块亮区在日面上缓慢游移，太阳表面那种不均匀。
+     位置、大小、亮度各用不同种子的噪声驱动 —— 没有共同节拍，
+     所以看着是"在对流"，不是几个圆在整齐地绕圈。 */
+  const orbs = 4;
   for (let k=0; k<orbs; k++){
-    const dir = (k % 2) ? -1 : 1;
-    const a = T*0.20*dir + k*2.1;
-    const wob = Math.sin(T*0.37 + k*2.3);
-    const reach = 0.30 + 0.16*bi;
-    const ox = x + Math.cos(a) * R*reach * (0.7 + 0.3*wob);
-    const oy = y + Math.sin(a*0.83 + k) * R*reach*0.82 * (0.7 + 0.3*wob);
-    const orbR = R * (1.10 + 0.22*wob) * scale;
-    ctx.globalAlpha = (0.16 + 0.10*wob) * (0.55 + 0.45*bi);
+    const sd = 20 + k * 8.7;
+    const nx = smoothNoise(T * 0.155, sd);
+    const ny = smoothNoise(T * 0.138, sd + 4.3);
+    const reach = (0.24 + 0.14 * bi) * R;
+    const ox = x + nx * reach;
+    const oy = y + ny * reach * 0.9;
+    const sz = smoothNoise(T * 0.26, sd + 7.9);
+    const orbR = R * (1.02 + 0.26 * sz) * scale;
+    const aa = 0.15 + 0.11 * sz;
+    ctx.globalAlpha = Math.max(0, aa) * (0.55 + 0.45 * bi);
     ctx.drawImage(CORE.soft, ox - orbR/2, oy - orbR/2, orbR, orbR);
   }
 
@@ -1994,7 +2008,7 @@ function drawCoreStar(ctx){
   const T0 = T - CORE.t0;
 
   /* 起点仍是正十字（4 根落在 0/90/180/270），另外两根从 45°/225° 长出来。
-     转动和伸缩都用多频叠加，频率差互不整除，看起来没有周期。 */
+     转动和伸缩都改成噪声驱动：没有共同节拍，所以看不出"机械循环"。 */
   if (!CORE.spikes) {
     CORE.spikes = [];
     for (let k = 0; k < N_SPIKE; k++) {
@@ -2004,17 +2018,9 @@ function drawCoreStar(ctx){
         : (Math.PI / 4) + (k - 4) * Math.PI;
       CORE.spikes.push({
         base,
-        // 角度漂移：三个互不相关的频率
-        wA: [0.19 + k*0.031, 0.071 + k*0.017, 0.043 + k*0.011],
-        phA: [k*1.7, k*3.1 + 0.9, k*5.3 + 2.2],
-        ampA: [0.42, 0.26, 0.18],       // rad，三层加起来约 ±50°
-        // 伸缩：三频，整体慢一档，收缩不至于太急。
-        // 后两根（斜对角）给更大的相位偏移，免得跟正十字那四根同步。
-        wL: [(2.05 + k*0.31) * 0.62, (3.37 + k*0.43) * 0.52, (0.87 + k*0.11) * 0.70],
-        phL: [k*2.3 + 0.4 + (k >= 4 ? 2.4 : 0),
-              k*1.1 + 2.7 + (k >= 4 ? 1.6 : 0),
-              k*4.9 + 1.3 + (k >= 4 ? 0.9 : 0)],
-        ampL: [0.55, 0.28, 0.17],
+        seedA: 40 + k * 11.3,          // 角度噪声种子
+        seedL: 90 + k * 13.7,          // 伸缩噪声种子
+        seedB: 140 + k * 17.1,         // 亮度噪声种子（和长度解耦）
       });
     }
   }
@@ -2027,19 +2033,13 @@ function drawCoreStar(ctx){
   for (let k = 0; k < N_SPIKE; k++) {
     const s = CORE.spikes[k];
 
-    // 角度：三频叠加，再减掉 T0=0 的值，保证开局是正十字
-    let drift = 0, drift0 = 0;
-    for (let j = 0; j < 3; j++) {
-      drift  += s.ampA[j] * Math.sin(T0 * s.wA[j] + s.phA[j]);
-      drift0 += s.ampA[j] * Math.sin(s.phA[j]);
-    }
+    // 角度：噪声驱动，减掉 T0=0 的值保证开局是正十字
+    const drift  = smoothNoise(T0 * 0.19, s.seedA) * 0.72;
+    const drift0 = smoothNoise(0, s.seedA) * 0.72;
     const ang = s.base + globalSpin + (drift - drift0);
 
-    // 长度：三频叠加，快速又不规律
-    let wave = 0;
-    for (let j = 0; j < 3; j++) {
-      wave += s.ampL[j] * Math.sin(T * s.wL[j] + s.phL[j]);
-    }
+    // 长度：独立种子的噪声，跟角度不同步
+    const wave = smoothNoise(T * 0.62, s.seedL);
     const raw = Math.max(0, Math.min(1, 0.5 + 0.5 * wave));
 
     /* 缩成"无"用的是一道软门槛：
@@ -2047,7 +2047,11 @@ function drawCoreStar(ctx){
        中间平滑过渡，所以是"慢慢缩没了/慢慢长出来"，不是忽然闪断。 */
     const gate = Math.max(0, Math.min(1, (raw - 0.42) / 0.20));
     const shaped = gate * gate * (3 - 2 * gate);     // smoothstep
-    plan.push({ ang, gate, shaped });
+
+    // 亮度：再来一条独立噪声，跟长度不完全同步 —— 这样不会"一长就亮一短就暗"
+    const bright = 0.72 + 0.28 * smoothNoise(T * 0.83, s.seedB);
+
+    plan.push({ ang, gate, shaped, bright });
   }
 
   /* ── 第二步：角度避让 ──
@@ -2081,7 +2085,7 @@ function drawCoreStar(ctx){
     if (p.gate <= 0.001) continue;                     // 这根刺此刻不存在
 
     const len = R * (0.68 + 0.34 * p.shaped) * scale;
-    const amp2 = (0.02 + 0.32 * p.shaped) * (0.60 + 0.40 * bi);
+    const amp2 = (0.02 + 0.32 * p.shaped) * (0.60 + 0.40 * bi) * p.bright;
     drawSpike(p.ang, len, Math.max(1.1, R * 0.019), amp2);
   }
 
