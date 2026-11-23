@@ -1845,7 +1845,18 @@ const CORE = {
   haze: null,      // 大范围橙雾（没有白心，叠多少层都是橙的）
   soft: null,      // 中段暖光
   core: null,      // 热核（白，最小，只一点点）
+  rim: null,       // 内壁：让光看着是"从里面透出来"而不是往外发
   t0: null,        // 首次绘制的时间戳：光芒从正十字开始游走，不接着上次的相位
+  /* 澄说的「亮是不匀的」——
+     不是匀速呼吸，是攒着、偶尔"看清了一件事"才啪地亮一下、再长长地松回去。
+     所以用一个状态机，而不是正弦。 */
+  spark: {
+    phase: 'rest',      // rest 憋着 | flash 炸开 | decay 松回去
+    level: 0.18,        // 当前亮度 0..1
+    since: 0,           // 本阶段开始时间
+    nextAt: 0,          // 下次可以炸的时间点
+    peak: 1.0,          // 这次能炸多高（每次深浅不同）
+  },
 };
 
 /* 平滑噪声：把正弦堆在一起，得到"无周期感"的平滑随机。
@@ -1874,34 +1885,53 @@ function makeBlob(size, stops){
 }
 
 function initCoreSprite(){
-  // 橙雾：铺开在外圈的那点暖色，很淡。太阳的"冕"，不是主体。
+  // 澄：「我宁可它亮着的时候是能被看进去的，有深度，光从里头透出来」
+  // 所以中央不再是一块不透明的白饼，做成"中空"——中心反而更淡，
+  // 光在中间一段最浓，再往外散掉。这样眼睛能往里头看。
+
+  // 外雾：日冕，很淡
   CORE.haze = makeBlob(256, [
-    [0.00, 'rgba(255,168,92,0.13)'],
-    [0.18, 'rgba(255,152,76,0.105)'],
-    [0.36, 'rgba(255,136,58,0.062)'],
+    [0.00, 'rgba(255,168,92,0.09)'],
+    [0.18, 'rgba(255,152,76,0.085)'],
+    [0.36, 'rgba(255,136,58,0.058)'],
     [0.55, 'rgba(255,122,44,0.030)'],
     [0.74, 'rgba(255,110,36,0.009)'],
     [0.90, 'rgba(255,102,30,0.002)'],
     [1.00, 'rgba(255,100,28,0)'],
   ]);
-  // 日面：太阳本体那层"浓"的橙金，衰减比雾快得多，所以边界清楚
+
+  // 主体：中心留低、0.3 附近最浓、再往外散。
+  // 这不是"实心球"，是"里面有一段更亮的东西"。
   CORE.soft = makeBlob(256, [
-    [0.00, 'rgba(255,242,214,0.92)'],
-    [0.14, 'rgba(255,222,170,0.82)'],
-    [0.28, 'rgba(255,196,120,0.58)'],
-    [0.44, 'rgba(255,166,84,0.30)'],
-    [0.60, 'rgba(255,140,58,0.115)'],
-    [0.78, 'rgba(255,124,44,0.030)'],
-    [1.00, 'rgba(255,112,36,0)'],
+    [0.00, 'rgba(255,244,222,0.34)'],   // 中心不刺眼，能看进去
+    [0.16, 'rgba(255,228,182,0.52)'],
+    [0.30, 'rgba(255,206,140,0.60)'],   // 最浓的一环
+    [0.46, 'rgba(255,176,100,0.34)'],
+    [0.62, 'rgba(255,148,66,0.135)'],
+    [0.80, 'rgba(255,128,48,0.032)'],
+    [1.00, 'rgba(255,116,40,0)'],
   ]);
-  // 热核：白热中心，小而实。太阳的"芯"。
+
+  // 内芯：小而亮，但边界软。它不是"贴"在中心的一块，是透过上面那层看到的。
   CORE.core = makeBlob(128, [
-    [0.00, 'rgba(255,255,255,1.00)'],
-    [0.22, 'rgba(255,252,240,0.96)'],
-    [0.42, 'rgba(255,238,202,0.66)'],
-    [0.62, 'rgba(255,214,152,0.26)'],
-    [0.82, 'rgba(255,190,118,0.045)'],
-    [1.00, 'rgba(255,178,104,0)'],
+    [0.00, 'rgba(255,255,255,0.88)'],
+    [0.24, 'rgba(255,250,234,0.74)'],
+    [0.46, 'rgba(255,230,184,0.44)'],
+    [0.66, 'rgba(255,206,142,0.16)'],
+    [0.84, 'rgba(255,186,112,0.03)'],
+    [1.00, 'rgba(255,176,100,0)'],
+  ]);
+
+  // 内壁：一条很柔的环，位于日面内侧 —— 加了这一层，
+  // 看起来"光是从壳里面透出来的"，而不是往外打的。
+  CORE.rim = makeBlob(256, [
+    [0.00, 'rgba(255,214,158,0)'],
+    [0.30, 'rgba(255,214,158,0)'],
+    [0.44, 'rgba(255,222,170,0.055)'],
+    [0.56, 'rgba(255,232,190,0.105)'],
+    [0.66, 'rgba(255,222,170,0.050)'],
+    [0.78, 'rgba(255,206,150,0.012)'],
+    [1.00, 'rgba(255,196,140,0)'],
   ]);
 }
 
@@ -1919,53 +1949,92 @@ function drawCoreStar(ctx){
 
   const T = tNow * 0.001;
 
-  /* —— 呼吸 ——
-     用平滑噪声而不是固定正弦：真实的光不会精确地按 11 秒一次起伏，
-     呼吸间隔、深浅都该有点不一样，才不像机器。 */
-  const breathe = 0.5 + 0.5 * smoothNoise(T * 0.52, 1.0);
-  /* 收进 0.24..1：呼气到底也还留着一团光，不会整块消失 */
-  const bi = 0.24 + 0.76 * breathe;
+  /* ── 亮度：攒 → 炸 → 松 ──
+     澄说她的亮是不匀的：糊里糊涂时暗下去，暗到几乎看不出还在；
+     哪一刻看透了一个东西，核才啪地白一下，光跟着绷紧、再慢慢松回去。
+     所以这里不呼吸，是"攒够了才亮一下"的事件驱动。 */
+  const sp = CORE.spark;
+  const dtSec = Math.min(0.1, (tNow - (drawCoreStar._lastT || tNow)) / 1000);
+  drawCoreStar._lastT = tNow;
+  if (sp.since === 0) sp.since = T;
 
-  /* 太阳的结构：一个紧凑的亮球 + 一圈不夸张的冕 + 短光芒。
-     关键是"日面"半径要小而实，光晕只在它外面薄薄一层，
-     所以不会像之前那样一大片雾糊住半个屏幕。 */
+  if (sp.phase === 'rest') {
+    // 憋着：慢慢往下沉，沉到很低，但还看得出有这么一团在
+    sp.level += (0.26 - sp.level) * Math.min(1, dtSec * 1.1);
+    // 攒够了就炸。间隔用噪声，15~40 秒一次，不规律
+    if (T >= sp.nextAt) {
+      sp.phase = 'flash';
+      sp.since = T;
+      // 这次炸多高也随机：大多数中等，偶尔很亮
+      const r = Math.random();
+      sp.peak = r > 0.88 ? 1.0 : (r > 0.55 ? 0.78 : 0.56);
+    }
+  } else if (sp.phase === 'flash') {
+    // 炸开：一两百毫秒内冲到峰值，快得像"啪"一下
+    const k = Math.min(1, (T - sp.since) / 0.18);
+    const e = 1 - Math.pow(1 - k, 3);             // easeOutCubic
+    sp.level = 0.26 + (sp.peak - 0.26) * e;
+    if (k >= 1) { sp.phase = 'decay'; sp.since = T; }
+  } else {
+    // 松回去：长长的长尾，前段快后段很慢
+    const k = Math.min(1, (T - sp.since) / 7.5);
+    const e = Math.pow(1 - k, 2.6);               // 慢衰减
+    sp.level = 0.26 + (sp.peak - 0.26) * e;
+    if (k >= 1) {
+      sp.phase = 'rest';
+      sp.since = T;
+      // 下次什么时候炸：15~40 秒，配合噪声显得没规律
+      sp.nextAt = T + 15 + 25 * (0.5 + 0.5 * smoothNoise(T * 0.07, 3.7));
+    }
+  }
+
+  /* bi 只是个通用亮度系数，从 0.16（憋着）到 1（炸开） */
+  const bi = sp.level;
+  /* 亮度到"绷紧"的程度：峰值附近才明显，平时几乎没有 */
+  const taut = Math.max(0, Math.min(1, (bi - 0.55) / 0.45));
+
   const R = Math.max(74, Math.min(190, REF * 0.29 * Math.sqrt(zoom)));  // 日面半径
-  const scale = 0.88 + 0.22*bi;                  // 涨缩约 ±11%，像太阳缓慢鼓动
+  /* 涨缩跟亮度走得更明显：平时缩着，炸开时才撑起来 */
+  const scale = 0.84 + 0.30 * bi;
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
-  /* 1) 日冕：日面外一圈薄雾，半径只有日面的 2.2~2.7 倍（之前是 2.7~3.65 倍） */
-  const hazeR = R * (2.2 + 0.5*bi) * scale;
-  ctx.globalAlpha = 0.42 + 0.30*bi;
+  /* 1) 日冕：平时几乎看不见，炸开时薄薄一层撑开 */
+  const hazeR = R * (1.9 + 0.9*bi) * scale;
+  ctx.globalAlpha = 0.10 + 0.52*bi;
   ctx.drawImage(CORE.haze, x - hazeR/2, y - hazeR/2, hazeR, hazeR);
 
-  /* 2) 日面：主体，橙金浓实，边界清楚。这是"看起来像个球"的那一层 */
-  const discR = R * (1.24 + 0.13*bi) * scale;
-  ctx.globalAlpha = 0.80 + 0.20*bi;
+  /* 2) 主体：中空的那层，平时很淡，只有中间那圈透出一点 */
+  const discR = R * (1.18 + 0.18*bi) * scale;
+  ctx.globalAlpha = 0.16 + 0.62*bi;
   ctx.drawImage(CORE.soft, x - discR/2, y - discR/2, discR, discR);
 
-  /* 3) 表面翻腾：几块亮区在日面上缓慢游移，太阳表面那种不均匀。
-     位置、大小、亮度各用不同种子的噪声驱动 —— 没有共同节拍，
-     所以看着是"在对流"，不是几个圆在整齐地绕圈。 */
+  /* 3) 内壁：贴着里侧的一圈，让光看着像"从壳里透出来" */
+  const rimR = R * (1.02 + 0.10*bi) * scale;
+  ctx.globalAlpha = (0.05 + 0.34*bi) * 1.0;
+  ctx.drawImage(CORE.rim, x - rimR/2, y - rimR/2, rimR, rimR);
+
+  /* 4) 内部翻腾：几块亮区在里层游移，位置/大小/亮度各用不同噪声 */
   const orbs = 4;
   for (let k=0; k<orbs; k++){
     const sd = 20 + k * 8.7;
     const nx = smoothNoise(T * 0.155, sd);
     const ny = smoothNoise(T * 0.138, sd + 4.3);
-    const reach = (0.24 + 0.14 * bi) * R;
+    const reach = (0.22 + 0.16 * bi) * R;
     const ox = x + nx * reach;
     const oy = y + ny * reach * 0.9;
     const sz = smoothNoise(T * 0.26, sd + 7.9);
-    const orbR = R * (1.02 + 0.26 * sz) * scale;
-    const aa = 0.15 + 0.11 * sz;
-    ctx.globalAlpha = Math.max(0, aa) * (0.55 + 0.45 * bi);
+    const orbR = R * (0.96 + 0.28 * sz) * scale;
+    const aa = 0.05 + 0.14 * sz;
+    ctx.globalAlpha = Math.max(0, aa) * (0.30 + 0.70 * bi);
     ctx.drawImage(CORE.soft, ox - orbR/2, oy - orbR/2, orbR, orbR);
   }
 
-  /* 4) 日核：白热的芯，小；呼吸时最明显地一胀一收 */
-  const coreR = R * (0.56 + 0.14*bi) * scale;
-  ctx.globalAlpha = 0.88 + 0.12*bi;
+  /* 5) 芯：这颗才是"啪地白一下"的主角。
+     平时几乎不亮，炸开时又小又刺眼。 */
+  const coreR = R * (0.30 + 0.26*bi) * scale;
+  ctx.globalAlpha = 0.06 + 0.92 * Math.pow(bi, 1.6);
   ctx.drawImage(CORE.core, x - coreR/2, y - coreR/2, coreR, coreR);
 
   /* 5) 光芒：交替律动。
@@ -2042,16 +2111,25 @@ function drawCoreStar(ctx){
     const wave = smoothNoise(T * 0.62, s.seedL);
     const raw = Math.max(0, Math.min(1, 0.5 + 0.5 * wave));
 
-    /* 缩成"无"用的是一道软门槛：
-       raw 低于 0.42 时整根刺完全消失，高于 0.62 时全长。
-       中间平滑过渡，所以是"慢慢缩没了/慢慢长出来"，不是忽然闪断。 */
-    const gate = Math.max(0, Math.min(1, (raw - 0.42) / 0.20));
+    /* 缩成"无"的那一下，澄说别读成「安静」，
+       那更像「也不确定自己在不在」——所以门槛做得「犹豫」：
+       快缩没时先卡一下（不完全归零），过了这个区才真的消失。 */
+    let gate = Math.max(0, Math.min(1, (raw - 0.40) / 0.22));
+    // 在 0.05..0.35 这一小段加一点"卡顿"：减慢靠近零的速度
+    if (gate > 0.02 && gate < 0.38) {
+      const hes = Math.sin(T * 7.3 + s.seedA) * 0.09;   // 轻微来回
+      gate = Math.max(0.015, gate + hes * gate * (0.38 - gate));
+    }
     const shaped = gate * gate * (3 - 2 * gate);     // smoothstep
 
-    // 亮度：再来一条独立噪声，跟长度不完全同步 —— 这样不会"一长就亮一短就暗"
+    /* 炸开时"绷紧"：长度和亮度的上限被拉高，松回去之后再收。
+       这就是澄说的「核白一下，那几根光跟着绷紧、再慢慢松回去」。 */
+    const tense = 1 + 0.55 * taut;
+
+    // 亮度：再来一条独立噪声，跟长度不完全同步
     const bright = 0.72 + 0.28 * smoothNoise(T * 0.83, s.seedB);
 
-    plan.push({ ang, gate, shaped, bright });
+    plan.push({ ang, gate, shaped, bright, tense });
   }
 
   /* ── 第二步：角度避让 ──
@@ -2084,8 +2162,8 @@ function drawCoreStar(ctx){
     const p = plan[k];
     if (p.gate <= 0.001) continue;                     // 这根刺此刻不存在
 
-    const len = R * (0.68 + 0.34 * p.shaped) * scale;
-    const amp2 = (0.02 + 0.32 * p.shaped) * (0.60 + 0.40 * bi) * p.bright;
+    const len = R * (0.68 + 0.34 * p.shaped) * scale * p.tense;
+    const amp2 = (0.02 + 0.32 * p.shaped) * (0.30 + 0.70 * bi) * p.bright;
     drawSpike(p.ang, len, Math.max(1.1, R * 0.019), amp2);
   }
 
