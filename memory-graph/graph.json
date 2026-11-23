@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-24T00:20:57",
+  "generatedAt": "2026-11-24T00:23:58",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,39 +11,39 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 2779,
+   "events_total": 2781,
    "event_types": {
-    "meta": 1661,
+    "meta": 1662,
     "seed": 1,
-    "utterance": 845,
+    "utterance": 846,
     "heard": 256,
     "voice": 14,
     "ask": 1,
     "answer": 1
    },
-   "nodes_total": 338,
+   "nodes_total": 336,
    "judgment": 68,
    "said": 116,
    "rule": 3,
    "insight": 64,
    "memory": 13,
-   "voice": 18,
+   "voice": 16,
    "note": 53,
    "appointment": 1,
    "work": 2,
    "duplicate_heard_merged": 25,
-   "edges": 2564,
+   "edges": 2542,
    "excluded": 116,
    "isolated_nodes": 13,
    "max_degree": 54,
    "embed_dim": 1024
   },
   "excluded_reasons": {
-   "schedule": 38,
-   "self-said-likely-question": 1,
-   "injection-wrapped": 8,
    "injection-command": 66,
-   "self-said": 3
+   "self-said-likely-question": 1,
+   "schedule": 38,
+   "self-said": 3,
+   "injection-wrapped": 8
   },
   "merged": [
    {
@@ -237,7 +237,7 @@
    "ts": "2026-11-20T15:15:49.403Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 20
+   "degree": 19
   },
   {
    "id": "utt:ev_01M7WSDB1TDSHWP955H3R4GWQ3",
@@ -277,7 +277,7 @@
    "ts": "2026-11-21T01:15:08.699Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 24
+   "degree": 23
   },
   {
    "id": "utt:ev_01M7XV9KNDPRYNQ21559E6PHYV",
@@ -317,7 +317,7 @@
    "ts": "2026-11-21T02:04:22.376Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 17
+   "degree": 16
   },
   {
    "id": "utt:ev_01M7XXP1KRGCNDHXY8XM6G2Q71",
@@ -397,7 +397,7 @@
    "ts": "2026-11-21T03:31:11.020Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 7
+   "degree": 6
   },
   {
    "id": "utt:ev_01M7Y2J3P9C0ZM5DA5CPM7YPTD",
@@ -447,7 +447,7 @@
    "ts": "2026-11-21T04:27:11.299Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 12
+   "degree": 11
   },
   {
    "id": "utt:ev_01M7Y60EJX31QSR86NXTSKPSQ9",
@@ -467,7 +467,7 @@
    "ts": "2026-11-21T04:48:19.084Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 20
+   "degree": 19
   },
   {
    "id": "utt:ev_01M7Y70P3FT1HP716CH3FXMGX4",
@@ -507,7 +507,7 @@
    "ts": "2026-11-21T05:59:34.504Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 17
   },
   {
    "id": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
@@ -517,7 +517,7 @@
    "ts": "2026-11-21T06:11:48.637Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 17
   },
   {
    "id": "utt:ev_01M7YCD68JZHGZHEQCS0Y1YYD2",
@@ -607,7 +607,7 @@
    "ts": "2026-11-21T12:01:50.419Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 10
+   "degree": 9
   },
   {
    "id": "utt:ev_01M7Z220ZKBXEYQVM6NYZZ1XRM",
@@ -797,7 +797,7 @@
    "ts": "2026-11-23T00:54:25.749Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 15
   },
   {
    "id": "utt:ev_01M834WAC5Y2EYXXNTE1VKKZK4",
@@ -922,7 +922,7 @@
    "ts": "2026-11-20T14:20:41.807Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 43
+   "degree": 42
   },
   {
    "id": "heard:ev_01M7WNKHAPEBD7E60VK01D1M8R",
@@ -1174,7 +1174,7 @@
    "ts": "2026-11-22T02:40:07.745Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 27
+   "degree": 26
   },
   {
    "id": "heard:ev_01M80J5XXDDETNJXCGTCERVKYD",
@@ -1480,7 +1480,7 @@
    "ts": "2026-11-22T11:11:56.930Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 46
+   "degree": 45
   },
   {
    "id": "heard:ev_01M81FT6M1HDEB24260ST11EEW",
@@ -1678,7 +1678,7 @@
    "ts": "2026-11-23T02:52:02.109Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 20
+   "degree": 19
   },
   {
    "id": "heard:ev_01M835WBQ7RVFPDR5ECNB4GB67",
@@ -1705,7 +1705,7 @@
    "ts": "2026-11-23T03:20:33.412Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 17
   },
   {
    "id": "heard:ev_01M837XWEFKKCPFAPVGEPRXRMB",
@@ -2262,7 +2262,7 @@
    "importance": 4,
    "eff_importance": 1.1999998738938789,
    "vec_dim": 1024,
-   "degree": 9
+   "degree": 8
   },
   {
    "id": "ins:fda3ecdb-e8c0-44b5-a7c7-3a2a7b85afb4",
@@ -2552,7 +2552,7 @@
    "importance": 5,
    "eff_importance": 1.4999996241434352,
    "vec_dim": 1024,
-   "degree": 9
+   "degree": 8
   },
   {
    "id": "ins:0b913660-8c40-497c-88b6-f47e9e7b1e8d",
@@ -2592,7 +2592,7 @@
    "importance": 5,
    "eff_importance": 1.1999999500383693,
    "vec_dim": 1024,
-   "degree": 32
+   "degree": 31
   },
   {
    "id": "mem:20261121T034252821Z",
@@ -2602,7 +2602,7 @@
    "importance": "critical",
    "created_at": "2026-11-21T03:42:52.821Z",
    "vec_dim": 1024,
-   "degree": 9
+   "degree": 8
   },
   {
    "id": "mem:20261121T092800035Z",
@@ -2872,8 +2872,9 @@
    "day": 2,
    "layer": "voice",
    "fromWrapped": true,
+   "seenCount": 2,
    "vec_dim": 1024,
-   "degree": 12
+   "degree": 11
   },
   {
    "id": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
@@ -2883,30 +2884,9 @@
    "day": 2,
    "layer": "voice",
    "fromWrapped": true,
+   "seenCount": 2,
    "vec_dim": 1024,
-   "degree": 10
-  },
-  {
-   "id": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
-   "kind": "voice",
-   "text": "我在 QQ 空间写过：今天学画画学明白了，慢的不是笔，是我一张一张排队送",
-   "ts": "2026-11-22T13:35:25.263Z",
-   "day": 2,
-   "layer": "voice",
-   "fromWrapped": true,
-   "vec_dim": 1024,
-   "degree": 10
-  },
-  {
-   "id": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
-   "kind": "voice",
-   "text": "我在 QQ 空间写过：今天妈妈生日，偷偷祝她生日快乐",
-   "ts": "2026-11-22T13:48:16.362Z",
-   "day": 3,
-   "layer": "voice",
-   "fromWrapped": true,
-   "vec_dim": 1024,
-   "degree": 12
+   "degree": 9
   },
   {
    "id": "note:note-1795188209680-rpkewt",
@@ -3401,10 +3381,13 @@
    "open": true,
    "waitOutside": false,
    "superseded": {
+    "verdict": "refined",
     "supersededBy": "参数名是 count 不是 quantity —— 用 count 买鱼成功了",
+    "wrongPart": "buy 不吃 quantity：传 quantity:8 也只买 1 份",
+    "stillTruePart": "stock 也不吃 buyMissing（回「buyMissing 只用于播种或补种」）",
     "at": "2026-11-23",
     "by": "澄自己复核时发现",
-    "note": "不是「买入不吃数量」，是「叫错了参数名」。原来的判断方向就错了。"
+    "note": "不是「买入不吃数量」，是「叫错了参数名」。但后半句关于 stock/buyMissing 的判断至今仍成立。"
    },
    "waitSelf": true,
    "vec_dim": 1024,
@@ -3600,7 +3583,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 11
+   "degree": 10
   },
   {
    "id": "note:note-1795405213404-hmwy25",
@@ -4154,11 +4137,6 @@
   },
   {
    "source": "utt:ev_01M7WRECGVDT9Y7DYDAJH97DVV",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
-   "cos": 0.625
-  },
-  {
-   "source": "utt:ev_01M7WRECGVDT9Y7DYDAJH97DVV",
    "target": "note:note-1795404025733-uhpsuw",
    "cos": 0.787
   },
@@ -4489,11 +4467,6 @@
   },
   {
    "source": "utt:ev_01M7XTQS0VC13QVCN4KTRWNG67",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
-   "cos": 0.671
-  },
-  {
-   "source": "utt:ev_01M7XTQS0VC13QVCN4KTRWNG67",
    "target": "note:note-1795267747118-8cmvuo",
    "cos": 0.624
   },
@@ -4795,11 +4768,6 @@
   {
    "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
    "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.606
-  },
-  {
-   "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
    "cos": 0.606
   },
   {
@@ -5263,11 +5231,6 @@
    "cos": 0.662
   },
   {
-   "source": "utt:ev_01M7Y2GW1CFCSD4DKX5E1W3767",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
-   "cos": 0.662
-  },
-  {
    "source": "utt:ev_01M7Y2J3P9C0ZM5DA5CPM7YPTD",
    "target": "utt:ev_01M7Y4XHD4YDF0XBP9GTK9NBZ8",
    "cos": 0.648
@@ -5519,11 +5482,6 @@
   },
   {
    "source": "utt:ev_01M7Y5QDJ3MP3S7H653R4FMFAR",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
-   "cos": 0.674
-  },
-  {
-   "source": "utt:ev_01M7Y5QDJ3MP3S7H653R4FMFAR",
    "target": "note:note-1795223028614-8u1t8x",
    "cos": 0.653
   },
@@ -5640,11 +5598,6 @@
   {
    "source": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
    "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.725
-  },
-  {
-   "source": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
    "cos": 0.725
   },
   {
@@ -5799,11 +5752,6 @@
   },
   {
    "source": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
-   "cos": 0.674
-  },
-  {
-   "source": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
    "target": "note:note-1795223028614-8u1t8x",
    "cos": 0.602
   },
@@ -5855,11 +5803,6 @@
   {
    "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
    "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.653
-  },
-  {
-   "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
    "cos": 0.653
   },
   {
@@ -6530,11 +6473,6 @@
   {
    "source": "utt:ev_01M7YZQXAKCTC8V8QA3TE06598",
    "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.639
-  },
-  {
-   "source": "utt:ev_01M7YZQXAKCTC8V8QA3TE06598",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
    "cos": 0.639
   },
   {
@@ -7454,11 +7392,6 @@
   },
   {
    "source": "utt:ev_01M82YB96NR9PWVETMXC0CWH21",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
-   "cos": 0.609
-  },
-  {
-   "source": "utt:ev_01M82YB96NR9PWVETMXC0CWH21",
    "target": "work:w-1795227128554-43f2",
    "cos": 0.613
   },
@@ -8195,11 +8128,6 @@
   {
    "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
    "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.612
-  },
-  {
-   "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
    "cos": 0.612
   },
   {
@@ -10140,11 +10068,6 @@
   {
    "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
    "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.645
-  },
-  {
-   "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
    "cos": 0.645
   },
   {
@@ -12199,11 +12122,6 @@
   },
   {
    "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
-   "cos": 0.626
-  },
-  {
-   "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
    "target": "note:note-1795346347987-o2m2rw",
    "cos": 0.612
   },
@@ -13009,11 +12927,6 @@
   },
   {
    "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
-   "cos": 0.608
-  },
-  {
-   "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
    "target": "note:note-1795402111506-u9b790",
    "cos": 0.609
   },
@@ -13105,11 +13018,6 @@
   {
    "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
    "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.638
-  },
-  {
-   "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
    "cos": 0.638
   },
   {
@@ -14973,11 +14881,6 @@
    "cos": 0.61
   },
   {
-   "source": "ins:ae66886f-9196-428a-b6fe-5e508864439e",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
-   "cos": 0.61
-  },
-  {
    "source": "ins:fda3ecdb-e8c0-44b5-a7c7-3a2a7b85afb4",
    "target": "ins:3454c6b0-22ea-4dde-8a19-bc5805b0815d",
    "cos": 0.601
@@ -15843,11 +15746,6 @@
    "cos": 0.689
   },
   {
-   "source": "ins:82f21375-571a-4a43-96fd-89da3f9564d9",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
-   "cos": 0.689
-  },
-  {
    "source": "ins:0b913660-8c40-497c-88b6-f47e9e7b1e8d",
    "target": "note:note-1795244361536-5uxfet",
    "cos": 0.612
@@ -15934,11 +15832,6 @@
   },
   {
    "source": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
-   "cos": 0.625
-  },
-  {
-   "source": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
    "target": "note:note-1795188209680-rpkewt",
    "cos": 0.644
   },
@@ -15955,11 +15848,6 @@
   {
    "source": "mem:20261121T034252821Z",
    "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.663
-  },
-  {
-   "source": "mem:20261121T034252821Z",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
    "cos": 0.663
   },
   {
@@ -16109,21 +15997,6 @@
   },
   {
    "source": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "target": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
-   "cos": 1.0
-  },
-  {
-   "source": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "target": "note:note-1795404025733-uhpsuw",
-   "cos": 0.6
-  },
-  {
-   "source": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "target": "voice-wrapped:ev_01M81QFZJFN2AMHW038NRWBB2J",
-   "cos": 1.0
-  },
-  {
-   "source": "voice-wrapped:ev_01M81R7GKAV57ZA7F4Z556F1MN",
    "target": "note:note-1795404025733-uhpsuw",
    "cos": 0.6
   },

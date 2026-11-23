@@ -311,12 +311,26 @@ note_nodes=[]; appt_nodes=[]; work_nodes=[]
 # 改了就没法追溯她当时是怎么想的。这里只在导出结果上挂一个纠正标记，
 # 前端把被推翻的星画成"划掉"的样子。
 # ════════════════════════════════════════════════════════════
+# 2026-11-24 澄复核后要求改判法：
+#   「那条的判法要改：不是『已推翻』，是『一半对一半错』。
+#     原文写了两件事：
+#       ·『buy 不吃 quantity：传 quantity:8 也只买 1 份』→ 观察是对的，只是名字叫 count
+#       ·『stock 也不吃 buyMissing（回「buyMissing 只用于播种或补种」）』→ 这条完全正确
+#     现在整颗星划红斜杠，把后半句那句真话也一起划掉了。
+#     该画成半划：只划前半，后半留着。或者 superseded 的 verdict 分 refuted / refined」
+#
+# 所以 verdict 现在是：
+#   refuted  = 整条错了
+#   refined  = 一半对一半错（只划错的那半）
 CORRECTIONS = {
   'note-1795394444145-qa1x4b': {
+    'verdict': 'refined',                      # 不是 refuted
     'supersededBy': '参数名是 count 不是 quantity —— 用 count 买鱼成功了',
+    'wrongPart': 'buy 不吃 quantity：传 quantity:8 也只买 1 份',
+    'stillTruePart': 'stock 也不吃 buyMissing（回「buyMissing 只用于播种或补种」）',
     'at': '2026-11-23',
     'by': '澄自己复核时发现',
-    'note': '不是「买入不吃数量」，是「叫错了参数名」。原来的判断方向就错了。',
+    'note': '不是「买入不吃数量」，是「叫错了参数名」。但后半句关于 stock/buyMissing 的判断至今仍成立。',
   },
 }
 
@@ -386,8 +400,21 @@ for x in (load_json(WORKS, {}).get('items') or []):
     })
 
 # 从注入壳里剥出来的真事，并回原类别（澄：「壳剔掉，里面那件真事放回 voice 或 said」）
-voice_nodes = voice_nodes + voice_nodes_raw
-said_nodes  = said_nodes + said_wrapped
+#
+# 但要按内容去重 —— 2026-11-24 澄复核时抓到：
+#   「那两对副本现在各自成了一颗独立的星——不是合并 + 计数。
+#     同一句话重复，在图上会变成『我说了两遍』，其实只说过一遍。
+#     该合并成 1 颗 + 标『出现过 2 次』。重复本身是信息（强调过），重复的星不是。」
+seen_wrap = {}
+for coll, dst in ((voice_nodes_raw, voice_nodes), (said_wrapped, said_nodes)):
+    for nd in coll:
+        k = norm(nd.get('text') or '')
+        if k in seen_wrap:
+            # 已经在图上了：不新增节点，只加计数
+            seen_wrap[k]['seenCount'] = (seen_wrap[k].get('seenCount') or 1) + 1
+            continue
+        seen_wrap[k] = nd
+        dst.append(nd)
 
 nodes = utt_nodes + said_nodes + rule_nodes + ins_nodes + mem_nodes + voice_nodes       + note_nodes + appt_nodes + work_nodes
 

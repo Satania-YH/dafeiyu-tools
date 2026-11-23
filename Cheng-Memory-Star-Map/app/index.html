@@ -3093,17 +3093,21 @@ function draw(){
       ctx.globalAlpha = Math.min(1, alpha);
     }
 
-    /* 被推翻的知识：画一道斜杠划掉。
-       2026-11-24 澄自己发现的：「qa1x4b『buy 不吃 quantity』是错的——
-       真相是参数名叫 count」。原始记录不改，只在图上标出来。 */
+    /* 被修正的知识：分成「整条错了」和「一半对一半错」两种画法。
+       2026-11-24 澄复核时指出：「不是『已推翻』，是『一半对一半错』…
+         现在整颗星划红斜杠，把后半句那句真话也一起划掉了。」 */
     if (n.superseded){
       const sr = size*1.05 + 4;
-      ctx.globalAlpha = Math.min(1, alpha) * 0.62;
-      ctx.strokeStyle = 'rgba(255,120,120,.85)';
+      ctx.strokeStyle = n.superseded.verdict === 'refuted'
+        ? 'rgba(255,120,120,.85)'      // 整条错：全划
+        : 'rgba(255,170,90,.80)';      // 半对半错：只划一半
       ctx.lineWidth = 1.2;
+      ctx.globalAlpha = Math.min(1, alpha) * 0.62;
       ctx.beginPath();
       ctx.moveTo(x - sr*0.7, y - sr*0.7);
-      ctx.lineTo(x + sr*0.7, y + sr*0.7);
+      // refined 只划到中心，留着另一半（那半是真话）
+      const endF = (n.superseded.verdict === 'refuted') ? 1 : 0.12;
+      ctx.lineTo(x + sr*0.7*endF, y + sr*0.7*endF);
       ctx.stroke();
       ctx.globalAlpha = Math.min(1, alpha);
     }
@@ -3908,9 +3912,13 @@ function openCard(i){
   if (n.k === 'note'){
     push('时间', n.ts ? fmtLocalTs(n.ts, true) : '');
     if (n.superseded){
-      push('已推翻', n.superseded.supersededBy || '—');
+      const v = n.superseded.verdict;
+      push('更正', v === 'refuted' ? '整条已被推翻' : '一半对一半错（只划错的那半）');
+      push('错的', n.superseded.wrongPart || '—');
+      if (n.superseded.stillTruePart) push('对的', n.superseded.stillTruePart);
+      push('现在', n.superseded.supersededBy || '—');
       push('谁发现的', n.superseded.by || '—');
-      push('为什么', n.superseded.note || '—');
+      push('说明', n.superseded.note || '—');
     }
     push('状态', n.open === true ? '还开着（没做完）' : '已了结');
     push('到期', n.due || '—');
