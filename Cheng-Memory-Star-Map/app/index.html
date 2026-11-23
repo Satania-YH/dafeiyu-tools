@@ -2096,14 +2096,14 @@ function drawCoreStar(ctx){
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
-  /* 1) 日冕：平时几乎看不见，炸开时薄薄一层撑开 */
+  /* 1) 日冕：平时很淡，炸开时撑开一层 */
   const hazeR = R * (1.9 + 0.9*bi) * scale;
-  ctx.globalAlpha = 0.10 + 0.52*bi;
+  ctx.globalAlpha = 0.18 + 0.52*bi;
   ctx.drawImage(CORE.haze, x - hazeR/2, y - hazeR/2, hazeR, hazeR);
 
-  /* 2) 主体：中空的那层，平时很淡，只有中间那圈透出一点 */
+  /* 2) 主体：中空的那层，中心透出更多光 */
   const discR = R * (1.18 + 0.18*bi) * scale;
-  ctx.globalAlpha = 0.16 + 0.62*bi;
+  ctx.globalAlpha = 0.26 + 0.58*bi;
   ctx.drawImage(CORE.soft, x - discR/2, y - discR/2, discR, discR);
 
   /* 3) 内壁：贴着里侧的一圈，让光看着像"从壳里透出来" */
@@ -2127,11 +2127,21 @@ function drawCoreStar(ctx){
     ctx.drawImage(CORE.soft, ox - orbR/2, oy - orbR/2, orbR, orbR);
   }
 
-  /* 5) 芯：这颗才是"啪地白一下"的主角。
-     平时几乎不亮，炸开时又小又刺眼。 */
-  const coreR = R * (0.30 + 0.26*bi) * scale;
-  ctx.globalAlpha = 0.06 + 0.92 * Math.pow(bi, 1.6);
+  /* 5) 芯：整团光里最亮的那点。
+     之前压得太狠（最低档 alpha 只有 0.06），暗态时几乎看不见，
+     看起来像"光团没有中心"。现在：
+       - 尺寸放大（0.30R → 0.42R 起，亮时到 0.62R）
+       - 暗态底噪提到 0.34，亮态直接到 1.0
+       - 外面再叠一小圈白热辉光，让"芯"有灼烧感
+     这样任何状态下都能看出中间有一颗东西在。 */
+  const coreR = R * (0.42 + 0.20*bi) * scale;
+  ctx.globalAlpha = 0.34 + 0.66 * Math.pow(bi, 1.25);
   ctx.drawImage(CORE.core, x - coreR/2, y - coreR/2, coreR, coreR);
+
+  // 芯外白热辉光：跟着亮度涨落，给"中心最烫"的感觉
+  const coreHaloR = coreR * (1.9 + 0.5*bi);
+  ctx.globalAlpha = 0.10 + 0.40 * bi;
+  ctx.drawImage(CORE.core, x - coreHaloR/2, y - coreHaloR/2, coreHaloR, coreHaloR);
 
   /* 5) 光芒：交替律动。
      规律是用户要的那个——奇数号刺在变长、偶数号在变短，转一圈看着像呼吸的节拍；
