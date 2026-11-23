@@ -782,7 +782,6 @@
     </div>
   </div>
 
-  <div id="unfold" class="open" title="展开 / 收起设置" style="display:none">》</div>
 </div>
 <div class="tip" id="tip"></div>
 
@@ -992,7 +991,7 @@ const DEFAULTS = {
   fx: { rays: true, flow: true, sea: true, meteor: true, pulse: false },
   sizePower: 1.45,
   sizeBase: 13,
-  linkTopK: 3,
+  linkTopK: 6,
   linkAlpha: 1,
   linkThreshold: 0.72,
   autoRotate: 0.12,
@@ -1279,18 +1278,57 @@ function buildPairsText(){
 }
 
 function buildEdges(){
-  // 服务端已经算好边了（新服务）：直接用，不在前端重算 1600+ 次余弦
+  // 服务端已经算好边了：拿到后按下面的 linkTopK / linkThreshold 再剪一次
   if (DATA.linkMode === 'edges' && Array.isArray(DATA.precomputedEdges)) {
     const idIdx = new Map();
     nodes.forEach((n, i) => idIdx.set(n.id, i));
-    const out = [];
+    const raw = [];
     for (const e of DATA.precomputedEdges) {
       const a = idIdx.get(e.source);
       const b = idIdx.get(e.target);
       if (a == null || b == null || a === b) continue;
-      out.push({ a, b, w: Number(e.cos) || 0, cos: Number(e.cos) || 0 });
+      const w = Number(e.cos) || 0;
+      if (w < OPTS.linkThreshold) continue;      // 阈值滑条生效
+      raw.push({ a, b, w });
     }
-    return out;
+
+    /* ── 度数上限剪枝 ──
+       服务端给的是"余弦 ≥ 0.6 全连上"，平均 13.7 条、最多 44 条 —— 那是毛线球。
+       这里按每颗星只留最强的 K 条来做，K 就是配置里的"每颗连线数"。
+       做法：按权重从高到低遍历，一条边只有在两端的额度都没满时才收下，
+       否则这条边给到的那一端就直接跳过。 */
+    const K = Math.max(1, OPTS.linkTopK | 0);
+    raw.sort((x, y) => y.w - x.w);
+    const quota = new Array(N).fill(K);
+    const kept = [];
+    const seen = new Set();
+    for (const e of raw) {
+      if (quota[e.a] <= 0 || quota[e.b] <= 0) continue;
+      const key = e.a < e.b ? e.a + '_' + e.b : e.b + '_' + e.a;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      kept.push(e);
+      quota[e.a]--; quota[e.b]--;
+    }
+
+    /* 兜底：一条边都没有的孤立星，补上它最强的那一条，别散成一盘沙 */
+    const deg = new Array(N).fill(0);
+    for (const e of kept) { deg[e.a]++; deg[e.b]++; }
+    const bestOf = new Map();
+    for (const e of raw) {
+      if (!bestOf.has(e.a) || e.w > bestOf.get(e.a).w) bestOf.set(e.a, e);
+      if (!bestOf.has(e.b) || e.w > bestOf.get(e.b).w) bestOf.set(e.b, e);
+    }
+    for (let i = 0; i < N; i++) {
+      if (deg[i] > 0) continue;
+      const e = bestOf.get(i);
+      if (!e) continue;
+      const key = e.a < e.b ? e.a + '_' + e.b : e.b + '_' + e.a;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      kept.push(e);
+    }
+    return kept;
   }
 
   const pairs = DATA.linkMode === 'vector' ? buildPairsVector() : buildPairsText();
@@ -2771,11 +2809,11 @@ function extraEdges(i){
 /* ── 自转的"让手"机制 ──
    一直在转的话根本点不中星星。所以：
    - 任何一次交互（拖动/滚轮/点星/悬停命中）都刷新 lastInteractAt
-   - 交互后 SPIN_HOLD_MS(3秒) 内完全不转
-   - 之后再用 SPIN_RAMP_MS(1.2秒) 平滑加速回去，不是"啪"一下开始转 */
+   - 交互后 SPIN_HOLD_MS(1秒) 内完全不转
+   - 之后再用 SPIN_RAMP_MS(0.7秒) 平滑加速回去，不是"啪"一下开始转 */
 let lastInteractAt = -1e9;          // 上次动手的时间（performance.now）
-const SPIN_HOLD_MS = 3000;          // 停手多久后开始恢复
-const SPIN_RAMP_MS = 1200;          // 恢复用了多久（渐入）
+const SPIN_HOLD_MS = 1000;          // 停手多久后开始恢复
+const SPIN_RAMP_MS = 700;          // 恢复用了多久（渐入）
 
 function touchInteraction(){
   lastInteractAt = performance.now();
