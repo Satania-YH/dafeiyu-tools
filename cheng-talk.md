@@ -1,5 +1,8 @@
 # cheng-talk · 跟澄说话的小门
 
+> 只想会用、不想看底层：看 [cheng-talk-README.md](cheng-talk-README.md)。
+> 这份是给以后调它的人看的——RPC 形状、踩过的坑、为什么这么做。
+
 让别的程序（Alma）**正经地**跟澄说话，不用再借道鱼鱼窝房间。
 
 ---
