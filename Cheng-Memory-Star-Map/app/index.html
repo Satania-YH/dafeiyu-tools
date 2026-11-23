@@ -2021,6 +2021,9 @@ function drawCoreStar(ctx){
 
   const globalSpin = T0 * 0.028;                          // 整组极慢公转
 
+  /* ── 第一步：先算出每根刺"想"在哪个角度、想多长 ──
+     因为后面要互相避让，得先有全部数据再排。 */
+  const plan = [];
   for (let k = 0; k < N_SPIKE; k++) {
     const s = CORE.spikes[k];
 
@@ -2040,15 +2043,46 @@ function drawCoreStar(ctx){
     const raw = Math.max(0, Math.min(1, 0.5 + 0.5 * wave));
 
     /* 缩成"无"用的是一道软门槛：
-       raw 低于 0.42 时整根刺完全消失（长度、亮度都归零），高于 0.62 时全长。
-       中间那段平滑过渡，所以是"慢慢缩没了/慢慢长出来"，不是忽然闪断。 */
+       raw 低于 0.42 时整根刺完全消失，高于 0.62 时全长。
+       中间平滑过渡，所以是"慢慢缩没了/慢慢长出来"，不是忽然闪断。 */
     const gate = Math.max(0, Math.min(1, (raw - 0.42) / 0.20));
-    if (gate <= 0.001) continue;                     // 这根刺此刻不存在
-    const shaped = gate * gate * (3 - 2 * gate);     // smoothstep，两端过渡更软
+    const shaped = gate * gate * (3 - 2 * gate);     // smoothstep
+    plan.push({ ang, gate, shaped });
+  }
 
-    const len = R * (0.68 + 0.34 * shaped) * scale;
-    const amp2 = (0.02 + 0.32 * shaped) * (0.60 + 0.40 * bi);
-    drawSpike(ang, len, Math.max(1.1, R * 0.019), amp2);
+  /* ── 第二步：角度避让 ──
+     现实中光芒挤在一起会很糊。这里做一次简单的排斥：
+     两根刺夹角小于 MIN_GAP 时，各自往两边推开一点。
+     用夹角的正弦判断（考虑圆的对称，取最短角差）。 */
+  const MIN_GAP = 0.48;                       // 最小夹角 ~27°，够看出是两根
+  for (let iter = 0; iter < 5; iter++) {      // 迭代几次让多根一起挤时也能散开
+    for (let a = 0; a < N_SPIKE; a++) {
+      for (let b = a + 1; b < N_SPIKE; b++) {
+        let d = plan[b].ang - plan[a].ang;
+        // 归一化到 -π..π
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        const ad = Math.abs(d);
+        if (ad >= MIN_GAP || ad < 1e-4) continue;
+
+        // 挤压程度：越近推得越狠；两根都很短（快消失）时不必推
+        const urgency = (MIN_GAP - ad) / MIN_GAP;
+        const minShaped = Math.min(plan[a].shaped, plan[b].shaped);
+        const push = 0.5 * urgency * minShaped * 0.85;
+        const dir = d >= 0 ? 1 : -1;           // 谁在谁前面
+        plan[a].ang -= dir * push;
+        plan[b].ang += dir * push;
+      }
+    }
+  }
+
+  /* ── 第三步：画 ── */
+  for (let k = 0; k < N_SPIKE; k++) {
+    const p = plan[k];
+    if (p.gate <= 0.001) continue;                     // 这根刺此刻不存在
+
+    const len = R * (0.68 + 0.34 * p.shaped) * scale;
+    const amp2 = (0.02 + 0.32 * p.shaped) * (0.60 + 0.40 * bi);
+    drawSpike(p.ang, len, Math.max(1.1, R * 0.019), amp2);
   }
 
   ctx.restore();
