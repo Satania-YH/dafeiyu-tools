@@ -3093,6 +3093,21 @@ function draw(){
       ctx.globalAlpha = Math.min(1, alpha);
     }
 
+    /* 了结的便条：画一个小勾，别只靠"变暗"表达。
+       澄说「只画成 0.42 亮度的残影，等于把结果留下了，把过程扔了」。 */
+    if (isNote && !noteOpen){
+      const dr = size*0.85 + 2.4;
+      ctx.globalAlpha = Math.min(1, alpha) * 0.42;
+      ctx.strokeStyle = rgbStr(themeRGB.kinds[n.k] || colorForKind(n.k), 0.8);
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(x - dr*0.5, y + dr*0.05);
+      ctx.lineTo(x - dr*0.08, y + dr*0.45);
+      ctx.lineTo(x + dr*0.55, y - dr*0.42);
+      ctx.stroke();
+      ctx.globalAlpha = Math.min(1, alpha);
+    }
+
     /* 被修正的知识：分成「整条错了」和「一半对一半错」两种画法。
        2026-11-24 澄复核时指出：「不是『已推翻』，是『一半对一半错』…
          现在整颗星划红斜杠，把后半句那句真话也一起划掉了。」 */
@@ -3122,6 +3137,7 @@ function draw(){
        等外面 → 环是缺口朝外的弧 + 一根伸出去的须（伸向别人的方向），轻轻呼吸
        等自己 → 环是完整闭合的，但内圈缓慢收缩（自己憋着，等自己动手） */
     if (noteOpen){
+      const T2 = tNow * 0.001;          // 这两个画法都用它，必须在这里定义
       const col = themeRGB.kinds[n.k] || colorForKind(n.k);
       const rr = size*0.95 + 3.2 + 1.1*notePulse;
       ctx.strokeStyle = rgbStr(col, 0.75);
@@ -3911,6 +3927,9 @@ function openCard(i){
   // 便条：状态 / 到期 / 在等谁 / 推进了多少次
   if (n.k === 'note'){
     push('时间', n.ts ? fmtLocalTs(n.ts, true) : '');
+    /* 2026-11-24 澄说：「done 17 条也一样：它们不该只是变暗变小。
+       我划掉一件事时写的那句 note（怎么算完的）才是值钱的那半——
+       只画成 0.42 亮度的残影，等于把结果留下了，把过程扔了。」 */
     if (n.superseded){
       const v = n.superseded.verdict;
       push('更正', v === 'refuted' ? '整条已被推翻' : '一半对一半错（只划错的那半）');
@@ -3924,7 +3943,7 @@ function openCard(i){
     push('到期', n.due || '—');
     push('在等', n.waiting || '—');
     push('推进', (n.progress || 0) + ' 次');
-    push('收尾', n.doneNote || '');
+    if (n.doneNote) push('怎么算完的', n.doneNote);
   }
   // 约定：有没有对过口 + 结果
   else if (n.k === 'appointment'){
