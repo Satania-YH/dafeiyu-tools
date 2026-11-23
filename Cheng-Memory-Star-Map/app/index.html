@@ -1811,6 +1811,7 @@ function applyShape(){
       const ang = GOLD * gi + (g() - 0.5) * 0.16;     // 加一点抖动，别太规整
       // 半径也随纬度轻微起伏，避免所有团心都贴在同一个球面上
       const rr = R * (0.86 + 0.14 * (0.5 + 0.5 * Math.sin(gi * 1.7 + 0.9)));
+      // 位置先占位，循环结束后统一用 relayoutAllClusters 铺满整壳
       const cxx = Math.cos(ang) * ring * rr;
       const cyy = uy * rr * 0.72;
       const czz = Math.sin(ang) * ring * rr;
@@ -3638,6 +3639,14 @@ function loop(t){
       n.pz += (n.tz - n.pz)*k;
     }
 
+    // 分类星平滑追位：新增分类时整个球壳会缓缓重排，不是瞬间跳
+    for (const c of clusterInfo) {
+      if (typeof c.tx !== 'number') continue;
+      c.x += (c.tx - c.x) * k;
+      c.y += (c.ty - c.y) * k;
+      c.z += (c.tz - c.z) * k;
+    }
+
     // 时间滑条：显现进度平滑推进（滑过去是长出来，不是瞬间开关）
     tbEase(1 - Math.pow(0.86, dt/16.7));
 
@@ -5015,49 +5024,6 @@ function initLive() {
 
   live.connect();
 
-  /* ══════ 临时演示：多分类 + 数量悬殊 ══════
-     一次铺开 10 个分类，每个分类的子星数量差很多
-     （2 / 3 / 8 / 15 / 25 / 40 / 60 / 90 / 120 / 150 颗），
-     用来看"星多时会不会缩小、团会不会越界"。
-     删掉这段即可恢复。 */
-
-  if (window.__DEMO_MIX !== false) {
-    const plan = [
-      { label: '播客',   n: 2   },
-      { label: '抖音',   n: 3   },
-      { label: '相册',   n: 8   },
-      { label: 'B站',    n: 15  },
-      { label: '游戏',   n: 25  },
-      { label: '知乎',   n: 40  },
-      { label: '小说',   n: 60  },
-      { label: '微博',   n: 90  },
-      { label: '代码库', n: 120 },
-      { label: '小红书', n: 150 },
-    ];
-
-    setTimeout(() => {
-      if (!nodes.length) return;
-      for (let ci = 0; ci < plan.length; ci++) {
-        const { label, n } = plan[ci];
-        const kind = 'mix_' + ci;
-        KIND_CN[kind] = label;
-
-        let prevId = (nodes.find(x => x.k === 'said') || nodes[0]).id;
-        for (let i = 0; i < n; i++) {
-          const id = 'MIX-' + ci + '-' + i;
-          addStarToScene({
-            id, kind,
-            text: '【' + label + '】第 ' + (i + 1) + ' 条',
-            ts: new Date().toISOString(),
-            date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
-            importance: 3, topic: label,
-          }, [{ source: id, target: prevId, cos: 0.8 }]);
-          prevId = id;
-        }
-      }
-    }, 800);
-  }
-
 }
 
 /** 更新「上次更新 X 分钟前」 */
@@ -5329,6 +5295,47 @@ function stepClusterRelayout() {
 }
 
 /* 把新加入的节点登记到分类里（只补差量，不动已有布局） */
+/* ══════ 分类星的统一排布 ══════
+   所有分类按斐波那契球面均匀铺在"以核心为圆心"的壳上。
+   任意数量都均匀：1 个在正中，2 个南北极，N 个螺旋铺满。
+
+   位置写到 tx/ty/tz，实际 x/y/z 由主循环平滑追过去，
+   所以新增分类时能看到"整个球壳缓缓重排"的动画。 */
+
+function relayoutAllClusters() {
+  const list = clusterInfo;
+  const n = list.length;
+  if (!n) return;
+
+  const GOLD = Math.PI * (3 - Math.sqrt(5));
+
+  /* 壳的半径：分类多就把壳撑大，但起步就是 0.72（够大，不挤在核心上）。
+     撑大速率用 sqrt，避免几十个分类时壳大到看不见。 */
+  const shell = 0.72 * (1 + 0.75 * Math.pow(Math.max(0, n - 1) / 14, 0.62));
+
+  for (let k = 0; k < n; k++) {
+    // 纬度：从 -1 到 1 均匀；只在两极各留一点空隙
+    const t = n === 1 ? 0.5 : (k + 0.5) / n;
+    const uy = 1 - 2 * t;                       // 1 → -1
+    const ring = Math.sqrt(Math.max(0, 1 - uy * uy));
+    const ang = GOLD * k;
+
+    // 半径带一点点起伏，避免所有团心严格共球面（看着更自然）
+    const rr = shell * (0.92 + 0.08 * Math.sin(k * 1.7 + 0.9));
+
+    list[k].tx = Math.cos(ang) * ring * rr;
+    list[k].ty = uy * rr * 0.72;                 // y 压扁，像星系盘
+    list[k].tz = Math.sin(ang) * ring * rr;
+
+    // 首次没有实际位置时直接落位，避免从 (0,0,0) 飞出来
+    if (!list[k].x && !list[k].y && !list[k].z) {
+      list[k].x = list[k].tx;
+      list[k].y = list[k].ty;
+      list[k].z = list[k].tz;
+    }
+  }
+}
+
 function registerNewNodeToCluster(i) {
   const n = nodes[i];
   if (!n) return;
@@ -5353,74 +5360,35 @@ function registerNewNodeToCluster(i) {
     return;
   }
 
-  /* 2) 全新分类 → 现场在球壳上找个空位放一颗分类星。
-        做法：按已有的分类数算黄金角，插在空隙里，不重排旧的。 */
-  /* 位置：把第 gi 个点按斐波那契球面铺开。
-     ⚠️ gi 必须是一个只增不减的全局计数器 ——
-     如果拿 CL_LABEL_IDX.size 现算，连续新建时算出来的角度会撞
-     （实测前两个分类距离是 0，完全重叠）。 */
-  if (typeof CORE.clusterSeq !== 'number') CORE.clusterSeq = CL_LABEL_IDX.size;
-  const gi = CORE.clusterSeq++;
+  /* ══ 2) 全新分类 ══
+     不再"给新来的找个空位"，而是：所有分类一起按斐波那契球面重新均分。
+     这样无论多少个分类，都是"以核心为中心、均匀铺在球壳上"，
+     不会出现"后来的全挤在赤道附近、越推越远"。
 
-  const GOLD = Math.PI * (3 - Math.sqrt(5));
-  // 分类越多，壳撑得越大，否则一挤就重叠
-  const nCat = CL_LABEL_IDX.size + 1;
-  const shell = 0.80 * (1 + 0.55 * Math.pow(Math.max(0, nCat - 5) / 15, 0.7));
-  const rr = shell * 0.86;
-
-  /* 纬度分布：用 gi 对"预计总数"取模做螺旋，不能直接 gi/gs ——
-     gi 是只增计数器，会比当前分类数还大，那样 t 会超过 1 被夹到顶，
-     所有新分类就全挤在球顶端了（第一次实跑就是这样）。
-     这里改成让点在 0..1 之间持续螺旋上升，转满一轮再从头。 */
-  const SPIRAL_N = 26;                     // 一圈容纳多少个分类
-  const tRaw = (gi % SPIRAL_N) / SPIRAL_N; // 0..1 之间循环
-  // 加一个 +0.5 的偏移让每轮错开，避免第二轮和第一轮完全重合
-  const layer = Math.floor(gi / SPIRAL_N); // 第几圈
-  const t = Math.min(1, Math.max(0, tRaw + (layer % 2) * 0.5 / SPIRAL_N));
-  const uy = 1 - 2 * t;
-  const ring = Math.sqrt(Math.max(0, 1 - uy * uy));
-  const ang = GOLD * gi;
-  // 第二圈起把半径稍微缩一点，错开层次
-  const rr2 = rr * (1 - 0.10 * Math.min(3, layer));
-  let cxx = Math.cos(ang) * ring * rr2;
-  let cyy = uy * rr2 * 0.72;
-  let czz = Math.sin(ang) * ring * rr2;
-
-  /* 最小间距排斥：如果落点和已有分类太近（<0.22），
-     沿着"从球心往外"的方向把它推出去一点，直到不挤为止。 */
-  const MIN_SEP = 0.22;
-  for (let iter = 0; iter < 12; iter++) {
-    let moved = false;
-    for (const c of clusterInfo) {
-      const d = Math.hypot(cxx - c.x, cyy - c.y, czz - c.z);
-      if (d >= MIN_SEP) continue;
-      const len = Math.hypot(cxx, cyy, czz) || 1;
-      // 优先沿球面法向外推；同向则横向错开
-      const push = (MIN_SEP - d) * 0.85;
-      cxx += (cxx - c.x) / (d || 1) * push + (cxx / len) * push * 0.4;
-      cyy += (cyy - c.y) / (d || 1) * push + (cyy / len) * push * 0.4;
-      czz += (czz - c.z) / (d || 1) * push + (czz / len) * push * 0.4;
-      moved = true;
-    }
-    if (!moved) break;
-  }
+     已有分类不会跳变 —— 新位置写到 c.tx/ty/tz，绘制时用 c.x/y/z 平滑追过去，
+     所以画面上看到的是"整个球壳缓缓重排"，能看出动画。 */
+  const gi = CL_LABEL_IDX.size;          // 含新分类的总数（新分类排在最后）
 
   const sz = Math.sqrt(Math.max(1, N));
   const rad = 0.052 + 0.100 * Math.sqrt(1 / sz);
-
   const color = colorForKind(kindKey);
 
-  clusterInfo.push({
-    x: cxx, y: cyy, z: czz, rad,
-    gi: gi,
-    label, count: 1, color,
-  });
+  const info = {
+    x: 0, y: 0, z: 0,          // 实际位置（会被主循环平滑追）
+    tx: 0, ty: 0, tz: 0,       // 目标位置（下面统一算）
+    rad, gi, label, count: 1, color,
+  };
+  clusterInfo.push(info);
   CL_LABEL_IDX.set(label, [i]);
 
-  // 新分类星的位置直接给这颗星，不用等下一帧
-  n.tx = cxx * OPTS.spread;
-  n.ty = cyy * OPTS.spread;
-  n.tz = czz * OPTS.spread;
+  /* 把所有分类（含刚加的）重排到球面上。
+     用斐波那契：纬度均匀、经度黄金角，任意数量都均匀。 */
+  relayoutAllClusters();
+
+  // 新分类的第一颗星放到它自己的团心（用刚算好的目标位置）
+  n.tx = info.tx * OPTS.spread;
+  n.ty = info.ty * OPTS.spread;
+  n.tz = info.tz * OPTS.spread;
 
   if (typeof toast === 'function') toast(`新分类：${label}`);
 }
