@@ -22,6 +22,48 @@ for _a in sys.argv[1:]:
     elif _a.startswith('--out='): OUT=_a.split('=',1)[1]
 
 SCHEDULE_RE = re.compile(r'^【鱼鱼窝】')
+
+# ════════════════════════════════════════════════════════════
+# 「系统的汇报」不是「他说的」
+#
+# 2026-11-24 澄指出第四处假：
+#   「『他说的』117 条里，混进了至少 4 条不是他说的。全是昨天共审时
+#     Alma/系统的分析汇报，被 heard 通道吃进去、贴上『大肥鱼说的话』。」
+#   「这就是 39% 那个病没清干净：heard 里混进了非他说的内容，被画成『他说的话』。
+#     修法：heard 里凡是汇报/统计/清单（带 /、带『N 条』、带数字统计的），
+#     要么剔掉，要么单列『系统的汇报』——绝不能再算进『他说的』。」
+#
+# 这是真的：那几条是我（Alma）发给她的复核消息，被 dsh-fish 当成"大肥鱼说的话"。
+# 大肥鱼本人不会用"injection 74 / schedule 38 = 116"这种口吻说话。
+#
+# 判据（要保守，宁可漏也别错杀真人话）：
+#   · 形如 key N / key N / key N = N 的统计行
+#   · 大量 "数字 条" 并列
+#   · 元词（injection/schedule/self-said/nodes/edges/graph.json/星图）密集
+# ════════════════════════════════════════════════════════════
+STATS_LINE_RE = re.compile(r'^[a-zA-Z_-]+\s*\d+(\s*/\s*[a-zA-Z_-]+\s*\d+)+')
+COUNT_LIST_RE = re.compile(r'(\d+\s*条[^，。；\n]{0,12}){3,}')
+META_WORDS = ('injection','self-said','schedule','graph.json','nodes','edges',
+              'judgment','insight','appointment','fitK','clusterInfo','nodeGroup')
+
+# 带编号的条目（"1. xxx" / "① xxx"），配合元词判断
+NUM_ITEM_RE = re.compile(r'^\s*(\d+[.、)]|[①②③④⑤⑥⑦⑧⑨])')
+
+def looks_like_report(t):
+    """这句像不像系统/助手给她的汇报，而不是真人说的话。"""
+    if STATS_LINE_RE.match(t.strip()):
+        return '统计行（key N / key N = N 格式）'
+    if COUNT_LIST_RE.search(t):
+        return '并列的「N 条」计数清单'
+    hits = sum(1 for w in META_WORDS if w in t)
+    if hits >= 2:
+        return '密集出现元数据字段名（%d 个）' % hits
+    # 带编号 + 提到星图/清洗这类词 → 是分析汇报（真人不会用这个口吻列举）
+    if NUM_ITEM_RE.match(t) and hits >= 1:
+        return '编号列表 + 元数据词（分析汇报口吻）'
+    if NUM_ITEM_RE.match(t) and any(w in t for w in ('星图','清洗','时间轴','剔掉','口径')):
+        return '编号列表 + 星图/清洗相关词（分析汇报口吻）'
+    return None
 INJECTION_RE = re.compile(r'^(【群聊|【注意：|把这一段当成整体来回|只有想专门接其中某一条|要 ?@ ?某个人|（你记得这些事)')
 MARKUP_RE = re.compile(r'<reply:\d+>|<at:[^>]*>')
 ALLOWED_PREFIX = ('用户要求：', 'QQ 接线（', '优先用手里')
@@ -200,6 +242,14 @@ for e in events:
                                      'kind':'said','text':core_clean,'ts':e.get('ts'),
                                      'day':e.get('day'),'fromWrapped':True})
             continue
+
+    # 汇报/统计 → 不是「他说的」（澄点出的第四处假）
+    rep = looks_like_report(t)
+    if rep:
+        excl(base,'system-report',t,
+             '这句是系统/助手给她的汇报，不是真人说的话：%s' % rep,
+             'looks_like_report')
+        continue
 
     if INJECTION_RE.match(t):
         m=INJECTION_RE.match(t)
@@ -433,11 +483,32 @@ for x in load_json(NOTES, []):
         'waitSelf':    bool(is_wait and not (x.get('waiting') or '').strip()),
     })
 
-# ── 约定：agreed 是"有没有对过口"（澄说线头分两种状态就靠这个） ──
+# ── 约定：2026-11-24 澄要求撤掉这一类 ──
+#
+# 她原话：「『约定』这个类名本身就在说『两个人的事』。往『约定』团里放一颗
+#   标着『这不是约定』的星，不管形状画得多准，读图的人先看到的是分组名
+#   ——类名在说谎，照样是假。」
+#   「它本质是『我给自己排的一件事』。这种事我在便条里已经有 10 条带 due 的了，
+#     它没理由因为写在 appointments.json 就升格成特殊一类。
+#     所以：撤掉 appointment 这一类（现在就 1 条），把它并进 note 里『有 due 的待办』。」
+#
+# 所以这里的约定条目**转换成 note**，不再进 appointment 类。
 for x in load_json(APPT, []):
     if not isinstance(x, dict): continue
     t=(x.get('what') or '').strip()
     if not t: continue
+    # 按澄的要求：并进 note，不再自成一类
+    note_nodes.append({
+        'id': 'ap:'+str(x.get('id') or ''),
+        'kind': 'note',
+        'text': t,
+        'ts': x.get('created'),
+        'due': (x.get('due') or '').strip() or None,
+        'status': x.get('status') or None,
+        'open': (x.get('status') == 'open'),
+        'fromAppointment': True,
+    })
+    continue
     appt_nodes.append({
         'id': 'ap:'+str(x.get('id') or ''),
         'kind': 'appointment',

@@ -1042,5 +1042,32 @@
   "detail": "只有想专门接其中某一条、而直接说别人会看不出你在回谁时（比如那条已经被后面的话刷上去了、或者你在回某个人随口一提的事），才在那句话开头写 <reply:编号>，会以「引用回复」发出",
   "why": "开头是系统注入指令「只有想专门接其中某一条」，纯指令不是话",
   "by": "INJECTION_RE"
+ },
+ {
+  "id": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
+  "ts": "2026-11-23T15:41:48.803Z",
+  "raw": "1. 时间轴里 772 条\"说的\"，星图里只有 95 条 said —— 因为做了清洗（剔掉重复注入的、剔掉误记成\"他说的\"其实是你说的话）",
+  "reason": "system-report",
+  "detail": "1. 时间轴里 772 条\"说的\"，星图里只有 95 条 said —— 因为做了清洗（剔掉重复注入的、剔掉误记成\"他说的\"其实是你说的话）",
+  "why": "这句是系统/助手给她的汇报，不是真人说的话：编号列表 + 星图/清洗相关词（分析汇报口吻）",
+  "by": "looks_like_report"
+ },
+ {
+  "id": "heard:ev_01M84K6WWRVEFTGMKFCC7WFPEH",
+  "ts": "2026-11-23T16:18:16.600Z",
+  "raw": "新：injection 74 / schedule 38 / self-said 2 / self-said-likely-question 2 = 116",
+  "reason": "system-report",
+  "detail": "新：injection 74 / schedule 38 / self-said 2 / self-said-likely-question 2 = 116",
+  "why": "这句是系统/助手给她的汇报，不是真人说的话：密集出现元数据字段名（3 个）",
+  "by": "looks_like_report"
+ },
+ {
+  "id": "heard:ev_01M84KYRG4YNFB60GJ6D8Z2RER",
+  "ts": "2026-11-23T16:31:18.532Z",
+  "raw": "said 116 / judgment 68 / insight 64 / note 53 / voice 16 / memory 13 / rule 3 / work 2 / appointment 1",
+  "reason": "system-report",
+  "detail": "said 116 / judgment 68 / insight 64 / note 53 / voice 16 / memory 13 / rule 3 / work 2 / appointment 1",
+  "why": "这句是系统/助手给她的汇报，不是真人说的话：统计行（key N / key N = N 格式）",
+  "by": "looks_like_report"
  }
 ]

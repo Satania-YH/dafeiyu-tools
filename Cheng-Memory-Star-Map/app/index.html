@@ -445,6 +445,7 @@
   .ex-tag.self-said{ background:rgba(160,120,255,.15); color:#b49bff; }
   .ex-tag.injection-command{ background:rgba(255,110,110,.13); color:#ff8a8a; }
   .ex-tag.injection-wrapped{ background:rgba(120,200,255,.14); color:#7cc8ff; }
+  .ex-tag.system-report{ background:rgba(255,200,120,.13); color:#ffcc80; }
   .ex-tag.self-said-likely-question{ background:rgba(120,220,180,.14); color:#7fe0b4; }
   .ex-tag.markup{ background:rgba(150,150,150,.12); color:#9a9a9a; }
   .ex-item .ex-time{ font-size:10.5px; color:#4e5a75; }
@@ -1181,7 +1182,6 @@ const KIND_CN = {
   work:'作品',             // 画完自己写的 line
   voice:'读到的话',        // voice 层：别人写的字、她读到的，不是她说的
   note:'便条',             // 她给自己记下的事（有 due / waiting / progress）
-  appointment:'约定',       // 约好的日子，等一个时间
   work:'作品',             // 画完 / 写完的东西，等有人来看
   spoken:'说出去的',        // 她自己写的、但写在公开地方（QQ 空间等）
                             // 澄：「嘴是在我这儿的，是我写的，只是写在公开的窗上。
@@ -5344,6 +5344,7 @@ const EX_REASON_CN = {
   'injection': '系统注入·不是话',
   'injection-command': '系统指令·不是话',
   'injection-wrapped': '注入壳·已剥出真事',
+  'system-report': '系统的汇报·不是他说的',
   'schedule': '定时提醒·不是话',
   'self-said': '她说的·记成听到',
   'self-said-likely-question': '疑似问她·存疑',
@@ -5351,7 +5352,7 @@ const EX_REASON_CN = {
   'group-format': '群聊格式剥不净',
   'unknown': '其它',
 };
-const EX_REASON_ORDER = ['injection-command','injection-wrapped','injection','schedule',
+const EX_REASON_ORDER = ['injection-command','injection-wrapped','injection','system-report','schedule',
   'self-said','self-said-likely-question','markup','group-format','unknown'];
 
 let EX_DATA = null;

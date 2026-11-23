@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-24T00:32:56",
+  "generatedAt": "2026-11-24T00:36:24",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,40 +11,41 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 2793,
+   "events_total": 2795,
    "event_types": {
-    "meta": 1671,
+    "meta": 1672,
     "seed": 1,
-    "utterance": 848,
+    "utterance": 849,
     "heard": 257,
     "voice": 14,
     "ask": 1,
     "answer": 1
    },
-   "nodes_total": 340,
+   "nodes_total": 337,
    "judgment": 68,
-   "said": 117,
+   "said": 114,
    "rule": 6,
    "insight": 64,
    "memory": 13,
    "voice": 14,
-   "note": 53,
-   "appointment": 1,
+   "note": 54,
+   "appointment": 0,
    "work": 2,
    "spoken": 2,
    "duplicate_heard_merged": 25,
-   "edges": 2542,
-   "excluded": 116,
+   "edges": 2535,
+   "excluded": 119,
    "isolated_nodes": 13,
    "max_degree": 54,
    "embed_dim": 1024
   },
   "excluded_reasons": {
    "injection-command": 66,
+   "system-report": 3,
    "self-said": 3,
-   "self-said-likely-question": 1,
+   "injection-wrapped": 8,
    "schedule": 38,
-   "injection-wrapped": 8
+   "self-said-likely-question": 1
   },
   "merged": [
    {
@@ -548,7 +549,7 @@
    "ts": "2026-11-21T08:37:55.781Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 34
+   "degree": 33
   },
   {
    "id": "utt:ev_01M7YMJHJN1RVHZ97XY9W0Y31W",
@@ -578,7 +579,7 @@
    "ts": "2026-11-21T08:51:56.671Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 20
+   "degree": 19
   },
   {
    "id": "utt:ev_01M7YN2RJTQ62EVR3DVDM46N7V",
@@ -768,7 +769,7 @@
    "ts": "2026-11-22T14:14:23.288Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 12
   },
   {
    "id": "utt:ev_01M81YT2X7HGDFFCRQW69XHBR6",
@@ -1869,33 +1870,6 @@
    "day": 3,
    "vec_dim": 1024,
    "degree": 20
-  },
-  {
-   "id": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
-   "kind": "said",
-   "text": "1. 时间轴里 772 条\"说的\"，星图里只有 95 条 said —— 因为做了清洗（剔掉重复注入的、剔掉误记成\"他说的\"其实是你说的话）",
-   "ts": "2026-11-23T15:41:48.803Z",
-   "day": 4,
-   "vec_dim": 1024,
-   "degree": 5
-  },
-  {
-   "id": "heard:ev_01M84K6WWRVEFTGMKFCC7WFPEH",
-   "kind": "said",
-   "text": "新：injection 74 / schedule 38 / self-said 2 / self-said-likely-question 2 = 116",
-   "ts": "2026-11-23T16:18:16.600Z",
-   "day": 4,
-   "vec_dim": 1024,
-   "degree": 2
-  },
-  {
-   "id": "heard:ev_01M84KYRG4YNFB60GJ6D8Z2RER",
-   "kind": "said",
-   "text": "said 116 / judgment 68 / insight 64 / note 53 / voice 16 / memory 13 / rule 3 / work 2 / appointment 1",
-   "ts": "2026-11-23T16:31:18.532Z",
-   "day": 4,
-   "vec_dim": 1024,
-   "degree": 2
   },
   {
    "id": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
@@ -3658,7 +3632,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 19
+   "degree": 18
   },
   {
    "id": "note:note-1795408881332-ec7tlg",
@@ -3690,7 +3664,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 7
+   "degree": 6
   },
   {
    "id": "note:note-1795425080117-5xosbe",
@@ -3774,16 +3748,13 @@
   },
   {
    "id": "ap:ap-1795325902435-eqe1cs",
-   "kind": "appointment",
+   "kind": "note",
    "text": "自己去刷一轮抖音：看推荐流、挑几条看片、读评论，然后给自己写一份记录",
    "ts": "2026-11-22T05:38:22.435Z",
    "due": "2026-11-23",
-   "time": "12:30",
-   "agreed": null,
-   "oneSided": true,
-   "outcome": "done",
    "status": "done",
-   "lateMinutes": null,
+   "open": false,
+   "fromAppointment": true,
    "vec_dim": 1024,
    "degree": 21
   },
@@ -6099,11 +6070,6 @@
   },
   {
    "source": "utt:ev_01M7YM2HE54SG7MEJ08KV7CPRF",
-   "target": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
-   "cos": 0.62
-  },
-  {
-   "source": "utt:ev_01M7YM2HE54SG7MEJ08KV7CPRF",
    "target": "rule:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
    "cos": 0.634
   },
@@ -6356,11 +6322,6 @@
    "source": "utt:ev_01M7YMW6KZFC0HAKY96PCTWJ05",
    "target": "heard:ev_01M81Z019JF1WM1B5F1TT853Q8",
    "cos": 0.615
-  },
-  {
-   "source": "utt:ev_01M7YMW6KZFC0HAKY96PCTWJ05",
-   "target": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
-   "cos": 0.617
   },
   {
    "source": "utt:ev_01M7YMW6KZFC0HAKY96PCTWJ05",
@@ -7221,11 +7182,6 @@
    "source": "utt:ev_01M81SQASRVZ2AGH6TX5GGE1FE",
    "target": "utt:ev_01M834WAC5Y2EYXXNTE1VKKZK4",
    "cos": 0.638
-  },
-  {
-   "source": "utt:ev_01M81SQASRVZ2AGH6TX5GGE1FE",
-   "target": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
-   "cos": 0.604
   },
   {
    "source": "utt:ev_01M81SQASRVZ2AGH6TX5GGE1FE",
@@ -13336,26 +13292,6 @@
    "source": "heard:ev_01M849CTBX1PBC4P6S8AQDB0P0",
    "target": "mem:20261122T052629770Z",
    "cos": 0.671
-  },
-  {
-   "source": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
-   "target": "heard:ev_01M84K6WWRVEFTGMKFCC7WFPEH",
-   "cos": 0.602
-  },
-  {
-   "source": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
-   "target": "note:note-1795423077819-8a30e0",
-   "cos": 0.621
-  },
-  {
-   "source": "heard:ev_01M84K6WWRVEFTGMKFCC7WFPEH",
-   "target": "heard:ev_01M84KYRG4YNFB60GJ6D8Z2RER",
-   "cos": 0.692
-  },
-  {
-   "source": "heard:ev_01M84KYRG4YNFB60GJ6D8Z2RER",
-   "target": "note:note-1795408785648-f9vqq9",
-   "cos": 0.602
   },
   {
    "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
