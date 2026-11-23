@@ -2911,7 +2911,7 @@ stage.addEventListener('pointermove', e=>{
   }
   if (i>=0){
     const n = nodes[i];
-    tipEl.innerHTML = '<div class="k">'+esc(KIND_CN[n.k]||n.k)+(n.ts ? ' · '+esc(n.ts) : '')+'</div>'+esc(short(n.t, 52));
+    tipEl.innerHTML = '<div class="k">'+esc(KIND_CN[n.k]||n.k)+(n.ts ? ' · '+esc(fmtLocalTs(n.ts, true)) : '')+'</div>'+esc(short(n.t, 52));
     putTip();
     tipEl.classList.add('show');
   } else {
@@ -3030,7 +3030,7 @@ function renderSbHits(q) {
       `<span class="h-kind" style="background:${c}22;color:${c}">${esc(label)}</span>` +
       `<div class="h-body">` +
         `<div class="h-text">${sbHighlight(n.t, q)}</div>` +
-        `<div class="h-meta">${esc(n.ts || '—')}${n.scope ? ' · #' + esc(n.scope) : ''}</div>` +
+        `<div class="h-meta">${esc(n.ts ? fmtLocalTs(n.ts, true) : '—')}${n.scope ? ' · #' + esc(n.scope) : ''}</div>` +
       `</div>`;
 
     el.onclick = () => sbGoto(i);
@@ -4616,6 +4616,17 @@ async function loadTimeline() {
 /* 时间轴当前筛选的分类（null = 全部） */
 let TL_FILTER = null;
 
+/* 统一把 UTC 的 ts 格式化成"本地时间"字符串（UTC+8）。
+   全项目所有要显示 ts 的地方都应该走这里，
+   直接截 ts 字符串会把 UTC 当本地，显示的时间会早 8 小时。 */
+function fmtLocalTs(ts, withDate) {
+  const t = Date.parse(ts);
+  if (!Number.isFinite(t)) return '—';
+  const d = new Date(t + 8 * 3600 * 1000);
+  const s = d.toISOString();
+  return withDate ? (s.slice(0, 10) + ' ' + s.slice(11, 16)) : s.slice(11, 16);
+}
+
 /* 把 ts 换算成本地日（UTC+8）。
    服务端给的 day.date 有的和 ts 对不上（比如 appointment 的 date 是"计划日"，
    ts 是"创建时刻"），所以这里一律以 ts 为准重新分组。 */
@@ -4775,7 +4786,8 @@ function renderTlItem(it) {
   el.className = 'tl-item';
   el.dataset.id = it.id;
 
-  const time = (it.ts || '').slice(11, 16) || '--:--';
+  // 时间显示本地钟（UTC+8）；直接截 ts 会早 8 小时
+  const time = fmtLocalTs(it.ts);
   const kindCls = 'k-' + String(it.kind || it.layer || 'stream').replace(/[^a-z-]/gi, '');
 
   // 动作标记（不是脏东西，是事实）
