@@ -2127,20 +2127,39 @@ function drawCoreStar(ctx){
     ctx.drawImage(CORE.soft, ox - orbR/2, oy - orbR/2, orbR, orbR);
   }
 
-  /* 5) 芯：整团光里最亮的那点。
-     之前压得太狠（最低档 alpha 只有 0.06），暗态时几乎看不见，
-     看起来像"光团没有中心"。现在：
-       - 尺寸放大（0.30R → 0.42R 起，亮时到 0.62R）
-       - 暗态底噪提到 0.34，亮态直接到 1.0
-       - 外面再叠一小圈白热辉光，让"芯"有灼烧感
-     这样任何状态下都能看出中间有一颗东西在。 */
-  const coreR = R * (0.42 + 0.20*bi) * scale;
-  ctx.globalAlpha = 0.34 + 0.66 * Math.pow(bi, 1.25);
+  /* ══ 5) 芯：整团光最亮的那点，要"活着" ══
+     生命力靠三样东西：
+     ① 心跳   —— 两三个不同频率叠出来的高频微颤（不是均匀呼吸）
+     ② 翻腾   —— 核心里有几颗更小的白斑在快速乱窜
+     ③ 灼烧感 —— 亮的时候边上有细小的白热丝 */
+
+  // ① 心跳：约 2.7 Hz 的主跳 + 1.3 Hz 的次跳，幅度很小但肉眼能看出"在动"
+  const beat = 0.5 + 0.5 * Math.sin(T * 17.0)
+             + 0.30 * Math.sin(T * 8.3 + 1.7);
+  const beatN = Math.max(0, Math.min(1, beat / 1.6));   // 0..1
+
+  const coreR = R * (0.44 + 0.22*bi + 0.03*beatN) * scale;
+  // 亮度：底噪 0.48（比之前 0.34 更亮），亮时冲到 1.0，再叠心跳微闪
+  const coreA = Math.min(1, 0.48 + 0.52 * Math.pow(bi, 1.15) + 0.10 * beatN);
+  ctx.globalAlpha = coreA;
   ctx.drawImage(CORE.core, x - coreR/2, y - coreR/2, coreR, coreR);
 
-  // 芯外白热辉光：跟着亮度涨落，给"中心最烫"的感觉
-  const coreHaloR = coreR * (1.9 + 0.5*bi);
-  ctx.globalAlpha = 0.10 + 0.40 * bi;
+  // ② 翻腾：核心里 5 颗粒子状白斑，各自高速绕小圈
+  for (let k = 0; k < 5; k++) {
+    const sp = 0.9 + k * 0.23;                       // 每颗转速不同
+    const a1 = T * sp * 2.1 + k * 1.7;
+    const a2 = T * sp * 1.4 + k * 2.9;
+    const rad = coreR * (0.16 + 0.16 * Math.sin(T * 1.3 + k));
+    const px2 = x + Math.cos(a1) * rad;
+    const py2 = y + Math.sin(a2) * rad * 0.9;
+    const dotR = coreR * (0.28 + 0.10 * Math.sin(T * 2.7 + k * 1.3));
+    ctx.globalAlpha = (0.30 + 0.26 * Math.sin(T * 3.1 + k)) * (0.45 + 0.55 * bi);
+    ctx.drawImage(CORE.core, px2 - dotR/2, py2 - dotR/2, dotR, dotR);
+  }
+
+  // ③ 芯外白热辉光：亮的时候更明显，给"中心最烫"
+  const coreHaloR = coreR * (1.9 + 0.55*bi);
+  ctx.globalAlpha = 0.16 + 0.44 * bi;
   ctx.drawImage(CORE.core, x - coreHaloR/2, y - coreHaloR/2, coreHaloR, coreHaloR);
 
   /* 5) 光芒：交替律动。
