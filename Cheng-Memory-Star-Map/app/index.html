@@ -2767,7 +2767,14 @@ function extraEdges(i){
 }
 
 /* ---------------- 交互 ---------------- */
-function pick(mx,my){
+/* 拾取：mx/my 是视口坐标（clientX/clientY），
+   而 labelsCv 里存的是画布内坐标 —— 必须先减掉画布在页面里的偏移，
+   否则整张图会偏掉（左侧导航 186px、顶部标题栏 52px），
+   表现为"鼠标指着星星却不命中，指到别处反而命中了"。 */
+function pick(clientX, clientY){
+  const r = cv.getBoundingClientRect();
+  const mx = clientX - r.left;
+  const my = clientY - r.top;
   let best=-1, bestD=1e9;
   for (const l of labelsCv){
     const d = Math.hypot(l.x-mx, l.y-my);
@@ -2805,18 +2812,22 @@ stage.addEventListener('pointermove', e=>{
   }
   const i = pick(e.clientX, e.clientY);
   hovered = i;
+  // 气泡是 fixed 定位，边界要用视口宽高来夹，不能用画布的 W/H
+  const VW = window.innerWidth, VH = window.innerHeight;
+  const putTip = () => {
+    tipEl.style.left = Math.min(e.clientX + 16, VW - 350) + 'px';
+    tipEl.style.top  = Math.min(e.clientY + 16, VH - 130) + 'px';
+  };
   if (i === -2){
     tipEl.innerHTML = '<div class="k">核心</div>澄 · 她本身（不是记忆）';
-    tipEl.style.left = Math.min(e.clientX+16, W-340)+'px';
-    tipEl.style.top  = Math.min(e.clientY+16, H-120)+'px';
+    putTip();
     tipEl.classList.add('show');
     return;
   }
   if (i>=0){
     const n = nodes[i];
     tipEl.innerHTML = '<div class="k">'+esc(KIND_CN[n.k]||n.k)+(n.ts ? ' · '+esc(n.ts) : '')+'</div>'+esc(short(n.t, 52));
-    tipEl.style.left = Math.min(e.clientX+16, W-340)+'px';
-    tipEl.style.top  = Math.min(e.clientY+16, H-120)+'px';
+    putTip();
     tipEl.classList.add('show');
   } else {
     tipEl.classList.remove('show');
