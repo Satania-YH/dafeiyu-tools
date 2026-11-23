@@ -1953,40 +1953,60 @@ function drawCoreStar(ctx){
   ctx.globalAlpha = 0.88 + 0.12*bi;
   ctx.drawImage(CORE.core, x - coreR/2, y - coreR/2, coreR, coreR);
 
-  /* 5) 十字光芒：细线为主，小而克制；自己会轻轻跳动，不是钉死的。
-     长度大约是日面半径的 1.6 倍，探出球外一点点就收；
-     每根芒有自己的相位，所以不会四条一起同步闪，看起来是活的。 */
+  /* 5) 光芒：单根从中心往外画，长度像音浪一样律动。
+     做法——每根尖的伸缩量由"一个相邻尖传过来的波"驱动（相位差 0.55），
+     所以看起来是一条波绕着球跑，而不是所有尖一起同步跳。
+     再加一个更慢的第二波，避免规律得不自然。 */
   ctx.globalAlpha = 1;
-  const drawSpike = (ang, len, thick, amp) => {
+
+  const drawSpike = (ang, len, halfW, amp) => {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(ang);
-    // 在局部坐标系里建渐变（关键：不能混用全局坐标，否则会错位成灰块）
-    const g2 = ctx.createLinearGradient(-len, 0, len, 0);
-    g2.addColorStop(0,    'rgba(255,196,132,0)');
-    g2.addColorStop(0.30, `rgba(255,214,158,${amp*0.30})`);
-    g2.addColorStop(0.50, `rgba(255,248,226,${amp})`);
-    g2.addColorStop(0.70, `rgba(255,214,158,${amp*0.30})`);
-    g2.addColorStop(1,    'rgba(255,196,132,0)');
+    // 渐变必须在旋转后的局部坐标系里建，混用全局坐标会算错成灰块
+    const g2 = ctx.createLinearGradient(R*0.20, 0, len, 0);
+    g2.addColorStop(0,    `rgba(255,250,232,${amp})`);
+    g2.addColorStop(0.22, `rgba(255,240,206,${amp*0.86})`);
+    g2.addColorStop(0.52, `rgba(255,216,166,${amp*0.44})`);
+    g2.addColorStop(0.80, `rgba(255,198,140,${amp*0.13})`);
+    g2.addColorStop(1,    'rgba(255,190,124,0)');
     ctx.fillStyle = g2;
-    ctx.fillRect(-len, -thick/2, len*2, thick);
+
+    // 细长三角：底部窄、越往外越细，末端收尖（尖尖的感觉）
+    const b = halfW;
+    ctx.beginPath();
+    ctx.moveTo(R*0.18, -b);          // 根部压在日面里
+    ctx.quadraticCurveTo(len*0.55, -b*0.30, len, 0);
+    ctx.quadraticCurveTo(len*0.55,  b*0.30, R*0.18, b);
+    ctx.quadraticCurveTo(R*0.06, 0, R*0.18, -b);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   };
 
-  for (let k=0; k<4; k++){
-    // 每根主芒的抖动相位不同，周期也不同 → 整体像在轻轻呼吸的火光
-    const ph = k * 1.73;
-    const flick = Math.sin(T*1.15 + ph) * 0.5 + Math.sin(T*0.47 + ph*2.1) * 0.5;
-    const len = R * (1.05 + 0.16*bi + 0.13*flick) * scale;
-    const amp = (0.20 + 0.10*bi) * (0.72 + 0.28*flick);
-    drawSpike(k*Math.PI/2, len, Math.max(1, R*0.020), amp);
+  /* 主波：8 根长尖，绕一圈 */
+  const N_MAIN = 8;
+  for (let k=0; k<N_MAIN; k++){
+    const ang = k * (Math.PI*2/N_MAIN) + Math.PI/8;
+    // 相位随角度递增 → 波沿圆周跑
+    const wave = Math.sin(T*2.05 - k*0.55) * 0.5
+               + Math.sin(T*0.83 - k*0.31 + 1.1) * 0.34;
+    const pulse = 0.5 + 0.5*wave;                       // 0..1
+    const len = R * (1.28 + 0.44*pulse + 0.10*bi) * scale;
+    const amp = (0.24 + 0.30*pulse) * (0.55 + 0.45*bi);
+    drawSpike(ang, len, Math.max(1.4, R*0.028), amp);
   }
-  for (let k=0; k<4; k++){
-    const ph = 2.4 + k * 1.37;
-    const flick = Math.sin(T*1.32 + ph) * 0.5 + Math.sin(T*0.61 + ph*1.7) * 0.5;
-    const len = R * (0.62 + 0.10*bi + 0.09*flick) * scale;
-    const amp = (0.11 + 0.06*bi) * (0.72 + 0.28*flick);
-    drawSpike(k*Math.PI/2 + Math.PI/4, len, Math.max(1, R*0.013), amp);
+
+  /* 副波：中间补 8 根短尖，反方向跑，密度上来才像音浪 */
+  const N_SUB = 8;
+  for (let k=0; k<N_SUB; k++){
+    const ang = k * (Math.PI*2/N_SUB);
+    const wave = Math.sin(T*1.72 + k*0.62 + 2.2) * 0.5
+               + Math.sin(T*0.71 + k*0.28) * 0.32;
+    const pulse = 0.5 + 0.5*wave;
+    const len = R * (0.86 + 0.26*pulse + 0.06*bi) * scale;
+    const amp = (0.13 + 0.18*pulse) * (0.55 + 0.45*bi);
+    drawSpike(ang, len, Math.max(1, R*0.018), amp);
   }
 
   ctx.restore();
