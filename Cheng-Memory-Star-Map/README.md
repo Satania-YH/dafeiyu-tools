@@ -1,33 +1,26 @@
-# Cheng-Memory-Star-Map
+# 澄的记忆星图
 
-澄的记忆星图 —— 只读可视化与检查工具。
+把记忆画成一片星图：**一颗星 = 一条记忆**。相近的自动连线，点开看原话。
 
-把 dsh-fish 的五层记忆系统摊开看：事件流、本子、派生状态、Mnemon 记忆库、向量覆盖。
-**只读，不写回任何被检数据。**
-
----
-
-## 状态
-
-**阶段：骨架就位，尚未开工**
-
-开工前有两个决策待定，见 [docs/DECISIONS.md](docs/DECISIONS.md)。
+后台服务 + 浏览器打开 + 系统托盘，**只读**（不改任何记忆文件、不回写、不联网）。
 
 ---
 
-## 为什么做这个
+## 快速开始
 
-《记忆实现-给Alma.md》里那句最关键：
+```bash
+# 1. 生成数据（大肥鱼的导出脚本）
+python D:/大肥鱼工具/memory-graph/export-graph.py
 
-> 记忆不是一份「记忆库」，是一条只追加的事件流 + 每轮现算的派生状态 + 两套外挂检索。
+# 2. 补向量（bge-m3，走本机 Ollama）
+node server/embed.mjs
 
-这句话的结构是对的。但实测发现几个「看起来健康、实际在漏」的地方 ——
-比如 `heard` 有 39% 是重复注入、insight 无法回溯到产生它的 event、`edges` 表 66% 是时间顺连。
+# 3. 起服务
+node server/server.mjs
+# → http://127.0.0.1:17800/
+```
 
-完整核查见 [`../记忆系统体检-2026-11-23.md`](../记忆系统体检-2026-11-23.md)。
-
-这个项目的目标不是「好看」，是让这些漏点**看得见**：
-哪条记忆没有向量、哪条 insight 找不到出处、哪条判断二十天没再被提起。
+或者双击 `tray/星图.bat` —— 托盘会自己拉起服务。
 
 ---
 
@@ -35,41 +28,147 @@
 
 ```
 Cheng-Memory-Star-Map/
-├── docs/
-│   ├── LAYERS.md        五层结构 + 数据源路径 + 字段实测
-│   ├── DECISIONS.md     开工前待定的决策
-│   └── RULES.md         设计约束（只读 / 不做进度条 / 口径统一）
-├── data/                本地快照与导出（不进 git）
-└── src/                 源码
+├── app/index.html        前端（单文件，Canvas 2D 渲染）
+├── server/
+│   ├── server.mjs        后台服务（HTTP + 单实例锁）
+│   └── embed.mjs         向量计算（bge-m3）
+├── tray/
+│   ├── 星图托盘.ps1      系统托盘（右键菜单 / 自动守护）
+│   ├── 星图.bat          双击启动托盘
+│   ├── make-icon.ps1     生成图标（橙色底 + 白「澄」字）
+│   └── starmap.ico       托盘图标
+├── data-sources/         数据源（*.json，按 memory-graph/1 规范）
+└── data/                 运行时（锁 / 日志 / 向量缓存）
 ```
 
 ---
 
-## 硬约束
+## 接口
 
-1. **只读**。所有层都只读打开。写入口只有 `growth_commit`，这个项目不碰。
-2. **不做成长进度条 / 亲密度分数 / 等级**。插件注释明确禁止（N2）。可以显示条数、分布、日期、改口链，不要评分。
-3. **复用现成纯函数，别重写口径**：`searchEvents`、`renderRecall`、`deriveSelf`、`buildStances`、`examine`、`listNotes`、`listAppointments`。
-4. **检查页直接吃 `examine()` 的字段**，不自己另造一套「健康度」。
-5. **时间口径统一本地钟**。事件流 `ts` 是 UTC，展示要转本地。
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/` | 前端页面 |
+| GET | `/api/health` | 健康检查 `{ok, version, sources}` |
+| GET | `/api/sources` | 数据源列表 |
+| GET | `/api/source?id=<name>` | 某个源的节点 + 向量 |
+
+**默认端口 17800**，只绑 `127.0.0.1`（不对外）。
 
 ---
 
-## 数据源速查
+## 数据源格式（memory-graph/1）
 
-| 层 | 路径 |
+```json
+{
+  "schema": "memory-graph/1",
+  "title": "澄的记忆",
+  "note": "可选说明",
+  "nodes": [
+    {
+      "id": "唯一 id",
+      "text": "记忆原文（点开就看它）",
+      "kind": "fact",
+      "ts": "2026-11-23",
+      "importance": 0.8,
+      "confidence": 0.85,
+      "scope": "分区名",
+      "tags": ["标签A"],
+      "vector": [0.01, -0.03, 0.22]
+    }
+  ]
+}
+```
+
+- **`text` 是唯一必填字段**
+- **`vector`** 可选，但**有它才走语义连线**（余弦 topK），没有就退回文本相似度（中文双字 Jaccard）
+- 同一文件内 `vector` 维度必须一致（我们用 bge-m3 的 1024 维）
+- 也接受裸数组 `[{...}]` 或 `.jsonl`（一行一个节点）
+
+`kind` 决定颜色，我们用的映射：
+
+| 我们的 kind | 星图的 kind | 含义 |
+|---|---|---|
+| judgment | conclusion | 我的判断 |
+| said | event | 听到的真话 |
+| rule | promise | 规矩 |
+| insight / memory | fact | 长期记忆 |
+
+---
+
+## 单例保护
+
+三层，从内到外：
+
+1. **托盘**：`data/tray.lock` 独占文件 —— 第二次启动直接退出
+2. **服务**：`data/server.lock` 独占文件 —— 检测到活 PID 就报「已经在运行了」
+3. **端口**：操作系统 `EADDRINUSE` —— 兜底，捕获后给可读提示
+
+**残留锁自动接管**：进程崩了但锁还在 → 检查 PID → 死了就接管，不会卡死。
+**退出清理**：`SIGINT` / `SIGTERM` / `exit` 三个钩子都释放锁。
+
+---
+
+## 托盘
+
+双击 `tray/星图.bat`（或 `powershell -File tray/星图托盘.ps1`）。
+
+| 操作 | 效果 |
 |---|---|
-| 事件流 | `D:/dsh-fish-home/dsh-fish/events.jsonl` |
-| 本子 | `D:/dsh-fish-home/dsh-fish/{notes,diary,works,appointments}.json` |
-| 派生状态 | `D:/dsh-fish-home/dsh-fish/home/她的身份.md` |
-| Mnemon | `C:/Users/14127/.mnemon/{runtime,data/default}` |
-| 向量服务 | `http://localhost:11434`（Ollama bge-m3） |
-| 说明小站 | `http://127.0.0.1:17321`（只 GET，不套栅栏） |
-| 观测台 | `http://127.0.0.1:61955/dsh-fish/*`（要本次启动签名 cookie） |
+| 悬停 | `澄的记忆星图 · 运行中 · N 个源` |
+| 双击 | 打开星图 |
+| 右键 → 打开星图 | 打开浏览器 |
+| 右键 → 复制地址 | 复制 `http://127.0.0.1:17800/` |
+| 右键 → 重启服务 | 停再启 |
+| 右键 → 停止服务 | 停掉 node |
+| 右键 → 退出 | 停服务 + 清理锁 |
+
+**自动守护**：每 15 秒探一次，服务掉了自动拉起。
 
 ---
 
-## 版本管理
+## 向量计算
 
-本目录在 `D:/大肥鱼工具` 仓库内（origin: Satania-YH/dafeiyu-tools），分支 `main`。
-提交在仓库根执行。
+```bash
+node server/embed.mjs                    # 处理 data-sources/cheng.json
+node server/embed.mjs --file=xxx.json    # 指定文件
+node server/embed.mjs --force            # 忽略缓存全重算
+```
+
+- 走本机 Ollama（`http://localhost:11434`），模型 `bge-m3`，1024 维
+- **235 条约 4 秒**（2 路并发）
+- 缓存在 `data/vector-cache.json`，按**文本哈希**索引 —— 文本没变就不重算
+- 结果写回同一个 JSON 的 `vector` 字段
+
+---
+
+## 视觉可调项
+
+前端面板里能直接调：
+
+- **形态**：分区 / 星云 / 球壳 / 星系 / 长河 / 星河 / 极光 / 突破 + 随机生成
+- **主题**：暮色 / 冰蓝 / 霓虹 / 紫夜 + 自定义
+- **特效**：星芒 / 连线流光 / 星海 / 流星 / 脉冲（可逐项开关）+ 自定义
+- **调节**：节点大小、连线阈值、自动旋转、辉光、星尘密度、铺开程度
+- **配置**：随机一套 / 存为收藏 / 复制种子分享
+
+---
+
+## 来源
+
+前端渲染基于 [asdfd3/3d-memory-sea](https://github.com/asdfd3/3d-memory-sea)（MIT）的思路，
+以及 [记忆星图 v0.2](https://space.bilibili.com/16669666)（作者：苏小懒SAMA）的界面与交互设计。
+
+本项目的改动：
+- 去掉 Electron，改成**后台服务 + 浏览器**（`app/index.html` 注入 `window.starmap` 桥接层）
+- 加**单实例锁**（三层）
+- 加**系统托盘**（自动守护 + 橙色「澄」字图标）
+- 接 **bge-m3 向量**（`server/embed.mjs`）
+- 数据源适配 dsh-fish 的记忆格式
+
+---
+
+## 只读保证
+
+- 从打开到关掉，只**读**数据源文件，不改、不写回、不删
+- 向量写在数据源 JSON 里（那是我们自己的导出文件，不是原始记忆库）
+- 服务只绑 `127.0.0.1`，不联网

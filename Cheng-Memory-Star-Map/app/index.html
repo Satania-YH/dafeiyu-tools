@@ -1,0 +1,2983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>记忆星图</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{ color-scheme:dark; --accent:#8fb8ff; --line:rgba(140,170,255,.14); }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; overflow:hidden; background:#04050b; }
+  body{
+    font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    color:#e8ecf6; -webkit-font-smoothing:antialiased; user-select:none;
+  }
+  #app{ position:relative; height:100%; overflow:hidden; }
+
+  /* ---------------- 左侧面板：浮动，不挤压画布 ---------------- */
+  #panel{
+    position:absolute; left:0; top:0; bottom:0; width:296px; overflow-y:auto; overflow-x:hidden;
+    background:linear-gradient(180deg,rgba(11,15,27,.97),rgba(7,9,17,.97));
+    backdrop-filter:blur(14px);
+    border-right:1px solid var(--line); padding:16px 16px 26px; z-index:30;
+    box-shadow:0 0 46px rgba(0,0,0,.6);
+    transform:translateX(0);
+    transition:transform .30s cubic-bezier(.4,0,.2,1), box-shadow .30s;
+  }
+  #panel.collapsed{ transform:translateX(-297px); box-shadow:none; }
+  #panel::-webkit-scrollbar{ width:6px; }
+  #panel::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.18); border-radius:3px; }
+  #panel::-webkit-scrollbar-track{ background:transparent; }
+
+  .brand{ display:flex; align-items:baseline; gap:8px; margin-bottom:2px; }
+  .brand h1{ margin:0; font-size:15px; font-weight:600; letter-spacing:.16em; color:#e2eaff; }
+  .brand .v{ font-size:10px; color:#5c6884; letter-spacing:.04em; }
+  .brand .fold{
+    margin-left:auto; cursor:pointer; color:#6d7b9a; font-size:13px; padding:2px 6px;
+    border-radius:6px; transition:.15s;
+  }
+  .brand .fold:hover{ background:rgba(140,170,255,.1); color:#cfe0ff; }
+  .tagline{ font-size:10.5px; color:#65718c; margin:0 0 16px; letter-spacing:.05em; }
+
+  .sec{ margin-bottom:17px; }
+  .sec > .h{
+    display:flex; align-items:center; gap:7px; font-size:10px; letter-spacing:.16em;
+    color:#6d7b9a; text-transform:uppercase; margin-bottom:8px;
+  }
+  .sec > .h::after{ content:''; flex:1; height:1px; background:var(--line); }
+
+  /* 数据源 */
+  .src{
+    display:block; width:100%; text-align:left; cursor:pointer; padding:9px 11px; margin-bottom:7px;
+    background:rgba(255,255,255,.025); border:1px solid rgba(140,170,255,.1); border-radius:10px;
+    color:#b9c6e2; font-family:inherit; transition:.16s; position:relative; overflow:hidden;
+  }
+  .src:hover{ background:rgba(140,170,255,.07); border-color:rgba(140,170,255,.24); }
+  .src.on{ background:rgba(120,160,255,.12); border-color:rgba(140,170,255,.42); color:#e8f0ff; }
+  .src.on::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--accent); }
+  .src .t{ font-size:12.5px; font-weight:500; display:flex; align-items:center; gap:6px; }
+  .src .t .dot{ width:6px; height:6px; border-radius:50%; background:#5a6b90; }
+  .src.on .t .dot{ background:var(--accent); box-shadow:0 0 8px var(--accent); }
+  .src .s{ font-size:10.5px; color:#6f7c9b; margin-top:3px; line-height:1.5; }
+  .src .n{ float:right; font-size:10px; color:#7f8db0; }
+
+  /* 按钮组 */
+  .seg{ display:flex; gap:5px; flex-wrap:wrap; }
+  .seg button{
+    flex:1 1 0; min-width:56px; padding:7px 4px; cursor:pointer; font-family:inherit;
+    font-size:11.5px; color:#93a1c0; background:rgba(255,255,255,.025);
+    border:1px solid rgba(140,170,255,.1); border-radius:8px; transition:.15s; white-space:nowrap;
+  }
+  .seg button:hover{ background:rgba(140,170,255,.08); color:#cfdcf7; }
+  .seg button.on{ background:rgba(120,160,255,.16); border-color:rgba(140,170,255,.44); color:#eaf2ff; }
+
+  .swatches{ display:flex; gap:7px; }
+  .sw{
+    flex:1; height:30px; border-radius:8px; cursor:pointer; border:1px solid rgba(255,255,255,.1);
+    position:relative; transition:.18s;
+  }
+  .sw:hover{ transform:translateY(-1px); }
+  .sw.on{ box-shadow:0 0 0 2px #04050b, 0 0 0 3.5px var(--accent); }
+  .sw span{ position:absolute; left:0; right:0; bottom:2px; text-align:center; font-size:9px; color:rgba(255,255,255,.75); letter-spacing:.06em; }
+
+  /* 开关 */
+  .tog{
+    display:flex; align-items:center; gap:8px; padding:7px 9px; margin-bottom:5px; cursor:pointer;
+    background:rgba(255,255,255,.02); border:1px solid rgba(140,170,255,.08); border-radius:9px;
+    font-size:11.5px; color:#a3b1cf; transition:.15s;
+  }
+  .tog:hover{ background:rgba(140,170,255,.06); }
+  .tog .box{
+    width:13px; height:13px; border-radius:4px; border:1px solid rgba(140,170,255,.35);
+    display:flex; align-items:center; justify-content:center; font-size:9px; color:#04050b; flex:0 0 13px;
+  }
+  .tog.on .box{ background:var(--accent); border-color:var(--accent); }
+  .tog.on{ color:#dce8ff; }
+  .tog .d{ margin-left:auto; font-size:9.5px; color:#5f6b86; }
+.tog .del{ margin-left:7px; font-size:10px; color:#49536a; cursor:pointer; }
+.tog .del:hover{ color:#ff8a8a; }
+
+  /* 滑块 */
+  .sl{ margin-bottom:11px; }
+  .sl .lab{ display:flex; justify-content:space-between; font-size:10.5px; color:#8290b0; margin-bottom:5px; }
+  .sl .lab b{ color:#b6c6e8; font-weight:500; }
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:3px; border-radius:2px; outline:none;
+    background:linear-gradient(90deg,rgba(143,184,255,.55),rgba(143,184,255,.12));
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:11px; height:11px; border-radius:50%; background:#cfe0ff;
+    cursor:pointer; box-shadow:0 0 6px rgba(143,184,255,.7);
+  }
+
+  /* 动作按钮 */
+  .act{ display:flex; gap:7px; margin-top:12px; }
+  .act button{
+    flex:1; padding:9px 6px; cursor:pointer; font-family:inherit; font-size:11.5px; border-radius:9px;
+    border:1px solid rgba(140,170,255,.18); background:rgba(120,160,255,.1); color:#cfdcf7; transition:.16s;
+  }
+  .act button:hover{ background:rgba(120,160,255,.2); color:#fff; }
+  .act button.primary{ background:rgba(143,184,255,.2); border-color:rgba(143,184,255,.45); }
+
+  .presets{ margin-top:9px; }
+  .preset{
+    display:flex; align-items:center; gap:8px; padding:7px 9px; margin-bottom:5px; cursor:pointer;
+    background:rgba(255,255,255,.02); border:1px solid rgba(140,170,255,.08); border-radius:8px;
+    font-size:11px; color:#a9b7d6; transition:.14s;
+  }
+  .preset:hover{ background:rgba(140,170,255,.07); }
+  .preset .nm{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .preset .del{ color:#6b7794; font-size:11px; padding:0 3px; }
+  .preset .del:hover{ color:#ff8f9e; }
+  .empty{ font-size:10.5px; color:#56617c; padding:4px 2px; line-height:1.6; }
+
+  .foot{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:9.5px; color:#4f5a74; line-height:1.7; }
+  .srcact{ display:flex; gap:6px; margin-top:8px; }
+  .srcact button{ flex:1; padding:7px 6px; font-size:10.5px; border-radius:8px; border:1px solid var(--line); background:rgba(140,170,255,.06); color:#c3cee6; cursor:pointer; font-family:inherit; }
+  .srcact button:hover{ background:rgba(140,170,255,.14); color:#fff; }
+  .srchint{ margin:7px 2px 0; font-size:9.5px; color:#4f5a74; line-height:1.55; }
+  .src{ position:relative; }
+  .src .del{ position:absolute; right:8px; top:7px; font-size:10px; color:#4f5a74; cursor:pointer; opacity:0; transition:opacity .15s; }
+  .src:hover .del{ opacity:1; }
+  .src .del:hover{ color:#ff8f9e; }
+  .src.restore{ text-align:center; font-size:10.5px; color:#8fb8ff; }
+  .author{ margin-top:14px; padding-top:12px; border-top:1px solid var(--line); font-size:9.5px; color:#5b6785; line-height:1.75; }
+  .author .a1{ color:#9fb0d4; font-weight:600; letter-spacing:.4px; }
+  .author a{ color:#7fa6e8; text-decoration:none; }
+  .author a:hover{ color:#b8d0ff; text-decoration:underline; }
+  .author .a3{ margin-top:4px; color:#4a5468; }
+
+  /* ---------------- 舞台：铺满整窗 ---------------- */
+  #stage{ position:absolute; inset:0; cursor:grab; overflow:hidden; transition:opacity .35s; }
+  #stage.dragging{ cursor:grabbing; }
+  canvas{ display:block; width:100%; height:100%; }
+
+  /* 「》」把手：面板收起时贴左边，展开时贴在面板右侧 */
+  #unfold{
+    position:absolute; top:50%; left:0; transform:translateY(-50%); z-index:40;
+    cursor:pointer; width:20px; height:74px; border-radius:0 10px 10px 0;
+    border:1px solid var(--line); border-left:none; background:rgba(12,17,30,.92);
+    color:#8fa0c4; display:flex; align-items:center; justify-content:center;
+    font-size:13px; letter-spacing:1px; backdrop-filter:blur(8px);
+    transition:left .30s cubic-bezier(.4,0,.2,1), color .2s, border-color .2s, background .2s;
+  }
+  #unfold.open{ left:297px; }
+  #unfold:hover{ color:#e6efff; border-color:rgba(140,170,255,.45); background:rgba(22,30,52,.95); }
+
+  .hud{ position:absolute; pointer-events:none; z-index:5; }
+  .stats{ left:20px; bottom:16px; font-size:10.5px; color:#7f8cab; line-height:1.8; transition:left .30s cubic-bezier(.4,0,.2,1); }
+  body.panel-open .stats{ left:322px; }
+  .stats b{ color:#bcd0ff; font-weight:600; }
+  .hint{ right:20px; bottom:16px; font-size:10.5px; color:#5e6a85; text-align:right; line-height:1.7; }
+
+  .tip{
+    position:fixed; z-index:8; pointer-events:none; max-width:340px; padding:8px 10px;
+    background:rgba(10,14,26,.94); border:1px solid rgba(140,170,255,.22); border-radius:8px;
+    font-size:12px; line-height:1.55; color:#cfd9f2; opacity:0; transition:opacity .12s;
+    box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  .tip.show{ opacity:1; }
+  .tip .k{ color:#8fb8ff; font-size:10.5px; letter-spacing:.08em; }
+
+  .card{
+    position:absolute; z-index:9; right:16px; top:16px; width:390px; max-height:calc(100% - 32px);
+    overflow:auto; padding:16px 18px 18px; border-radius:14px;
+    background:linear-gradient(180deg,rgba(16,21,38,.97),rgba(10,13,24,.98));
+    border:1px solid rgba(140,170,255,.18); box-shadow:0 24px 70px rgba(0,0,0,.62);
+    display:none;
+  }
+  .card.show{ display:block; }
+  .card .row1{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .badge{ font-size:10.5px; padding:2px 8px; border-radius:99px; letter-spacing:.08em; }
+  .close{ margin-left:auto; cursor:pointer; color:#7b88a6; font-size:16px; line-height:1; padding:2px 4px; }
+  .close:hover{ color:#cfe0ff; }
+  .card .full{ font-size:13px; line-height:1.85; color:#e6ecfa; white-space:pre-wrap; user-select:text; }
+  .meta{ margin-top:14px; display:grid; grid-template-columns:auto 1fr; gap:5px 12px; font-size:11.5px; }
+  .meta .lab{ color:#6f7c9b; }
+  .meta .val{ color:#c3d0ec; user-select:text; }
+  .tags{ margin-top:12px; display:flex; flex-wrap:wrap; gap:6px; }
+  .tag{ font-size:10.5px; padding:2px 8px; border-radius:99px; background:rgba(120,160,255,.1); border:1px solid rgba(120,160,255,.2); color:#9fb4e0; }
+  .feel{ margin-top:12px; padding:10px 12px; border-left:2px solid rgba(255,180,120,.45); background:rgba(255,180,120,.05); font-size:12px; line-height:1.7; color:#d9c8b4; border-radius:0 8px 8px 0; }
+
+  #loading{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px; background:#04050b; z-index:20; transition:opacity .45s; }
+  #loading .ring{ width:34px; height:34px; border-radius:50%; border:2px solid rgba(140,170,255,.15); border-top-color:#8fb8ff; animation:spin 1s linear infinite; }
+  #loading .txt{ font-size:11.5px; color:#7c89a8; letter-spacing:.1em; text-align:center; line-height:1.7; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  /* ---------------- 自定义：新增按钮 + 编辑器 ---------------- */
+  .add{ width:100%; margin-top:8px; padding:7px 10px; font-size:11.5px; cursor:pointer;
+    border:1px dashed rgba(140,170,255,.28); border-radius:8px; background:transparent;
+    color:#8fa6d0; font-family:inherit; transition:.18s; }
+  .add:hover{ color:#d6e4ff; border-color:rgba(140,170,255,.6); background:rgba(140,170,255,.07); }
+
+  #editor{ position:absolute; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+    background:rgba(2,4,10,.72); backdrop-filter:blur(6px); }
+  #editor.show{ display:flex; }
+  #editor .box{ width:430px; max-height:82vh; overflow-y:auto; padding:20px 22px 22px;
+    background:linear-gradient(180deg,rgba(14,19,32,.99),rgba(9,12,21,.99));
+    border:1px solid rgba(120,150,220,.28); border-radius:14px; box-shadow:0 24px 80px rgba(0,0,0,.7); }
+  #editor h3{ margin:0 0 4px; font-size:14px; font-weight:600; letter-spacing:.06em; color:#dfe9ff; }
+  #editor .sub{ font-size:11px; color:#7b89a8; margin-bottom:16px; }
+  #editor .fld{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  #editor .fld > label{ width:74px; font-size:11.5px; color:#93a3c2; flex:0 0 74px; }
+  #editor input[type=text]{ flex:1; padding:6px 9px; font-size:12px; color:#e6eeff; font-family:inherit;
+    background:rgba(6,9,17,.8); border:1px solid rgba(120,150,220,.22); border-radius:7px; outline:none; }
+  #editor input[type=text]:focus{ border-color:rgba(140,170,255,.55); }
+  #editor input[type=color]{ width:34px; height:26px; padding:0; border:1px solid rgba(120,150,220,.25);
+    border-radius:6px; background:transparent; cursor:pointer; }
+  #editor input[type=range]{ flex:1; }
+  #editor .row{ display:flex; gap:8px; margin-top:16px; }
+  #editor .row button{ flex:1; padding:9px; font-size:12px; cursor:pointer; font-family:inherit;
+    border-radius:8px; border:1px solid rgba(120,150,220,.28); background:rgba(120,150,220,.10); color:#cddcf7; }
+  #editor .row button.ok{ background:linear-gradient(135deg,rgba(92,140,255,.32),rgba(120,90,255,.30));
+    border-color:rgba(140,170,255,.5); color:#eef4ff; }
+  #editor .row button:hover{ filter:brightness(1.15); }
+  #editor .kv{ display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; margin-bottom:6px; }
+  #editor .kv .fld{ margin-bottom:0; }
+  #editor .kv .fld > label{ width:56px; flex:0 0 56px; font-size:11px; }
+
+  .sw .del{ position:absolute; right:4px; top:2px; font-size:10px; color:#7d8aa8; opacity:0; cursor:pointer; }
+  .sw:hover .del{ opacity:1; }
+  .sw{ position:relative; }.seedrow{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.seedrow code{ flex:1 0 100%; font-size:11px; padding:5px 8px; border-radius:7px; background:rgba(255,255,255,.06); color:#9fd0ff; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.seedrow button{ flex:0 0 auto; }
+.seedrow button{ padding:4px 9px; font-size:11px; }
+#toast{ position:fixed; right:22px; bottom:22px; z-index:60; padding:9px 14px; border-radius:10px; background:rgba(10,16,28,.94); border:1px solid rgba(120,180,255,.30); color:#cfe4ff; font-size:12px; opacity:0; transform:translateY(8px); transition:all .22s; pointer-events:none; max-width:60vw; }
+#toast.on{ opacity:1; transform:none; }
+.hud.spin{ position:absolute; right:22px; top:20px; pointer-events:auto; z-index:6; padding:7px 15px; border-radius:999px; background:rgba(10,16,28,.74); border:1px solid rgba(120,180,255,.20); color:#7f93b3; font-size:12px; letter-spacing:.6px; cursor:pointer; backdrop-filter:blur(10px); transition:all .22s; font-family:inherit; }
+.hud.spin:hover{ border-color:rgba(140,190,255,.45); color:#bcd6f5; }
+.hud.spin.on{ color:#c9e2ff; border-color:rgba(140,190,255,.55); box-shadow:0 0 20px rgba(110,170,255,.26), inset 0 0 12px rgba(110,170,255,.10); }
+.cell{ position:relative; display:inline-block; }
+.cell .del{ position:absolute; top:-6px; right:-6px; width:15px; height:15px; border-radius:50%; background:#182135; border:1px solid rgba(255,255,255,.10); color:#7d8aa6; font-size:9px; line-height:13px; text-align:center; cursor:pointer; opacity:0; transition:all .15s; z-index:2; }
+.cell:hover .del{ opacity:1; }
+.cell .del:hover{ background:#3a1b22; color:#ff9aa2; border-color:rgba(255,140,140,.35); }
+.hud.code{ position:absolute; right:22px; top:64px; pointer-events:auto; z-index:6; padding:7px 15px; border-radius:999px; background:rgba(10,16,28,.74); border:1px solid rgba(120,180,255,.20); color:#7f93b3; font-size:12px; letter-spacing:.6px; cursor:pointer; backdrop-filter:blur(10px); transition:all .22s; font-family:"Consolas",monospace; }
+.hud.code:hover{ border-color:rgba(140,190,255,.45); color:#bcd6f5; }
+.hud.code.on{ color:#c9e2ff; border-color:rgba(140,190,255,.55); box-shadow:0 0 20px rgba(110,170,255,.26); }
+#codeBox{ position:absolute; right:22px; top:106px; width:342px; max-height:62vh; display:flex; flex-direction:column; background:rgba(8,12,22,.94); border:1px solid rgba(120,180,255,.20); border-radius:13px; backdrop-filter:blur(16px); box-shadow:0 14px 44px rgba(0,0,0,.55); opacity:0; transform:translateY(-8px); pointer-events:none; transition:all .22s; z-index:35; }
+#codeBox.on{ opacity:1; transform:none; pointer-events:auto; }
+#codeBox .hd{ display:flex; align-items:center; justify-content:space-between; padding:10px 13px; border-bottom:1px solid rgba(120,180,255,.12); font-size:12px; color:#a9c2e4; letter-spacing:.5px; }
+#codeBox .hd .hdr{ display:flex; align-items:center; gap:9px; }
+#codeBox .hd .mini{ padding:3px 9px; font-size:10px; border-radius:6px; border:1px solid rgba(120,180,255,.30); background:rgba(120,180,255,.10); color:#a9c8ee; cursor:pointer; font-family:inherit; }
+#codeBox .hd .mini:hover{ background:rgba(120,180,255,.20); color:#d7e8ff; }
+#codeBox .hd .x{ cursor:pointer; color:#6f7d96; padding:0 4px; }
+#codeBox .hd .x:hover{ color:#ff9aa2; }
+#codeBox pre{ margin:0; padding:11px 13px; font-size:11px; line-height:1.65; color:#9fd0ff; font-family:"Consolas","Courier New",monospace; overflow:auto; white-space:pre-wrap; word-break:break-all; }
+#codeBox .ft{ padding:9px 13px; border-top:1px solid rgba(120,180,255,.12); display:flex; gap:8px; }
+#codeBox .ft button{ flex:1; padding:6px; font-size:11px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <div class="brand">
+      <h1>记 忆 星 图</h1>
+      <span class="v" id="ver">desktop</span>
+    </div>
+    <p class="tagline">只读 · 本机 · 不联网</p>
+
+    <div class="sec">
+      <div class="h">数据源</div>
+      <div id="sources"></div>
+      <div class="srcact">
+        <button id="addSrc">＋ 添加文件</button>
+        <button id="openSrcDir">📂 打开目录</button>
+      </div>
+      <p class="srchint">只读 · 这里只决定显示哪些源，不会改动记忆文件</p>
+    </div>
+
+    <div class="sec">
+      <div class="h">形态</div>
+      <div class="seg" id="shapes">
+        <button data-v="nebula">星云</button>
+        <button data-v="sphere">球壳</button>
+        <button data-v="galaxy">星系</button>
+        <button data-v="river">长河</button>
+      </div>
+      <button class="add" id="addShape">+ 自定义形态</button>
+    </div>
+
+    <div class="sec">
+      <div class="h">主题</div>
+      <div class="swatches" id="themes"></div>
+      <button class="add" id="addTheme">+ 自定义主题</button>
+    </div>
+
+    <div class="sec">
+      <div class="h">特效</div>
+      <div id="fx"></div>
+      <button class="add" id="addFx">+ 自定义特效</button>
+    </div>
+
+    <div class="sec">
+      <div class="h">调节</div>
+      <div id="sliders"></div>
+    </div>
+
+    <div class="sec">
+      <div class="h">配置</div>
+      <div class="act">
+        <button id="btnRandom" class="primary">🎲 随机一套</button>
+        <button id="btnSave">💾 存为收藏</button>
+      </div>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="author">
+      <div class="a1">作者 · 苏小俊SAMA</div>
+      <div class="a2">B站 <a href="https://space.bilibili.com/16666966" data-url="https://space.bilibili.com/16666966">space.bilibili.com/16666966</a></div>
+      <div class="a2">个人主页 <a href="https://space.bilibili.com/16666966" data-url="https://space.bilibili.com/16666966">space.bilibili.com/16666966</a></div>
+      <div class="a3">本工具仅供个人非商业使用；转载请注明作者与出处。</div>
+    </div>
+    <div class="foot" id="foot"></div>
+  </aside>
+
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div class="hud stats" id="stats"></div>
+    <button class="hud spin" id="spinBtn" title="自动旋转 开/关">⟳ 自转</button>
+    <button class="hud code" id="codeBtn" title="看当前形态的种子代码">查看种子代码</button>
+    <div id="codeBox">
+      <div class="hd"><span>当前形态 · 种子代码</span><span class="hdr"><button class="mini" id="codeCopyTop">一键复制</button><span class="x" id="codeClose">✕</span></span></div>
+      <pre id="codeText"></pre>
+      <div class="ft"><button id="codeCopy">复制代码</button></div>
+    </div>
+    <div class="hud hint">拖拽旋转 · 滚轮缩放 · 点星看原话<br>实线=相近，金虚线=同标签，青虚线=同时段</div>
+    <div class="card" id="card"></div>
+    <div id="loading"><div class="ring"></div><div class="txt">正在铺星图…</div></div>
+  </main>
+
+  <div id="editor">
+    <div class="box">
+      <h3 id="edTitle">自定义</h3>
+      <div class="sub" id="edSub"></div>
+      <div id="edBody"></div>
+      <div class="row">
+        <button id="edCancel">取消</button>
+        <button id="edOk" class="ok">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="unfold" class="open" title="展开 / 收起面板">》</div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+/* ── 浏览器桥接层 ──
+   Electron 版用 preload.js 暴露 window.starmap；
+   这里是网页版，用 HTTP 接口提供同样的对象，前端代码一行不用改。 */
+(function () {
+  if (window.starmap && window.starmap.isDesktop) return;   // 在 Electron 里就用原生的
+
+  const api = (path) => fetch(path).then(r => r.json());
+
+  window.starmap = {
+    isDesktop: false,
+
+    listSources: async () => {
+      const d = await api('/api/sources');
+      // 原样透传：前端要用 title / subtitle / stats.total
+      return { ok: true, sources: d.sources || [] };
+    },
+
+    load: async (id) => {
+      const d = await api('/api/source?id=' + encodeURIComponent(id));
+      if (!d.ok) throw new Error(d.error || '加载失败');
+      return d;
+    },
+
+    addSourceFiles: null,     // 网页版不支持选文件，前端会提示
+    openSourceDir: null,
+    openExternal: (u) => window.open(u, '_blank', 'noopener'),
+  };
+})();
+</script>
+<script>
+'use strict';
+
+/* ============================================================================
+   可调配置
+   shape: nebula 星云 | sphere 球壳 | galaxy 星系
+   theme: dusk 暮色 | ice 冰蓝 | neon 霓虹 | violet 紫夜
+   fx:    nebula 星云雾 | river 星河 | sea 星海
+   ========================================================================== */
+const DEFAULTS = {
+  source: 'coo',
+  shape: 'cluster',
+  groupBy: 'kind',
+  theme: 'dusk',
+  fx: { rays: true, flow: true, sea: true, meteor: true, pulse: false },
+  sizePower: 1.45,
+  sizeBase: 13,
+  linkTopK: 3,
+  linkAlpha: 1,
+  linkThreshold: 0.72,
+  autoRotate: 0.12,
+  glow: 0.60,
+  starfield: 260,
+  spread: 1.0,
+  seed: 0,
+};
+const OPTS = JSON.parse(JSON.stringify(DEFAULTS));
+
+/* ---------------- 环境探测 ---------------- */
+const CAP = (function(){
+  let webgl2 = false, webgl = false;
+  try {
+    const c = document.createElement('canvas');
+    webgl2 = !!c.getContext('webgl2');
+    webgl = webgl2 || !!c.getContext('webgl');
+  } catch(e){}
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || 0;
+  const dpr = window.devicePixelRatio || 1;
+  const ua = navigator.userAgent || '';
+  let hash = 2166136261;
+  for (let i=0;i<ua.length;i++){ hash ^= ua.charCodeAt(i); hash = (hash*16777619)>>>0; }
+  hash ^= Math.round(screen.width*7919 + screen.height*104729 + dpr*31) >>> 0;
+  return { webgl2, webgl, cores, mem, dpr, hash: hash>>>0 };
+})();
+const WEAK = CAP.cores <= 4 || (CAP.mem && CAP.mem <= 4) || !CAP.webgl;
+if (WEAK){ OPTS.starfield = Math.min(OPTS.starfield, 150); OPTS.glow *= 0.8; OPTS.sizeBase *= 0.92; }
+else if (CAP.cores >= 12){ OPTS.starfield = Math.max(OPTS.starfield, 360); }
+if (!OPTS.seed) OPTS.seed = CAP.hash % 100000;
+
+/* ---------------- 主题与类型 ---------------- */
+const KIND_CN = { episode:'事件', fact:'事实', self:'自我', person:'人物', thread:'线索', rule:'规则', msg:'对话' };
+
+const LINK_DEFAULTS = { vector: 0.72, text: 0.20 };
+
+const THEMES = {
+  dusk: {
+    name:'暮色', bg:['#0a1024','#04050b'], nebula:'#4a6edc', nebulaA:.10,
+    kinds:{ episode:'#8fb8ff', fact:'#5fe0c8', self:'#ffd479', person:'#ff9ecb', thread:'#b48cff', rule:'#ffb37a', msg:'#9fb8e8' },
+    link:'#5a78c8', star:'#9fb4e8'
+  },
+  ice: {
+    name:'冰蓝', bg:['#05101c','#02060c'], nebula:'#4fa8d8', nebulaA:.10,
+    kinds:{ episode:'#a8d8ff', fact:'#7ff0e0', self:'#fff0a8', person:'#c8b8ff', thread:'#8fd0ff', rule:'#a8ffe8', msg:'#a9c8ea' },
+    link:'#4f9fd0', star:'#b8d8f0'
+  },
+  neon: {
+    name:'霓虹', bg:['#12052a','#04020a'], nebula:'#dc50c8', nebulaA:.09,
+    kinds:{ episode:'#7fd0ff', fact:'#5fffd0', self:'#ffe066', person:'#ff6fbf', thread:'#c07fff', rule:'#ff9a6f', msg:'#a0d0ff' },
+    link:'#b060d0', star:'#e0a8f0'
+  },
+  violet: {
+    name:'紫夜', bg:['#0b0620','#030208'], nebula:'#8b5cf6', nebulaA:.11,
+    kinds:{ episode:'#9db4ff', fact:'#6fe8c8', self:'#ffd98a', person:'#ff9ad5', thread:'#c9a0ff', rule:'#ffb08a', msg:'#a8baff' },
+    link:'#7a6ad8', star:'#c0b0f0'
+  }
+};
+
+/* ---------------- 颜色工具 ---------------- */
+function hex2rgb(h){
+  const v = h.replace('#','');
+  return [parseInt(v.slice(0,2),16), parseInt(v.slice(2,4),16), parseInt(v.slice(4,6),16)];
+}
+function rgbStr(c, a){ return 'rgba('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+','+(a==null?1:a)+')'; }
+function mixTo(cur, tgt, k){
+  cur[0] += (tgt[0]-cur[0])*k;
+  cur[1] += (tgt[1]-cur[1])*k;
+  cur[2] += (tgt[2]-cur[2])*k;
+}
+function themeToRGB(t){
+  const o = { bg:[hex2rgb(t.bg[0]), hex2rgb(t.bg[1])], nebula:hex2rgb(t.nebula), nebulaA:t.nebulaA,
+              kinds:{}, link:hex2rgb(t.link), star:hex2rgb(t.star) };
+  for (const k in t.kinds) o.kinds[k] = hex2rgb(t.kinds[k]);
+  return o;
+}
+
+/* ---------------- 状态 ---------------- */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const stage = document.getElementById('stage');
+const tipEl = document.getElementById('tip');
+const cardEl = document.getElementById('card');
+const panel = document.getElementById('panel');
+const statsEl = document.getElementById('stats');
+
+let DATA = null;           // 当前数据源
+let nodes = [], edges = [], adj = [];
+let N = 0, DIM = 0;
+let vecs = new Map(), hasVec = new Set();
+let pairCache = null;
+let bgStars = [];
+
+let W=0, H=0, DPR=1, fitK=0, panX=0, panY=0, panning=false;
+let yaw = 0.6, pitch = -0.18, zoom = 1;
+let dragging=false, lastX=0, lastY=0;
+let proj = new Float32Array(4);
+let selected = -1, hovered = -1;
+let labelsCv = [];
+let focusCache = { i:-1, list:[] };
+
+// 主题色：cur 平滑追 tgt
+let themeRGB = themeToRGB(THEMES[OPTS.theme] || THEMES.dusk);
+let themeTgt = themeRGB;
+let sprites = {}, spritesDim = {}, spriteTick = 0;
+let clusterInfo = [];
+let nodeGroupOf = [];
+let nodeGroup = [];
+let flowList = [];
+function buildFlowList(){
+  flowList = edges.map((e,i)=>i).sort((a,b)=> edges[b].w - edges[a].w).slice(0, 140);
+}
+
+const FOV = 3.1;
+
+/* ---------------- 画布尺寸 ---------------- */
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  W = stage.clientWidth; H = stage.clientHeight;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+
+/* ---------------- 随机/工装 ---------------- */
+function rnd(seed){
+  let s = (seed >>> 0) || 1;
+  return function(){ s = (s*1664525 + 1013904223) >>> 0; return s/4294967296; };
+}
+function short(s, n){ s = String(s||'').replace(/\s+/g,' '); return s.length>n ? s.slice(0,n)+'…' : s; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------------- 数据装载 ---------------- */
+function decodeVectors(){
+  vecs = new Map(); hasVec = new Set();
+  if (!DATA.vecB64 || !DATA.dim) return;
+  const bin = atob(DATA.vecB64);
+  const q = new Int8Array(bin.length);
+  for (let i=0;i<bin.length;i++){ const c=bin.charCodeAt(i); q[i] = c>127 ? c-256 : c; }
+  DIM = DATA.dim;
+  for (let ni=0; ni<N; ni++){
+    const n = nodes[ni];
+    if (n.v < 0) continue;
+    const off = n.v*DIM;
+    const v = new Float32Array(DIM);
+    let s = 0;
+    for (let d=0; d<DIM; d++){ const x = q[off+d]/127; v[d]=x; s += x*x; }
+    s = Math.sqrt(s) || 1;
+    for (let d=0; d<DIM; d++) v[d] /= s;
+    vecs.set(ni, v); hasVec.add(ni);
+  }
+}
+
+// 无向量的源：中文双字 + 英文词 的 Jaccard
+function bigrams(s){
+  const t = String(s||'').toLowerCase().replace(/[\s\p{P}\p{S}]/gu,'');
+  const set = new Set();
+  for (let i=0;i<t.length-1;i++) set.add(t.slice(i,i+2));
+  return set;
+}
+function jaccard(a,b){
+  let inter = 0;
+  for (const x of a) if (b.has(x)) inter++;
+  return inter / (a.size + b.size - inter || 1);
+}
+
+function buildPairsVector(){
+  if (pairCache) return pairCache;
+  const idx = [...vecs.keys()];
+  const out = [];
+  for (let a=0; a<idx.length; a++){
+    const va = vecs.get(idx[a]);
+    for (let b=a+1; b<idx.length; b++){
+      const vb = vecs.get(idx[b]);
+      let dot = 0;
+      for (let d=0; d<DIM; d++) dot += va[d]*vb[d];
+      if (dot > 0.45) out.push([idx[a], idx[b], dot]);
+    }
+  }
+  pairCache = out;
+  return out;
+}
+// 没有 embedding 时：TF-IDF 加权的 bigram 余弦。短文本里共享一个低频词就能得分，
+// 比裸 Jaccard 靠谱得多（"星图"这种词在一堆笔记里是强信号）。
+function buildPairsText(){
+  if (pairCache) return pairCache;
+  const sets = nodes.map(n => bigrams(n.t));
+  const df = new Map();
+  for (const s of sets) for (const g of s) df.set(g, (df.get(g)||0) + 1);
+  const total = Math.max(1, N);
+  const vecsT = sets.map(s => {
+    const m = new Map(); let norm = 0;
+    for (const g of s){
+      const idf = Math.log(1 + total/(1 + (df.get(g)||1)));
+      if (!m.has(g)){ m.set(g, idf); norm += idf*idf; }
+    }
+    return { m, norm: Math.sqrt(norm) || 1 };
+  });
+  const out = [];
+  for (let a=0; a<N; a++){
+    if (!sets[a].size) continue;
+    const A = vecsT[a];
+    for (let b=a+1; b<N; b++){
+      if (!sets[b].size) continue;
+      const B = vecsT[b];
+      const small = A.m.size <= B.m.size ? A : B;
+      const big = small === A ? B : A;
+      let dot = 0;
+      for (const [g, w] of small.m){ const w2 = big.m.get(g); if (w2) dot += w*w2; }
+      const cos = dot/(A.norm*B.norm);
+      if (cos > 0.02) out.push([a, b, cos]);
+    }
+  }
+  pairCache = out;
+  return out;
+}
+
+function buildEdges(){
+  const pairs = DATA.linkMode === 'vector' ? buildPairsVector() : buildPairsText();
+  const thr = OPTS.linkThreshold, K = Math.max(1, OPTS.linkTopK|0);
+  const per = new Map();
+  const best = new Array(N).fill(null);
+  for (const p of pairs){
+    if (!best[p[0]] || p[2] > best[p[0]][2]) best[p[0]] = p;
+    if (!best[p[1]] || p[2] > best[p[1]][2]) best[p[1]] = p;
+    if (p[2] < thr) continue;
+    for (const end of [p[0], p[1]]){
+      let arr = per.get(end);
+      if (!arr){ arr=[]; per.set(end, arr); }
+      arr.push(p);
+    }
+  }
+  const seen = new Set(), out = [];
+  for (const [ni, arr] of per){
+    arr.sort((x,y)=>y[2]-x[2]);
+    for (let i=0; i<Math.min(K, arr.length); i++){
+      const p = arr[i];
+      const key = p[0] < p[1] ? p[0]+'_'+p[1] : p[1]+'_'+p[0];
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ a:p[0], b:p[1], w:p[2] });
+    }
+  }
+
+  // 兜底：一条边都没有的孤立星，补上它最像的那一条，别让星图散成一盘沙
+  const deg = new Array(N).fill(0);
+  for (const e of out){ deg[e.a]++; deg[e.b]++; }
+  for (let i=0;i<N;i++){
+    if (deg[i] > 0) continue;
+    const p = best[i];
+    if (!p) continue;
+    const key = p[0] < p[1] ? p[0]+'_'+p[1] : p[1]+'_'+p[0];
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ a:p[0], b:p[1], w:p[2] });
+    deg[p[0]]++; deg[p[1]]++;
+  }
+  return out;
+}
+
+function buildAdj(){
+  adj = nodes.map(()=>[]);
+  edges.forEach((e,i)=>{ adj[e.a].push(i); adj[e.b].push(i); });
+}
+
+/* ---------------- 布局：3D 力导向（空间网格加速） ---------------- */
+function computeLayout(){
+  N = nodes.length;
+  const rand = rnd(OPTS.seed || 20261118);
+  for (let i=0;i<N;i++){
+    const u = rand()*2-1, phi = rand()*Math.PI*2;
+    const r = Math.cbrt(rand())*0.9 + 0.1;
+    const s = Math.sqrt(1-u*u);
+    const n = nodes[i];
+    n.x = Math.cos(phi)*s*r; n.y = u*r; n.z = Math.sin(phi)*s*r;
+    n.vx = n.vy = n.vz = 0;
+    n.px = n.x; n.py = n.y; n.pz = n.z;    // 当前显示位置
+  }
+
+  const ITER = N > 600 ? 260 : 380;
+  const CELL = 0.45, CUT2 = 0.9;
+  const REPEL = N < 40 ? 0.0020 : 0.0052;
+  const grid = new Map();
+  const key = (ix,iy,iz) => (ix+64)*16384 + (iy+64)*128 + (iz+64);
+
+  for (let it=0; it<ITER; it++){
+    // 斥力（网格邻域）
+    grid.clear();
+    for (let i=0;i<N;i++){
+      const n = nodes[i];
+      const kx = Math.floor(n.x/CELL), ky = Math.floor(n.y/CELL), kz = Math.floor(n.z/CELL);
+      const k = key(kx,ky,kz);
+      let cell = grid.get(k);
+      if (!cell){ cell = []; grid.set(k, cell); }
+      cell.push(i);
+    }
+    for (let i=0;i<N;i++){
+      const a = nodes[i];
+      const ax = Math.floor(a.x/CELL), ay = Math.floor(a.y/CELL), az = Math.floor(a.z/CELL);
+      for (let dx=-1; dx<=1; dx++) for (let dy=-1; dy<=1; dy++) for (let dz=-1; dz<=1; dz++){
+        const cell = grid.get(key(ax+dx, ay+dy, az+dz));
+        if (!cell) continue;
+        for (let ci=0; ci<cell.length; ci++){
+          const j = cell[ci];
+          if (j <= i) continue;
+          const b = nodes[j];
+          let ddx = a.x-b.x, ddy = a.y-b.y, ddz = a.z-b.z;
+          const d2 = ddx*ddx + ddy*ddy + ddz*ddz;
+          if (d2 > CUT2 || d2 < 1e-9) continue;
+          const f = REPEL/(d2+0.0012);
+          const inv = 1/Math.sqrt(d2);
+          ddx*=inv; ddy*=inv; ddz*=inv;
+          a.vx += ddx*f; a.vy += ddy*f; a.vz += ddz*f;
+          b.vx -= ddx*f; b.vy -= ddy*f; b.vz -= ddz*f;
+        }
+      }
+    }
+    // 弹簧
+    for (let ei=0; ei<edges.length; ei++){
+      const e = edges[ei];
+      const a = nodes[e.a], b = nodes[e.b];
+      let dx = b.x-a.x, dy = b.y-a.y, dz = b.z-a.z;
+      const d = Math.sqrt(dx*dx+dy*dy+dz*dz) || 1e-6;
+      const f = (d - 0.55) * 0.020 * (0.45 + e.w);
+      dx/=d; dy/=d; dz/=d;
+      a.vx += dx*f; a.vy += dy*f; a.vz += dz*f;
+      b.vx -= dx*f; b.vy -= dy*f; b.vz -= dz*f;
+    }
+    // 向心 + 阻尼
+    for (let i=0;i<N;i++){
+      const n = nodes[i];
+      n.vx += -n.x*0.0012; n.vy += -n.y*0.0012; n.vz += -n.z*0.0012;
+      n.vx *= 0.87; n.vy *= 0.87; n.vz *= 0.87;
+      n.x += n.vx; n.y += n.vy; n.z += n.vz;
+    }
+  }
+
+  const rs = nodes.map(n=>Math.hypot(n.x,n.y,n.z)).sort((a,b)=>a-b);
+  const p92 = rs[Math.min(rs.length-1, Math.floor(rs.length*0.92))] || 1;
+  const k = 0.90 / (p92 || 1);
+  for (const n of nodes){ n.x*=k; n.y*=k; n.z*=k; }
+}
+
+/* ---------------- 形态：只改目标位置，渲染层平滑追过去 ---------------- */
+/* 语义聚簇：用记忆自己的向量做 k-means，同类记忆抱团 → 星团/星云自然成形 */
+let CLUSTER = null;
+function computeClusters(k){
+  if (CLUSTER && CLUSTER.k === k) return CLUSTER.map;
+  const pts = [];
+  for (let i=0;i<N;i++){ if (nodes[i].vec && nodes[i].vec.length === DIM) pts.push(i); }
+  if (pts.length < k*3 || !DIM){ CLUSTER = {k, map:null}; return null; }
+  const cent = [];
+  for (let c=0;c<k;c++) cent.push(Float32Array.from(nodes[pts[Math.floor(pts.length*c/k)]].vec));
+  const assign = new Int32Array(N).fill(-1);
+  for (let it=0; it<14; it++){
+    for (const i of pts){
+      const v = nodes[i].vec;
+      let bd = -2, best = 0;
+      for (let c=0;c<k;c++){
+        const ce = cent[c]; let dot = 0;
+        for (let d=0; d<DIM; d++) dot += v[d]*ce[d];
+        if (dot > bd){ bd = dot; best = c; }
+      }
+      assign[i] = best;
+    }
+    const sum = []; for (let c=0;c<k;c++) sum.push(new Float32Array(DIM));
+    const cnt = new Int32Array(k);
+    for (const i of pts){ const c = assign[i]; cnt[c]++; const v = nodes[i].vec, s = sum[c]; for (let d=0;d<DIM;d++) s[d] += v[d]; }
+    for (let c=0;c<k;c++){
+      if (!cnt[c]) continue;
+      const s = sum[c]; let nn = 0; for (let d=0;d<DIM;d++) nn += s[d]*s[d];
+      nn = Math.sqrt(nn) || 1;
+      for (let d=0;d<DIM;d++) cent[c][d] = s[d]/nn;
+    }
+  }
+  // 团心摆成球面（Fibonacci），簇之间互不重叠
+  const pos = [];
+  for (let c=0;c<k;c++){
+    const y = 1 - (c+0.5)*2/k;
+    const rr = Math.sqrt(Math.max(0, 1-y*y));
+    const phi = c*2.39996323;
+    pos.push({ x: Math.cos(phi)*rr*0.62, y: y*0.62, z: Math.sin(phi)*rr*0.62 });
+  }
+  const map = [];
+  const sizes = new Int32Array(k);
+  for (const i of pts) if (assign[i]>=0) sizes[assign[i]]++;
+  for (let i=0;i<N;i++) map.push(assign[i] >= 0 ? pos[assign[i]] : { x:0,y:0,z:0 });
+  CLUSTER = { k, map, pos, assign, sizes };
+  return map;
+}
+
+
+function baseShape(){ const cs = CUSTOM.shapes[OPTS.shape]; return (cs && cs.base) || OPTS.shape; }
+/* ---------- 形态列表：内置 + 自定义，可删，至少留 3 个 ---------- */
+const SHAPE_BUILTIN = [
+  { v:'duel',    label:'突破' },
+  { v:'cluster', label:'分区' },
+  { v:'nebula',  label:'星云' },
+  { v:'sphere',  label:'球壳' },
+  { v:'galaxy',  label:'星系' },
+  { v:'river',   label:'长河' },
+  { v:'stream',  label:'星河' },
+  { v:'aurora',  label:'极光' },
+];
+let HIDDEN_SHAPES = [];
+try { HIDDEN_SHAPES = JSON.parse(localStorage.getItem('starmap.hiddenShapes.v1') || '[]'); } catch(e){ HIDDEN_SHAPES = []; }
+function saveHiddenShapes(){ try { localStorage.setItem('starmap.hiddenShapes.v1', JSON.stringify(HIDDEN_SHAPES)); } catch(e){} }
+function allShapesList(){
+  const out = SHAPE_BUILTIN.slice();
+  for (const sid in CUSTOM.shapes) out.push({ v:sid, label:(CUSTOM.shapes[sid].name || '自定义') });
+  return out;
+}
+function visibleShapes(){ return allShapesList().filter(x => HIDDEN_SHAPES.indexOf(x.v) < 0); }
+function deleteShape(v){
+  const vis = visibleShapes();
+  if (vis.length <= 3){ toast('最少留 3 个形态，删不下去了'); return; }
+  if (CUSTOM.shapes[v]){ delete CUSTOM.shapes[v]; saveCustom(); }
+  else if (HIDDEN_SHAPES.indexOf(v) < 0){ HIDDEN_SHAPES.push(v); saveHiddenShapes(); }
+  if (OPTS.shape === v){
+    const rest = visibleShapes();
+    OPTS.shape = (rest[0] && rest[0].v) || 'nebula';
+    RANDOM_SPEC = null;
+  }
+  applyShape(); initSprites(); buildPanel();
+  toast('已删除，还剩 ' + visibleShapes().length + ' 个形态');
+}
+
+function toast(msg){
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=> el.classList.remove('on'), 2200);
+}
+function copyText(s){
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = s;
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast(ok ? ('已复制：' + s) : ('复制失败，手动记：' + s));
+  } catch(e){ toast('复制失败，手动记：' + s); }
+}
+function openSeedLoader(){
+  let v = '';
+  openEditor('载入种子 / 形态 JSON', '把别人分享的种子粘进来，或者粘一份完整 JSON（AI 看图生成的那种）。', (body)=>{
+    const ta = document.createElement('textarea');
+    ta.value = currentSeed() || 'spiral-3f9k';
+    ta.style.cssText = 'width:100%;height:158px;box-sizing:border-box;background:rgba(255,255,255,.04);border:1px solid rgba(120,150,220,.25);border-radius:8px;color:#d6e2f5;font:12px/1.6 ui-monospace,Consolas,monospace;padding:9px;resize:vertical;outline:none';
+    v = ta.value;
+    ta.oninput = ()=>{ v = ta.value; };
+    body.appendChild(ta);
+    const tip = document.createElement('div');
+    tip.style.cssText = 'font-size:11px;color:#6c7c98;margin-top:8px;line-height:1.7';
+    tip.textContent = '短种子：spiral-3f9k（随机形态）、cluster / sphere / galaxy…（内置）、custom-<id>（本机自定义）。要么粘完整 JSON：{"struct":"partition","spreadP":1.0,...}。';
+    body.appendChild(tip);
+  }, ()=>{
+    const r = applySeed(v);
+    if (r === 'bad'){ toast('认不出这个种子，检查一下是不是抄漏了'); return; }
+    if (r === 'empty'){ toast('先粘一个种子进来'); return; }
+    closeEditor();
+    refreshCodeIfOpen();
+    toast('已载入 ' + currentSeed());
+  });
+}
+
+function groupNodes(){
+  const mode = OPTS.groupBy || 'kind';
+  const m = new Map();
+  nodes.forEach((n,i)=>{
+    let k;
+    if (mode === 'scope') k = n.scope || '未分区';
+    else if (mode === 'tag') k = (n.tags && n.tags[0]) || '无标签';
+    else k = n.k || 'fact';
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(i);
+  });
+  const out = [];
+  m.forEach((idx, k) => {
+    out.push({
+      key:k, idx,
+      label: KIND_CN[k] || k,
+      color: themeRGB.kinds[k] || themeRGB.nebula
+    });
+  });
+  out.sort((a,b)=> b.idx.length - a.idx.length);
+  return out;
+}
+
+function applyShape(){
+  const shape = OPTS.shape;
+  const cs = shape === '__rnd' ? RANDOM_SPEC : CUSTOM.shapes[shape];
+  const base = cs ? (cs.base || cs.struct || cs.proto || shape) : shape;
+  clusterInfo = [];
+  nodeGroup = new Array(N).fill(-1);
+  for (const n of nodes) n.bh = false;
+  nodeGroupOf = new Array(N).fill(-1);
+
+  // —— 动态结构：组 → 组内轨迹 → 节点，逐帧公转+自转
+  if (shape === 'duel' && !(RANDOM_SPEC && RANDOM_SPEC.struct === 'duel')){
+    RANDOM_SPEC = { struct:'duel', seed:20261118, name:'突破', pitch:-0.44, yaw:0.02, duelGap:0.74 };
+  }
+  const structSpec = (shape === 'duel') ? RANDOM_SPEC
+                   : (cs && cs.struct && STRUCT_NAMES.indexOf(cs.struct) >= 0) ? cs
+                   : (shape === '__rnd' && RANDOM_SPEC && RANDOM_SPEC.struct ? RANDOM_SPEC : null);
+  if (structSpec){
+    if (structSpec.groupBy) OPTS.groupBy = structSpec.groupBy;
+    yaw = structSpec.yaw != null ? structSpec.yaw : 0.40;
+    pitch = structSpec.pitch != null ? structSpec.pitch : -0.30;
+    buildEvolve(structSpec);
+    return;
+  }
+  EVOLVE = null;
+
+  // —— 随机形态：按原型生成器铺开，参数与 seed 一一对应（同种子同长相）
+  const protoSpec = (shape === '__rnd' && RANDOM_SPEC) ? RANDOM_SPEC
+                  : (cs && cs.proto ? cs : null);
+  if (protoSpec){
+    const sp = protoSpec;
+    const g = rnd((sp.seed >>> 0) || 1);
+    const P = PROTOS[sp.proto] || PROTOS.cloud;
+    for (let i=0;i<N;i++){
+      const p = P(sp, i, g, nodes[i]) || {x:0,y:0,z:0};
+      const n = nodes[i];
+      n.tx = (p.x||0)*OPTS.spread;
+      n.ty = (p.y||0)*OPTS.spread;
+      n.tz = (p.z||0)*OPTS.spread;
+    }
+    yaw   = sp.yaw   != null ? sp.yaw   : 0.40;
+    pitch = sp.pitch != null ? sp.pitch : -0.30;
+    return;
+  }
+  if (base === 'sphere'){
+    const inner = cs && cs.inner != null ? cs.inner : 0.30;
+    const pw    = cs && cs.pow   != null ? cs.pow   : 1.0;
+    for (const n of nodes){
+      const r = Math.hypot(n.x,n.y,n.z) || 1e-6;
+      const imp = Math.max(0.05, n.imp);
+      const radius = inner + (1-inner)*Math.pow(1-imp, pw);
+      n.tx = n.x/r*radius; n.ty = n.y/r*radius; n.tz = n.z/r*radius;
+    }
+  } else if (base === 'galaxy'){
+    const arms   = cs && cs.arms   != null ? cs.arms   : 4;
+    const spiral = cs && cs.spiral != null ? cs.spiral : 3.4;
+    const thick0 = cs && cs.thick  != null ? cs.thick  : 0.14;
+    const pw     = cs && cs.pow    != null ? cs.pow    : 0.75;
+    const g = rnd((OPTS.seed||20261118) ^ 0x9e3779b9);
+    for (const n of nodes){
+      const t = Math.pow(g(), pw);
+      const r = 0.10 + 0.90*t;
+      const arm = Math.floor(g()*arms);
+      const theta = arm*(Math.PI*2/arms) + t*spiral + (g()-0.5)*0.17;
+      const thick = (1 - 0.65*t) * thick0 * OPTS.spread;
+      n.tx = Math.cos(theta)*r*OPTS.spread;
+      n.ty = (g()-0.5)*thick;
+      n.tz = Math.sin(theta)*r*OPTS.spread;
+    }
+    pitch = cs && cs.pitch != null ? cs.pitch : -0.62;
+  } else if (base === 'river'){
+    // 记忆长河：按时间排序，沿螺旋从内到外铺开（越新越靠外、越重要越大）
+    const idx = nodes.map((n,i)=>i).sort((a,b)=>{
+      const ta = nodes[a].ts || '', tb = nodes[b].ts || '';
+      return ta < tb ? -1 : ta > tb ? 1 : 0;
+    });
+    const twist = cs && cs.twist != null ? cs.twist : 2.35;
+    const hgt   = cs && cs.height != null ? cs.height : 0.42;
+    const inner = cs && cs.inner != null ? cs.inner : 0.26;
+    const M = Math.max(1, idx.length - 1);
+    idx.forEach((k, pos)=>{
+      const t = pos / M;
+      const ang = t * Math.PI * 2 * twist;
+      const rad = inner + (1-inner) * t;
+      const n = nodes[k];
+      n.tx = Math.cos(ang) * rad * OPTS.spread;
+      n.ty = (t - 0.5) * hgt * OPTS.spread + Math.sin(ang*1.6)*hgt*0.14;
+      n.tz = Math.sin(ang) * rad * OPTS.spread;
+    });
+    pitch = cs && cs.pitch != null ? cs.pitch : -0.52;
+  } else if (base === 'stream'){
+    // 星河：记忆沿一条宽阔河带铺开，越重要越贴着河心，河身带弯曲
+    const g = rnd((OPTS.seed||20261118) ^ 0x7f4a7c15);
+    const width = cs && cs.width  != null ? cs.width  : 2.30;
+    const freq  = cs && cs.freq   != null ? cs.freq   : 3.1;
+    const curv  = cs && cs.curv   != null ? cs.curv   : 1.0;
+    const band0 = cs && cs.band   != null ? cs.band   : 0.06;
+    const bandw = cs && cs.bandw  != null ? cs.bandw  : 0.24;
+    const depth = cs && cs.depth  != null ? cs.depth  : 0.20;
+    for (const n of nodes){
+      const t = g();
+      const x = (t - 0.5) * width;
+      const bend = (Math.sin(t*freq + 0.6)*0.24 + Math.sin(t*freq*2.3)*0.06) * curv;
+      const band = (g() - 0.5) * (band0 + bandw*(1 - Math.max(0.05, n.imp)));
+      n.tx = x * OPTS.spread;
+      n.ty = (bend + band) * OPTS.spread;
+      n.tz = (g() - 0.5) * depth * OPTS.spread;
+    }
+    pitch = cs && cs.pitch != null ? cs.pitch : -0.20;
+  } else if (base === 'aurora'){
+    // 极光：记忆铺成一面起伏的光幕，波峰处记忆更密
+    const g = rnd((OPTS.seed||20261118) ^ 0x2545f491);
+    const f1   = cs && cs.fx1  != null ? cs.fx1  : 3.4;
+    const f2   = cs && cs.fx2  != null ? cs.fx2  : 7.1;
+    const amp  = cs && cs.amp  != null ? cs.amp  : 0.20;
+    const flat = cs && cs.flat != null ? cs.flat : 0.70;
+    const cnt  = cs && cs.curtains != null ? cs.curtains : 5;
+    for (let i=0;i<nodes.length;i++){
+      const n = nodes[i];
+      const ci = i % cnt;                                  // 轮流分到各条帘幕，保证每条都有足够记忆
+      const u  = -0.86 + (ci + 0.5) * (1.72 / cnt) + (g()-0.5)*0.10;
+      const v  = g()*2 - 1;
+      const wave = Math.sin(v*f1*0.8 + u*2.0)*amp + Math.sin(v*f2*0.55 - u*3.0)*amp*0.40;
+      n.tx = u * OPTS.spread;
+      n.ty = v * flat * OPTS.spread;
+      n.tz = (wave*1.5 + (g()-0.5)*0.06) * OPTS.spread;
+    }
+    pitch = cs && cs.pitch != null ? cs.pitch : -0.16;
+  } else if (base === 'cluster'){
+    // 分区：记忆按 kind/scope/tag 分成几团，每团一个团心、一圈边界、一个中文标签
+    const gs = groupNodes();
+    const g = rnd((OPTS.seed||20261118) ^ 0x51ed270b);
+    const R = cs && cs.radius != null ? cs.radius : 0.80;
+    const sz = Math.sqrt(Math.max(1, N));
+    gs.forEach((grp, gi)=>{
+      const ang = gi/gs.length*Math.PI*2 - Math.PI/2 + (g()-0.5)*0.14;
+      const cxx = Math.cos(ang)*R;
+      const cyy = Math.sin(ang)*R*0.88 + 0.02;
+      const czz = (g()-0.5)*0.20;
+      const rad = 0.052 + 0.100*Math.sqrt(grp.idx.length/sz);
+      for (const i of grp.idx){
+        const n = nodes[i];
+        const u1 = Math.max(1e-6, g()), u2 = g();
+        const mag = Math.sqrt(-2*Math.log(u1)) * rad * 0.62;
+        const th = u2*Math.PI*2, ph = Math.acos(2*g()-1);
+        n.tx = (cxx + mag*Math.sin(ph)*Math.cos(th)) * OPTS.spread;
+        n.ty = (cyy + mag*Math.cos(ph)) * OPTS.spread;
+        n.tz = (czz + mag*Math.sin(ph)*Math.sin(th)) * OPTS.spread;
+        nodeGroup[i] = gi;
+      }
+      clusterInfo.push({ x:cxx, y:cyy, z:czz, rad, label:grp.label, count:grp.idx.length, color:grp.color });
+    });
+    yaw = cs && cs.yaw != null ? cs.yaw : 0;
+    pitch = cs && cs.pitch != null ? cs.pitch : -0.04;
+  } else {
+    const cmap = computeClusters(8);
+    for (let i=0;i<N;i++){
+      const n = nodes[i];
+      const c = (cmap && cmap[i]) || { x:0, y:0, z:0 };
+      n.tx = (n.x*0.44 + c.x*0.56) * OPTS.spread;
+      n.ty = (n.y*0.44 + c.y*0.56) * OPTS.spread;
+      n.tz = (n.z*0.44 + c.z*0.56) * OPTS.spread;
+    }
+  }
+}
+
+/* ---------------- 相机 ---------------- */
+function rot(p){
+  const cy=Math.cos(yaw), sy=Math.sin(yaw);
+  const cx=Math.cos(pitch), sx=Math.sin(pitch);
+  let x = p.x*cy + p.z*sy;
+  let z = -p.x*sy + p.z*cy;
+  let y = p.y;
+  const y2 = y*cx - z*sx;
+  const z2 = y*sx + z*cx;
+  return [x, y2, z2];
+}
+
+/* ---------------- 精灵 ---------------- */
+function makeSprite(rgb, a, rays){
+  // 一颗星：白核 + 彩色体积光晕 + 四长芒 + 四短芒（预渲染，绘制时只 drawImage）
+  const S=128, c=document.createElement('canvas'); c.width=c.height=S;
+  const g=c.getContext('2d');
+  const cx=S/2, cy=S/2;
+  g.globalCompositeOperation='lighter';
+  // 体积光晕：从白核一路衰减到透明，中段给足颜色
+  const grd=g.createRadialGradient(cx,cy,0,cx,cy,cx);
+  grd.addColorStop(0.00, rgbStr(rgb, Math.min(1, a*1.00)));
+  grd.addColorStop(0.18, rgbStr(rgb, Math.min(1, a*1.00)));
+  grd.addColorStop(0.30, rgbStr(rgb, a*0.82));
+  grd.addColorStop(0.48, rgbStr(rgb, a*0.34));
+  grd.addColorStop(0.72, rgbStr(rgb, a*0.085));
+  grd.addColorStop(1.00, 'rgba(0,0,0,0)');
+  grd.addColorStop(1.00, 'rgba(0,0,0,0)');
+  g.fillStyle=grd; g.beginPath(); g.arc(cx,cy,cx,0,7); g.fill();
+  // 星芒：一条从中心向外的渐细光锥
+  function ray(len, halfW, amp){
+    const lg=g.createLinearGradient(cx,cy,cx+len,cy);
+    lg.addColorStop(0,   rgbStr(rgb, Math.min(1, amp*1.15)));
+    lg.addColorStop(0.18,rgbStr(rgb, amp*0.62));
+    lg.addColorStop(0.55,rgbStr(rgb, amp*0.18));
+    lg.addColorStop(1,   'rgba(0,0,0,0)');
+    g.fillStyle=lg;
+    g.beginPath();
+    g.moveTo(cx, cy-halfW);
+    g.quadraticCurveTo(cx+len*0.55, cy-halfW*0.30, cx+len, cy);
+    g.quadraticCurveTo(cx+len*0.55, cy+halfW*0.30, cx, cy+halfW);
+    g.closePath(); g.fill();
+  }
+  if (rays !== 0){
+    for (let i=0;i<4;i++){
+      g.save(); g.translate(cx,cy); g.rotate(i*Math.PI/2);
+      ray(cx*0.90, S*0.017, 0.80);
+      g.restore();
+    }
+    for (let i=0;i<4;i++){
+      g.save(); g.translate(cx,cy); g.rotate(Math.PI/4 + i*Math.PI/2);
+      ray(cx*0.58, S*0.010, 0.38);
+      g.restore();
+    }
+  }
+  return c;
+}
+function initSprites(){
+  sprites = {}; spritesDim = {};
+  for (const k in themeRGB.kinds){
+    sprites[k]    = makeSprite(themeRGB.kinds[k], 0.98, 1);
+    spritesDim[k] = makeSprite(themeRGB.kinds[k], 0.92, 0);
+  }
+  sprites.__miss    = makeSprite([120,130,160], 0.6, 0);
+  spritesDim.__miss = sprites.__miss;
+}
+function initStars(){
+  const rand = rnd(9911);
+  bgStars = [];
+  const n = OPTS.fx.sea ? Math.round(OPTS.starfield*2.4) : OPTS.starfield;
+  for (let i=0;i<n;i++){
+    const u=rand()*2-1, phi=rand()*Math.PI*2, s=Math.sqrt(1-u*u);
+    bgStars.push({ x:Math.cos(phi)*s, y:u, z:Math.sin(phi)*s, m:0.2+rand()*0.8, tw:rand()*6.28 });
+  }
+}
+
+/* ---------------- 绘制 ---------------- */
+let tNow = 0;
+
+/* ---------------- 附加特效（数据驱动：加一个函数 + 一条 FX_ITEMS 就能多一个特效） ---------------- */
+let meteors = [];
+function fxMeteor(ctx, cx, cy){
+  if (Math.random() < 0.030 && meteors.length < 8){
+    let mx0 = Math.random()*W*1.1 - W*0.05, my0 = Math.random()*H*0.45;
+    if (N && proj && proj.length >= N*4 && Math.random() < 0.65){
+      const j = (Math.random()*N)|0;
+      if (proj[j*4+3] > 0.02){ mx0 = proj[j*4]; my0 = proj[j*4+1]; }
+    }
+    const ang = Math.PI*0.22 + Math.random()*0.16;
+    const sp = 5.5 + Math.random()*7;
+    meteors.push({ x:mx0, y:my0, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, life:1, len:22 + Math.random()*30 });
+  }
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round';
+  for (let i=meteors.length-1; i>=0; i--){
+    const m = meteors[i];
+    m.x += m.vx; m.y += m.vy; m.life -= 0.010;
+    if (m.life <= 0 || m.x > W+80 || m.y > H+80){ meteors.splice(i,1); continue; }
+    const gx = m.x - m.vx*m.len*0.06, gy = m.y - m.vy*m.len*0.06;
+    const g2 = ctx.createLinearGradient(m.x, m.y, gx, gy);
+    g2.addColorStop(0, rgbStr(themeRGB.star, 0.9*m.life));
+    g2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.strokeStyle = g2; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(gx, gy); ctx.stroke();
+    ctx.fillStyle = rgbStr([255,255,255], 0.85*m.life);
+    ctx.fillRect(m.x-1.1, m.y-1.1, 2.2, 2.2);
+  }
+  ctx.restore();
+}
+
+/* 突破：两枚黑洞的暗核、光子环、吸积盘，和中间对撞的激波 */
+/* 突破：两枚黑洞各拖着一片旋涡吸积盘，正面对撞 */
+function fxDust(ctx){
+  // 星海：每条记忆周围撒一圈自己的微尘（记忆越多、越重要，尘埃越密）
+  if (!N || !proj || proj.length < N*4) return;
+  if (!N || !proj || proj.length < N*4 || !(OPTS.starfield > 0)) return;
+  ctx.save();
+  for (let i=0;i<N;i++){
+    const d = proj[i*4+3];
+    if (!(d > 0.02)) continue;
+    const sx = proj[i*4], sy = proj[i*4+1];
+    const n = nodes[i], imp = n.imp || 0.5;
+    const nr = rnd(((i+1)*2654435761 ^ (OPTS.seed||20261118)) >>> 0);
+    const cnt = 1 + Math.round((OPTS.starfield||0)/260) + (imp > 0.7 ? 1 : 0);
+    const col = themeRGB.kinds[n.k] || themeRGB.star;
+    for (let k=0;k<cnt;k++){
+      const a2 = nr()*Math.PI*2, rr = 3 + nr()*10;
+      ctx.fillStyle = rgbStr(col, (0.07 + 0.24*nr()*imp) * (0.7+0.5*OPTS.glow));
+      ctx.beginPath(); ctx.arc(sx + Math.cos(a2)*rr, sy + Math.sin(a2)*rr, 0.75 + nr()*0.5, 0, 7); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function fxPulse(ctx, cx, cy, tNow){
+  // 脉冲从「重要记忆」本身发出：越重要的节点，圈越大越亮
+  if (!N || !proj || proj.length < N*4) return;
+  const idx = [];
+  for (let i=0;i<N;i++) idx.push(i);
+  idx.sort((a,b)=> (nodes[b].imp||0) - (nodes[a].imp||0));
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const i of idx.slice(0, 8)){
+    const d = proj[i*4+3];
+    if (!(d > 0.02)) continue;
+    const sx = proj[i*4], sy = proj[i*4+1];
+    const imp = nodes[i].imp || 0.5;
+    const R0 = 10 + 18*imp, span = 40 + 70*imp;
+    const col = themeRGB.kinds[nodes[i].k] || themeRGB.star;
+    for (let k=0;k<2;k++){
+      const ph = ((tNow*0.00020 + k*0.5 + i*0.137) % 1);
+      const r = R0 + ph*span;
+      const a = (1-ph)*(1-ph)*0.22*imp*(0.7+OPTS.glow);
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, 7);
+      ctx.strokeStyle = rgbStr(col, a);
+      ctx.lineWidth = 1.0 + 2.0*(1-ph);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function fxAurora(ctx, cx, cy, tNow){
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const R = Math.min(W, H)*0.52;
+  const tint = themeRGB.kinds.fact || themeRGB.star;
+  for (let b=0; b<3; b++){
+    const baseY = cy + (b-1)*R*0.40;
+    ctx.beginPath();
+    for (let i=0; i<=64; i++){
+      const t = i/64, x = cx - R*1.2 + t*R*2.4;
+      const y = baseY + Math.sin(t*4.2 + tNow*0.0008 + b*1.1)*R*0.10
+                      + Math.sin(t*9.5 - tNow*0.0012)*R*0.032;
+      if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    }
+    ctx.strokeStyle = rgbStr(tint, 0.045*(0.7+OPTS.glow));
+    ctx.lineWidth = 36 - b*8; ctx.stroke();
+    ctx.strokeStyle = rgbStr(themeRGB.star, 0.028);
+    ctx.lineWidth = 4; ctx.stroke();
+  }
+  ctx.restore();
+}
+/* ---------------- 自定义特效：用户可加，其他 AI 也可加（往 CUSTOM.fx 里塞一条就行） ---------------- */
+const FX_KINDS = {
+  sparkle: '闪烁星尘',
+  drift:   '漂浮粒子',
+  orbit:   '环绕光环',
+  wave:    '波动光纹',
+  beam:    '放射光束'
+};
+function hsl2rgb(h, s, l){
+  h = (((h % 360) + 360) % 360) / 360;
+  const a2 = s * Math.min(l, 1-l);
+  const f = (n)=>{ const k = (n + h*12) % 12; return Math.round(255 * (l - a2*Math.max(-1, Math.min(k-3, 9-k, 1)))); };
+  return [f(0), f(8), f(4)];
+}
+function fxCustomDraw(ctx, cx, cy, spec, tNow){
+  const k = spec.kind || 'sparkle';
+  const cnt = Math.max(1, Math.min(1200, spec.count || 120));
+  const hue = spec.hue == null ? 200 : spec.hue;
+  const spd = spec.speed == null ? 1 : spec.speed;
+  const sz = spec.size == null ? 1.4 : spec.size;
+  const al = spec.alpha == null ? 0.5 : spec.alpha;
+  const col = hsl2rgb(hue, 0.72, 0.66);
+  const R = Math.min(W, H) * 0.5;
+  const nr = rnd((spec.seed || 20261118) >>> 0);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  if (k === 'sparkle'){
+    for (let i=0;i<cnt;i++){
+      const x = nr()*W, y = nr()*H, ph = nr()*6.2832, sp = 0.4 + nr()*1.6;
+      const tw = Math.pow(Math.max(0, Math.sin(tNow*0.0012*spd*sp + ph)), 3);
+      ctx.fillStyle = rgbStr(col, al * tw);
+      ctx.fillRect(x, y, sz, sz);
+    }
+  } else if (k === 'drift'){
+    for (let i=0;i<cnt;i++){
+      const x0 = nr()*W, y0 = nr()*H, sp = 0.3 + nr()*1.4, szz = sz*(0.6+nr());
+      let x = (x0 + tNow*0.018*spd*sp) % (W + 60) - 30;
+      let y = (y0 - tNow*0.006*spd*sp) % (H + 60); if (y < -30) y += H + 60;
+      ctx.fillStyle = rgbStr(col, al * (0.35 + 0.65*nr()));
+      ctx.fillRect(x, y, szz, szz);
+    }
+  } else if (k === 'orbit'){
+    const rings = Math.max(1, Math.min(8, Math.round(cnt / 60)));
+    for (let r=0; r<rings; r++){
+      const rad = R * (0.18 + 0.72*(r+1)/rings);
+      const tilt = 0.18 + 0.42*(r%3)/2;
+      const ph = tNow*0.00035*spd*(1 + r*0.17);
+      for (let i=0;i<Math.max(8, cnt/rings);i++){
+        const a = ph + i*0.16 + r*1.1;
+        const x = cx + Math.cos(a)*rad, y = cy + Math.sin(a)*rad*tilt;
+        ctx.fillStyle = rgbStr(col, al * (0.35 + 0.65*Math.abs(Math.sin(a*0.5))));
+        ctx.fillRect(x, y, sz, sz);
+      }
+    }
+  } else if (k === 'wave'){
+    for (let b=0; b<3; b++){
+      ctx.beginPath();
+      for (let i=0;i<=90;i++){
+        const t = i/90, x = cx - R*1.15 + t*R*2.30;
+        const y = cy + (b-1)*R*0.30 + Math.sin(t*5.2 + tNow*0.0012*spd + b*1.4)*R*0.09;
+        if (i) ctx.lineTo(x,y); else ctx.moveTo(x,y);
+      }
+      ctx.strokeStyle = rgbStr(col, al*0.30); ctx.lineWidth = 12 - b*3; ctx.stroke();
+      ctx.strokeStyle = rgbStr(col, al*0.55); ctx.lineWidth = 1.4; ctx.stroke();
+    }
+  } else if (k === 'beam'){
+    const n2 = Math.max(4, Math.min(48, Math.round(cnt/12)));
+    for (let i=0;i<n2;i++){
+      const a = nr()*6.2832 + tNow*0.00018*spd;
+      const len = R*(0.35 + nr()*0.85);
+      const g2 = ctx.createLinearGradient(cx, cy, cx+Math.cos(a)*len, cy+Math.sin(a)*len);
+      g2.addColorStop(0, rgbStr(col, al*0.55));
+      g2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.strokeStyle = g2; ctx.lineWidth = 1.2 + nr()*2.6;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx+Math.cos(a)*len, cy+Math.sin(a)*len); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+/* ---------- 右上角：自动旋转开关 ---------- */
+let _spinLast = 0.12;
+function syncSpinBtn(){
+  const b = document.getElementById('spinBtn');
+  if (!b) return;
+  const on = (OPTS.autoRotate || 0) > 0;
+  b.classList.toggle('on', on);
+  b.textContent = on ? '⟳ 自转 开' : '⟳ 自转 关';
+}
+(function bindSpin(){
+  const b = document.getElementById('spinBtn');
+  if (!b) return;
+  b.onclick = ()=>{
+    if ((OPTS.autoRotate || 0) > 0){ _spinLast = OPTS.autoRotate; OPTS.autoRotate = 0; }
+    else { OPTS.autoRotate = _spinLast || 0.12; }
+    syncSpinBtn();
+  };
+  syncSpinBtn();
+})();
+
+/* ---------- 右上角：当前形态的种子代码 ---------- */
+function shapeCode(){
+  const o = { shape: OPTS.shape, seed: currentSeed() };
+  if (OPTS.shape === '__rnd' && RANDOM_SPEC){
+    o.proto = RANDOM_SPEC.proto;
+    o.spec = RANDOM_SPEC;
+  } else if (CUSTOM.shapes[OPTS.shape]){
+    o.customShape = CUSTOM.shapes[OPTS.shape];
+  }
+  if (OPTS.shape === 'cluster') o.groupBy = OPTS.groupBy;
+  o.spread = OPTS.spread;
+  o.sizePower = OPTS.sizePower;
+  o.sizeBase = OPTS.sizeBase;
+  return o;
+}
+function refreshCodeIfOpen(){
+  const box = document.getElementById('codeBox');
+  if (box && box.classList.contains('on')) refreshCodeBox();
+}
+function refreshCodeBox(){
+  const el = document.getElementById('codeText');
+  if (!el) return;
+  const o = shapeCode();
+  let head;
+  if (o.shape === '__rnd') head = '种子：' + o.seed + '\n（发这个种子给别人，粘贴到「载入别人的种子」就能复现同样的形态）';
+  else if (CUSTOM.shapes[OPTS.shape]) head = '种子：' + o.seed + '\n（本机自定义形态，种子只在你这台机器有效）';
+  else head = '种子：' + o.seed + '\n（内置形态也认这个种子，别人载入就切回来）';
+  el.textContent = head + '\n\n完整参数：\n' + JSON.stringify(o, null, 2);
+}
+(function bindCode(){
+  const btn = document.getElementById('codeBtn');
+  const box = document.getElementById('codeBox');
+  if (!btn || !box) return;
+  btn.onclick = ()=>{
+    const on = !box.classList.contains('on');
+    if (on) refreshCodeBox();
+    box.classList.toggle('on', on);
+    btn.classList.toggle('on', on);
+  };
+  const cl = document.getElementById('codeClose');
+  if (cl) cl.onclick = ()=>{ box.classList.remove('on'); btn.classList.remove('on'); };
+  const cpt = document.getElementById('codeCopyTop');
+  if (cpt) cpt.onclick = ()=> copyText(document.getElementById('codeText').textContent);
+  const cp = document.getElementById('codeCopy');
+  if (cp) cp.onclick = ()=> copyText(document.getElementById('codeText').textContent);
+})();
+
+function draw(){
+  // 背景
+  const g = ctx.createRadialGradient(W*0.5,H*0.46,0,W*0.5,H*0.46,Math.max(W,H)*0.78);
+  g.addColorStop(0, rgbStr(themeRGB.bg[0]));
+  g.addColorStop(1, rgbStr(themeRGB.bg[1]));
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // 面板是浮动的：展开时星图中心右移半个面板宽，避免被盖住左边
+  const panelW = panelOpen ? 297 : 0;
+  const cx = (W + panelW)/2 + panX, cy = H/2 + panY;
+  const REF = Math.min(W,H)/2 * 0.86;
+  const base = REF * 1.30 * zoom;
+
+  // —— 星云雾：跟着记忆聚簇走（节点密集处才起雾，颜色取那片记忆的类型色）
+  if (baseShape() === 'nebula' && N > 0){
+    const C2 = 0.34;
+    const bk = new Map();
+    for (let i=0;i<N;i++){
+      const n = nodes[i];
+      const kk = Math.floor(n.px/C2) + '|' + Math.floor(n.py/C2) + '|' + Math.floor(n.pz/C2);
+      let b = bk.get(kk);
+      if (!b){ b = { x:0,y:0,z:0,c:0,r:0,g:0,bl:0 }; bk.set(kk, b); }
+      b.x += n.px; b.y += n.py; b.z += n.pz; b.c++;
+      const cr = themeRGB.kinds[n.k] || themeRGB.star;
+      b.r += cr[0]; b.g += cr[1]; b.bl += cr[2];
+    }
+    const arr = [...bk.values()].sort((a,b)=> b.c - a.c).slice(0, 14);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const b of arr){
+      const rp = rot({ x:b.x/b.c, y:b.y/b.c, z:b.z/b.c });
+      const persp = base / (FOV - rp[2]);
+      const mx = cx + rp[0]*persp, my = cy + rp[1]*persp;
+      const mr = Math.max(60, base * 0.07 * (1.2 + Math.sqrt(b.c)*0.55) * (persp/(base/FOV)) * 0.55);
+      const col = [b.r/b.c, b.g/b.c, b.bl/b.c];
+      const a0 = Math.min(0.26, 0.035 + 0.020*b.c) * (0.75 + 0.5*OPTS.glow);
+      const g2 = ctx.createRadialGradient(mx, my, 0, mx, my, mr);
+      g2.addColorStop(0, rgbStr(col, a0));
+      g2.addColorStop(0.45, rgbStr(col, a0*0.40));
+      g2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(mx, my, mr, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // —— 流星：随机划过的拖尾
+  if (OPTS.fx.meteor) fxMeteor(ctx, cx, cy, tNow);
+
+  // —— 脉冲：从中心扩散的涟漪
+  if (OPTS.fx.pulse) fxPulse(ctx, cx, cy, tNow);
+  // —— 动态结构：每帧推进公转/自转，直接改节点目标位置
+  if (EVOLVE){
+    if (draw._lt == null) draw._lt = tNow;
+    const edt = Math.min(0.06, Math.max(0, (tNow - draw._lt)/1000));
+    draw._lt = tNow;
+    if (edt > 0) evolveStep(edt);
+  } else {
+    draw._lt = tNow;
+  }
+  // —— 星云团：画在节点底下，让密集处透出彩色雾气
+  if (OPTS.fx.sea) fxDust(ctx);
+  for (const fid in CUSTOM.fx){ if (OPTS.fx[fid]) fxCustomDraw(ctx, cx, cy, CUSTOM.fx[fid], tNow); }
+
+  // —— 极光：缓慢起伏的光幕
+
+  // —— 投影
+  const order = [];
+  const radii = [];
+  for (let i=0;i<N;i++){
+    const n = nodes[i];
+    const r = rot({x:n.px, y:n.py, z:n.pz});
+    const persp = base / (FOV - r[2]);
+    const x = cx + r[0]*persp;
+    const y = cy + r[1]*persp;
+    proj[i*4]=x; proj[i*4+1]=y; proj[i*4+2]=persp; proj[i*4+3]=r[2];
+    radii.push(Math.hypot(x-cx, y-cy));
+    order.push(i);
+  }
+  const sorted = radii.slice().sort((a,b)=>a-b);
+  const p96 = sorted[Math.min(sorted.length-1, Math.floor(sorted.length*0.96))] || 1;
+  const fitTarget = (Math.min(W,H)*0.465) / (p96 || 1);
+  if (!fitK) fitK = fitTarget;
+  for (let i=0;i<N;i++){
+    proj[i*4]   = cx + (proj[i*4]  -cx)*fitK;
+    proj[i*4+1] = cy + (proj[i*4+1]-cy)*fitK;
+  }
+  order.sort((a,b)=> proj[a*4+3] - proj[b*4+3]);
+
+  // —— 公转轨道：每个子组在父组平面上的一圈淡线，层级一眼看出来
+  if (EVOLVE){
+    for (const gr of EVOLVE.groups){
+      if (gr.parent < 0 || gr.r0 < 0.04) continue;
+      const p = EVOLVE.groups[gr.parent];
+      ctx.beginPath();
+      for (let k=0; k<=72; k++){
+        const a = k/72*TAU;
+        const r3 = rot({ x: p.wx + Math.cos(a)*gr.r0, y: p.wy + (gr.h0||0), z: p.wz + Math.sin(a)*gr.r0 });
+        const pp = base / (FOV - r3[2]);
+        const px = cx + r3[0]*pp, py = cy + r3[1]*pp;
+        if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = themeRGB.link ? rgbStr(themeRGB.link, 0.10) : 'rgba(120,160,220,.10)';
+      ctx.lineWidth = 1.15;
+      ctx.stroke();
+    }
+  }
+  // —— 连线
+  ctx.lineCap='round';
+  const focus = selected>=0 ? selected : hovered;
+  const focusSet = new Set();
+  if (focus>=0) for (const ei of adj[focus]) { const e=edges[ei]; focusSet.add(e.a===focus?e.b:e.a); }
+  const extra = focus>=0 ? extraEdges(focus) : [];
+  for (const r of extra) focusSet.add(r.j);
+  const focusKind = focus>=0 ? nodes[focus].k : null;
+  const focusColor = (focusKind && themeRGB.kinds[focusKind]) || themeRGB.link;
+
+  for (const e of edges){
+    const ax=proj[e.a*4], ay=proj[e.a*4+1], bx=proj[e.b*4], by=proj[e.b*4+1];
+    const depth = (proj[e.a*4+3]+proj[e.b*4+3])/2;
+    const isF = focus>=0 && (e.a===focus || e.b===focus);
+    let a = (0.038 + 0.16*Math.max(0,(depth+1)/2) * Math.max(0,(e.w-0.6)/0.4)) * (OPTS.linkAlpha || 1);
+    if (EVOLVE && nodeGroupOf.length){
+      const ga = nodeGroupOf[e.a], gb = nodeGroupOf[e.b];
+      if (ga >= 0 && gb >= 0 && ga !== gb) a *= 0.26;
+    }
+    let lw = 0.5 + 0.9*Math.max(0,(depth+1)/2);
+    let col = themeRGB.link;
+    if (focus>=0){
+      if (isF){ a = Math.min(0.92, a*4 + 0.30); lw = lw*1.8 + 0.5; col = focusColor; }
+      else { a *= 0.18; }
+    }
+    if (nodeGroup.length && nodeGroup[e.a] >= 0 && nodeGroup[e.b] >= 0 && nodeGroup[e.a] !== nodeGroup[e.b]) a *= 0.40;
+    if (a <= 0.02) continue;
+    ctx.strokeStyle = rgbStr(col, Math.min(0.95, a));
+    ctx.lineWidth = lw;
+    if (isF){ ctx.shadowBlur = 10; ctx.shadowColor = rgbStr(col, .9); }
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+    if (isF){ ctx.shadowBlur = 0; }
+  }
+
+  if (focus>=0 && extra.length){
+    ctx.save(); ctx.setLineDash([4,5]); ctx.lineWidth = 1;
+    const fx=proj[focus*4], fy=proj[focus*4+1];
+    for (const r of extra){
+      ctx.strokeStyle = r.type==='tag' ? 'rgba(255,205,110,.42)' : 'rgba(110,220,215,.40)';
+      ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(proj[r.j*4], proj[r.j*4+1]); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // —— 连线流光：只挑边权最高的一批边跑光点，数量按机器能力收敛
+  if (OPTS.fx.flow && flowList.length){
+    const T = tNow * 0.001;
+    const cap = WEAK ? 14 : (CAP.cores >= 12 ? 54 : 34);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (let k=0;k<flowList.length && k<cap;k++){
+      const e = edges[flowList[k]];
+      if (e._ph === undefined) e._ph = Math.random();
+      const ax=proj[e.a*4], ay=proj[e.a*4+1], bx=proj[e.b*4], by=proj[e.b*4+1];
+      const len = Math.hypot(bx-ax, by-ay);
+      if (len < 46) continue;
+      const sp = 0.075 + (e.w > 0.82 ? 0.055 : 0) + (k % 7)*0.006;
+      const t = (T*sp + e._ph) % 1;
+      const hx = ax + (bx-ax)*t, hy = ay + (by-ay)*t;
+      const t2 = Math.max(0, t - 0.11);
+      const gx = ax + (bx-ax)*t2, gy = ay + (by-ay)*t2;
+      const lg = ctx.createLinearGradient(gx, gy, hx, hy);
+      lg.addColorStop(0, 'rgba(170,205,255,0)');
+      lg.addColorStop(1, 'rgba(226,240,255,0.50)');
+      ctx.strokeStyle = lg;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(hx,hy); ctx.stroke();
+      ctx.fillStyle = 'rgba(150,198,255,0.16)';
+      ctx.beginPath(); ctx.arc(hx,hy,4.6,0,7); ctx.fill();
+      ctx.fillStyle = 'rgba(242,250,255,0.95)';
+      ctx.beginPath(); ctx.arc(hx,hy,1.7,0,7); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // —— 节点
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  labelsCv = [];
+  for (const i of order){
+    const n = nodes[i];
+    const x=proj[i*4], y=proj[i*4+1], persp=proj[i*4+2], z=proj[i*4+3];
+    if (x<-40||x>W+40||y<-40||y>H+40) continue;
+    const imp = Math.max(0.05, n.imp);
+    const useBoost = 1 + 0.16*Math.log(1+n.use);
+    let size = OPTS.sizeBase * Math.pow(imp, OPTS.sizePower) * useBoost * (persp/(REF/2.6)) * 1.70;
+    if (n.bh) size *= 0.34;
+    if (n.ball) size *= 1.65;
+    if (n.disk) size *= 0.78;
+    size = Math.max(2.7, Math.min(72, size));
+    const depthA = 0.42 + 0.58*Math.max(0,(z+1)/2);
+    const confA = 0.55 + 0.45*Math.max(0,n.conf);
+    let alpha = depthA * confA * (0.55 + 0.45*OPTS.glow);
+    if (n.arch) alpha *= 0.35;
+    if (focus>=0 && i!==focus && !focusSet.has(i)) alpha *= 0.42;
+
+    const big = !n.disk && OPTS.fx.rays && (n.ball || size > 6.0 || imp > 0.62);
+    const spr = big ? (sprites[n.k] || sprites.__miss) : (spritesDim[n.k] || spritesDim.__miss);
+    // 外层辉光：节点自己散光，密集处叠成星云
+    const hs = size * (3.6 + 1.5*imp);
+    ctx.globalAlpha = Math.min(1, alpha * (0.085 + 0.050*imp));
+    ctx.drawImage(spr, x-hs/2, y-hs/2, hs, hs);
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.drawImage(spr, x-size/2, y-size/2, size, size);
+
+
+    if (focus>=0 && i!==focus && focusSet.has(i)){
+      ctx.globalAlpha = 0.34;
+      const halo = ctx.createRadialGradient(x,y,0,x,y,size*1.9);
+      halo.addColorStop(0, rgbStr(themeRGB.kinds[n.k] || [159,180,232], .65));
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(x,y,size*1.9,0,7); ctx.fill();
+    }
+
+    if (focus>=0 && (i===focus || focusSet.has(i))){
+      ctx.globalAlpha = i===focus ? 0.95 : 0.72;
+      ctx.strokeStyle = i===focus ? 'rgba(255,255,255,.9)' : rgbStr(themeRGB.kinds[n.k] || [159,180,232], .8);
+      ctx.lineWidth = i===focus ? 1.8 : 1.3;
+      ctx.beginPath(); ctx.arc(x,y,size*0.62 + 1.5,0,7); ctx.stroke();
+    }
+    labelsCv.push({i,x,y,size,alpha});
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // —— 分区标签：每个团心的投影点牵一条引线出来，写分类名 + 条数
+  if (clusterInfo.length){
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    for (const c of clusterInfo){
+      let tx = c.x, ty = c.y, tz = c.z;
+      if (c.gi != null && EVOLVE && EVOLVE.groups[c.gi]){
+        const gr = EVOLVE.groups[c.gi];
+        tx = gr.wx; ty = gr.wy; tz = gr.wz;
+      }
+      const r = rot({ x:tx*OPTS.spread, y:ty*OPTS.spread, z:tz*OPTS.spread });
+      const persp = base / (FOV - r[2]);
+      const px = cx + r[0]*persp*fitK, py = cy + r[1]*persp*fitK;
+      if (px < -240 || px > W+240 || py < -240 || py > H+240) continue;
+      const lx = px - 20, ly = py - 34;
+      ctx.strokeStyle = rgbStr(c.color, 0.42);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px+3, py-3); ctx.lineTo(lx-5, ly); ctx.lineTo(lx+108, ly);
+      ctx.stroke();
+      ctx.fillStyle = rgbStr(c.color, 0.9);
+      ctx.fillRect(px-2.5, py-2.5, 5, 5);
+      ctx.font = '600 13px "Microsoft YaHei",sans-serif';
+      ctx.shadowColor = rgbStr(c.color, 0.85); ctx.shadowBlur = 10;
+      ctx.fillStyle = rgbStr(c.color, 0.97);
+      ctx.lineWidth = 3.2; ctx.strokeStyle = 'rgba(3,6,14,0.88)';
+      ctx.strokeText(c.label, lx+1, ly-10);
+      ctx.fillText(c.label, lx+1, ly-10);
+      ctx.shadowBlur = 0;
+      ctx.font = '11px "Microsoft YaHei",sans-serif';
+      ctx.fillStyle = 'rgba(198,214,242,.52)';
+      ctx.fillText(c.count + ' 条', lx+1, ly+8);
+    }
+    ctx.restore();
+  }
+}
+
+/* ---------------- 焦点补充关系 ---------------- */
+function extraEdges(i){
+  if (focusCache.i === i) return focusCache.list;
+  const base = nodes[i], out = [];
+  const bt = base.tags || [];
+  const bd = Date.parse(base.ts) || 0;
+  const linked = new Set();
+  for (const ei of adj[i]) { const e=edges[ei]; linked.add(e.a===i?e.b:e.a); }
+  for (let j=0;j<N;j++){
+    if (j===i || linked.has(j)) continue;
+    const n = nodes[j];
+    const shared = bt.filter(t => (n.tags||[]).indexOf(t) >= 0);
+    let type = null, w = 0;
+    if (shared.length){ type='tag'; w = 0.6 + 0.2*Math.min(2, shared.length-1); }
+    else if (bd && n.scope===base.scope){
+      const nd = Date.parse(n.ts);
+      if (nd && Math.abs(nd-bd) <= 7*864e5){ type='time'; w = 0.5; }
+    }
+    if (type) out.push({ j, type, w });
+  }
+  out.sort((a,b)=>b.w-a.w);
+  const list = out.slice(0, 8);
+  focusCache = { i, list };
+  return list;
+}
+
+/* ---------------- 交互 ---------------- */
+function pick(mx,my){
+  let best=-1, bestD=1e9;
+  for (const l of labelsCv){
+    const d = Math.hypot(l.x-mx, l.y-my);
+    const lim = Math.max(10, l.size*0.55);
+    if (d < lim && d < bestD){ bestD=d; best=l.i; }
+  }
+  return best;
+}
+
+stage.addEventListener('pointerdown', e=>{
+  if (e.target !== cv) return;
+  if (e.button === 1){ panning = true; lastX=e.clientX; lastY=e.clientY; e.preventDefault(); stage.classList.add('panning'); return; }
+  dragging = true; lastX=e.clientX; lastY=e.clientY; stage.classList.add('dragging');
+});
+window.addEventListener('pointerup', ()=>{ dragging=false; panning=false; stage.classList.remove('dragging'); stage.classList.remove('panning'); });
+stage.addEventListener('pointermove', e=>{
+  if (panning){
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    lastX=e.clientX; lastY=e.clientY;
+    panX += dx; panY += dy;
+    return;
+  }
+  if (dragging){
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    lastX=e.clientX; lastY=e.clientY;
+    yaw += dx*0.006;
+    pitch = Math.max(-1.35, Math.min(1.35, pitch + dy*0.005));
+    return;
+  }
+  const i = pick(e.clientX, e.clientY);
+  hovered = i;
+  if (i>=0){
+    const n = nodes[i];
+    tipEl.innerHTML = '<div class="k">'+esc(KIND_CN[n.k]||n.k)+' · '+esc(n.ts)+'</div>'+esc(short(n.t, 52));
+    tipEl.style.left = Math.min(e.clientX+16, W-340)+'px';
+    tipEl.style.top  = Math.min(e.clientY+16, H-120)+'px';
+    tipEl.classList.add('show');
+  } else {
+    tipEl.classList.remove('show');
+  }
+});
+stage.addEventListener('pointerleave', ()=>{ hovered=-1; tipEl.classList.remove('show'); });
+stage.addEventListener('wheel', e=>{
+  e.preventDefault();
+  zoom *= (e.deltaY>0 ? 0.92 : 1.08);
+  zoom = Math.max(0.45, Math.min(4.5, zoom));
+}, {passive:false});
+stage.addEventListener('dblclick', ()=>{
+  yaw = 0.6; pitch = -0.18; zoom = 1; fitK = 0; panX = 0; panY = 0; closeCard();
+});
+stage.addEventListener('click', e=>{
+  if (e.target !== cv) return;
+  if (dragging) return;
+  const i = pick(e.clientX, e.clientY);
+  if (i >= 0) openCard(i); else closeCard();
+});
+window.addEventListener('keydown', e=>{
+  if (e.key === 'Escape'){ closeCard(); }
+});
+
+/* ---------------- 详情卡 ---------------- */
+function kindTag(n){
+  const c = n.k && THEMES[OPTS.theme] && THEMES[OPTS.theme].kinds[n.k] || '#9fb4e8';
+  return '<span class="badge" style="background:'+c+'22;color:'+c+'">'+esc(KIND_CN[n.k]||n.k)+'</span>';
+}
+function openCard(i){
+  selected = i;
+  const n = nodes[i];
+  const tags = (n.tags||[]).map(t=>'<span class="tag">#'+esc(t)+'</span>').join('') || '<span class="tag" style="opacity:.45">无标签</span>';
+  const det = n.det && Object.keys(n.det).length
+    ? '<div class="feel">'+(n.det.howIFelt ? '当时的感受：'+esc(n.det.howIFelt)+'<br>' : '')+(n.det.intensity!=null ? '强度：'+esc(n.det.intensity) : '')+'</div>'
+    : '';
+  const rows = [
+    ['时间', n.ts || '—'],
+    ['分区', n.scope || '—'],
+    ['重要度', Number(n.imp).toFixed(2)],
+    ['置信度', Number(n.conf).toFixed(2)],
+    ['被回想', n.use + ' 次'],
+    ['来源', n.src || '—'],
+    ['语义向量', hasVec.has(i) ? '有（玩家向量）' : '无（仅按标签/时间/文本）'],
+  ];
+  cardEl.innerHTML =
+    '<div class="row1">'+kindTag(n)+'<span style="font-size:11px;color:#6f7c9b">'+(n.arch?'已归档':'在册')+'</span><span class="close" id="cx">✕</span></div>'+
+    '<div class="full">'+esc(n.t)+'</div>'+
+    '<div class="meta">'+rows.map(r=>'<div class="lab">'+r[0]+'</div><div class="val">'+esc(r[1])+'</div>').join('')+'</div>'+
+    '<div class="tags">'+tags+'</div>'+det;
+  cardEl.classList.add('show');
+  setTimeout(()=>{ const c2=document.getElementById('cx'); if(c2) c2.onclick=closeCard; },0);
+}
+function closeCard(){ selected = -1; cardEl.classList.remove('show'); }
+
+/* ---------------- HUD ---------------- */
+function updateHud(){
+  if (!DATA) return;
+  const s = DATA.stats;
+  const kinds = Object.entries(s.kinds).map(([k,v])=>{
+    const c = (THEMES[OPTS.theme]||THEMES.dusk).kinds[k] || '#888';
+    return '<span style="color:'+c+'">●</span> '+(KIND_CN[k]||k)+' '+v;
+  }).join(' &nbsp; ');
+  statsEl.innerHTML = '<b>'+s.total+'</b> 条 · <b>'+edges.length+'</b> 条连线 · 向量 <b>'+s.withVector+'</b>'
+    + (s.missingVector ? ' / 缺 '+s.missingVector : '') + '<br>' + kinds;
+  document.getElementById('foot').innerHTML =
+    'seed '+OPTS.seed+' · 核 '+CAP.cores+' · WebGL '+(CAP.webgl2?'2':CAP.webgl?'1':'无')+' · DPR '+CAP.dpr.toFixed(1)+'<br>'+
+    (DATA.note ? esc(DATA.note) : '数据只读，不写回记忆');
+}
+
+/* ---------------- 主循环 ---------------- */
+let lastT = 0;
+function loop(t){
+  const dt = Math.min(50, t-lastT || 16); lastT = t; tNow = t;
+
+  // 位置平滑追目标（形态切换的"一点点变换"）
+  const k = 1 - Math.pow(0.90, dt/16.7);
+  for (let i=0;i<N;i++){
+    const n = nodes[i];
+    if (n.tx === undefined) continue;
+    n.px += (n.tx - n.px)*k;
+    n.py += (n.ty - n.py)*k;
+    n.pz += (n.tz - n.pz)*k;
+  }
+
+  // 主题色平滑过渡
+  mixTo(themeRGB.bg[0], themeTgt.bg[0], k*0.9);
+  mixTo(themeRGB.bg[1], themeTgt.bg[1], k*0.9);
+  mixTo(themeRGB.nebula, themeTgt.nebula, k*0.9);
+  mixTo(themeRGB.link, themeTgt.link, k*0.9);
+  mixTo(themeRGB.star, themeTgt.star, k*0.9);
+  for (const kk in themeTgt.kinds){
+    if (!themeRGB.kinds[kk]) themeRGB.kinds[kk] = themeTgt.kinds[kk].slice();
+    else mixTo(themeRGB.kinds[kk], themeTgt.kinds[kk], k*0.9);
+  }
+  if (++spriteTick % 6 === 0) initSprites();
+
+  if (!dragging && OPTS.autoRotate && baseShape() !== 'cluster') yaw += OPTS.autoRotate*0.001*dt;
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ---------------- 面板 UI ---------------- */
+const SLIDERS = [
+  { key:'sizeBase',      label:'节点大小', min:4,   max:26,  step:0.5, fmt:v=>v.toFixed(1) },
+  { key:'linkThreshold', label:'连线阈值', min:0.35,max:0.92,step:0.01, fmt:v=>v.toFixed(2) },
+  { key:'linkTopK',      label:'每颗连线数',min:1,  max:8,   step:1,   fmt:v=>String(v|0) },
+  { key:'linkAlpha',     label:'连线亮度', min:0.15,max:3,   step:0.05,fmt:v=>v.toFixed(2) },
+  { key:'glow',          label:'发光强度', min:0,   max:1.6, step:0.05, fmt:v=>v.toFixed(2) },
+  { key:'autoRotate',    label:'自转速度', min:0,   max:1.2, step:0.02, fmt:v=>v.toFixed(2) },
+      { key:'starfield',     label:'星尘密度', min:0,   max:600, step:10,  fmt:v=>String(v|0) },
+  { key:'sizePower',     label:'大小幂次', min:0.6, max:4,   step:0.1, fmt:v=>v.toFixed(1) },
+];
+
+const FX_ITEMS = [
+  { key:'rays',  name:'星芒', desc:'节点带十字光芒' },
+  { key:'flow',  name:'连线流光', desc:'光点沿记忆之间的线流动' },
+  { key:'sea',    name:'星海', desc:'每条记忆的微尘' },
+  { key:'meteor', name:'流星', desc:'从记忆划出' },
+  { key:'pulse',  name:'脉冲', desc:'重要记忆的涟漪' },
+];
+
+let rebuildTimer = null;
+function scheduleRebuild(){
+  clearTimeout(rebuildTimer);
+  rebuildTimer = setTimeout(()=>{
+    pairCache = null;
+    edges = buildEdges();
+    computeLayout();
+    buildAdj();
+  buildFlowList();
+    applyShape();
+    focusCache = { i:-1, list:[] };
+    updateHud();
+  }, 260);
+}
+
+function buildPanel(){
+  // 主题色块
+  const themesEl = document.getElementById('themes');
+  themesEl.innerHTML = '';
+  for (const key in THEMES){
+    const t = THEMES[key];
+    const d = document.createElement('div');
+    d.className = 'sw' + (OPTS.theme===key?' on':'');
+    d.dataset.v = key;
+    d.style.background = 'linear-gradient(135deg,'+t.bg[0]+','+t.kinds.episode+'55,'+t.kinds.thread+'66)';
+    d.innerHTML = '<span>'+t.name+'</span>';
+    d.onclick = ()=>{ OPTS.theme = key; themeTgt = themeToRGB(THEMES[key]); initSprites(); buildPanel(); updateHud(); };
+    themesEl.appendChild(d);
+  }
+  const shapesEl = document.getElementById('shapes');
+  shapesEl.innerHTML = '';
+  // 形态列表：内置 + 自定义，可删除（至少留 3 个）
+  const shapeItem = { v:'__rnd', label:'🎲 随机生成' };
+  const visList = visibleShapes().concat([shapeItem]);
+  for (const it of visList){
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const b = document.createElement('button');
+    b.dataset.v = it.v;
+    b.textContent = it.label;
+    if (it.v === '__rnd') b.style.borderStyle = 'dashed';
+    b.classList.toggle('on', OPTS.shape === it.v);
+    b.onclick = ()=>{
+      if (it.v === '__rnd'){
+        RANDOM_SPEC = randomSpec();
+        OPTS.shape = '__rnd';
+      } else {
+        OPTS.shape = it.v;
+      }
+      applyShape();
+      buildPanel();
+      refreshCodeIfOpen();
+    };
+    cell.appendChild(b);
+    if (it.v !== '__rnd'){
+      const dl = document.createElement('span');
+      dl.className = 'del';
+      dl.textContent = '✕';
+      dl.title = '删除这个形态（至少留 3 个）';
+      dl.onclick = (ev)=>{ ev.stopPropagation(); deleteShape(it.v); };
+      cell.appendChild(dl);
+    }
+    shapesEl.appendChild(cell);
+  }    {
+    const sds = currentSeed();
+    const row = document.createElement('div');
+    row.className = 'seedrow';
+    const code = document.createElement('code');
+    code.textContent = sds;
+    code.title = (OPTS.shape === '__rnd')
+      ? '把这个种子发给别人，对方载入后看到同一个形态'
+      : (CUSTOM.shapes[OPTS.shape] ? '本机自定义形态的种子' : '内置形态的种子，别人载入也能切回这个形态');
+    const cp = document.createElement('button'); cp.textContent = '复制种子';
+    cp.onclick = ()=> copyText(sds);
+    const ld = document.createElement('button'); ld.textContent = '载入';
+    ld.onclick = ()=> openSeedLoader();
+    row.append(code, cp, ld);
+    shapesEl.appendChild(row);
+    const pv = document.createElement('button');
+    pv.textContent = '🎲 偏好随机';
+    pv.style.marginTop = '6px';
+    pv.onclick = ()=> openPrefEditor();
+    shapesEl.appendChild(pv);
+    if (OPTS.shape === '__rnd' && RANDOM_SPEC){
+      const sv = document.createElement('button');
+      sv.className = 'primary'; sv.textContent = '💾 保存这个形态';
+      sv.style.marginTop = '6px';
+      sv.onclick = ()=> saveRandomShape();
+      shapesEl.appendChild(sv);
+    }
+  }
+  // 特效开关
+  const fxEl = document.getElementById('fx');
+  fxEl.innerHTML = '';
+  FX_ITEMS.forEach(it=>{
+    const d = document.createElement('div');
+    d.className = 'tog' + (OPTS.fx[it.key]?' on':'');
+    d.innerHTML = '<span class="box">'+(OPTS.fx[it.key]?'✓':'')+'</span><span>'+it.name+'</span><span class="d">'+it.desc+'</span>';
+    d.onclick = ()=>{
+      OPTS.fx[it.key] = !OPTS.fx[it.key];
+      if (it.key === 'sea') initStars();
+      buildPanel();
+    };
+    fxEl.appendChild(d);
+  });
+  // 自定义特效（用户自己加的，可删）
+  for (const id in CUSTOM.fx){
+    const sp = CUSTOM.fx[id];
+    const d = document.createElement('div');
+    d.className = 'tog' + (OPTS.fx[id] ? ' on' : '');
+    d.innerHTML = '<span class="box">'+(OPTS.fx[id]?'✓':'')+'</span><span>'+sp.name+'</span>'
+      + '<span class="d">'+(FX_KINDS[sp.kind]||'自定义')+'</span><span class="del">✕</span>';
+    d.onclick = (ev)=>{
+      if (ev.target && ev.target.classList.contains('del')){
+        delete CUSTOM.fx[id]; delete OPTS.fx[id]; saveCustom(); buildPanel(); return;
+      }
+      OPTS.fx[id] = !OPTS.fx[id]; buildPanel();
+    };
+    fxEl.appendChild(d);
+  }
+
+  // 滑块
+  const slEl = document.getElementById('sliders');
+  slEl.innerHTML = '';
+  SLIDERS.forEach(s=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'sl';
+    wrap.innerHTML = '<div class="lab"><span>'+s.label+'</span><b>'+s.fmt(OPTS[s.key])+'</b></div>';
+    const inp = document.createElement('input');
+    inp.type = 'range'; inp.min = s.min; inp.max = s.max; inp.step = s.step; inp.value = OPTS[s.key];
+    const val = wrap.querySelector('b');
+    inp.oninput = ()=>{
+      OPTS[s.key] = parseFloat(inp.value);
+      val.textContent = s.fmt(OPTS[s.key]);
+      if (s.key === 'linkThreshold' || s.key === 'linkTopK') scheduleRebuild();
+      if (s.key === 'starfield') initStars();
+    };
+    wrap.appendChild(inp);
+    slEl.appendChild(wrap);
+  });
+  renderPresets();
+}
+
+/* ---------------- 预设 ---------------- */
+const LS_KEY = 'starmap.presets.v1';
+function loadPresets(){ try { return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); } catch(e){ return []; } }
+function savePresets(list){ localStorage.setItem(LS_KEY, JSON.stringify(list)); }
+
+function renderPresets(){
+  const list = loadPresets();
+  const el = document.getElementById('presets');
+  el.innerHTML = '';
+  if (!list.length){
+    el.innerHTML = '<div class="empty">还没有收藏。调到自己喜欢的样子，点「存为收藏」。</div>';
+    return;
+  }
+  list.forEach((p, idx)=>{
+    const d = document.createElement('div');
+    d.className = 'preset';
+    d.innerHTML = '<span class="nm">'+esc(p.name)+'</span><span class="del" title="删除">✕</span>';
+    d.querySelector('.nm').onclick = ()=>{ applyPreset(p.opts); };
+    d.onclick = (e)=>{ if (e.target.classList.contains('del')) return; applyPreset(p.opts); };
+    d.querySelector('.del').onclick = (e)=>{
+      e.stopPropagation();
+      const l = loadPresets(); l.splice(idx,1); savePresets(l); renderPresets();
+    };
+    el.appendChild(d);
+  });
+}
+
+function applyPreset(o){
+  const src = JSON.parse(JSON.stringify(o));
+  if (src.__spec){ RANDOM_SPEC = src.__spec; delete src.__spec; }
+  Object.assign(OPTS, src);
+  themeTgt = themeToRGB(THEMES[OPTS.theme] || THEMES.dusk);
+  initSprites(); initStars();
+  pairCache = null;
+  edges = buildEdges();
+  computeLayout(); buildAdj(); applyShape();
+  focusCache = { i:-1, list:[] };
+  updateHud(); buildPanel(); syncSpinBtn();
+}
+
+document.getElementById('btnSave').onclick = ()=>{
+  const name = prompt('给这套配置起个名字：', '我的星空 ' + new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}));
+  if (!name) return;
+  const list = loadPresets();
+  const snap = JSON.parse(JSON.stringify(OPTS));
+  if (snap.shape === '__rnd' && RANDOM_SPEC) snap.__spec = JSON.parse(JSON.stringify(RANDOM_SPEC));
+  list.push({ name, opts: snap, t: Date.now() });
+  savePresets(list); renderPresets();
+};
+
+document.getElementById('btnRandom').onclick = ()=>{
+    const themes = Object.keys(THEMES);
+  const nrand = rnd((Math.random()*1e9)|0);
+  RANDOM_SPEC = randomSpec();
+  OPTS.shape = '__rnd';
+  OPTS.theme = themes[Math.floor(nrand()*themes.length)];
+  OPTS.fx = { sea: nrand()>0.3, meteor: nrand()>0.35, pulse: false };
+  OPTS.sizeBase = 7 + nrand()*12;
+  OPTS.sizePower = 1.2 + nrand()*1.6;
+  OPTS.linkThreshold = 0.55 + nrand()*0.3;
+  OPTS.linkTopK = 2 + Math.floor(nrand()*4);
+  OPTS.glow = 0.5 + nrand()*0.9;
+  OPTS.autoRotate = nrand()*0.5;
+  OPTS.seed = Math.floor(nrand()*100000);
+  applyPreset(JSON.parse(JSON.stringify(OPTS)));
+};
+
+/* ============================================================================
+   自定义：主题 / 形态（存在 localStorage，面板与文件名都是数据，不是指令）
+   ========================================================================== */
+let CUSTOM = { themes:{}, shapes:{}, fx:{} };
+let RANDOM_SPEC = null;
+/* 随机形态原型：只依赖 seed 派生，同一个 seed 永远长成同一个样子 */
+const TAU = Math.PI * 2;
+const PROTOS = {
+  spiral(sp, i, g, n){
+    const t = Math.pow(g(), sp.pow);
+    const arm = i % sp.arms;
+    const ang = arm/sp.arms*TAU + t*sp.turns*TAU + (g()-0.5)*sp.jitter;
+    const r = 0.16 + 0.84*t;
+    return { x:Math.cos(ang)*r, y:(g()-0.5)*sp.thick*(1.25-t*0.8), z:Math.sin(ang)*r };
+  },
+  helix(sp, i, g){
+    const t = g(), strand = i % 2;
+    const ang = t*sp.turns*TAU + strand*Math.PI;
+    const j = sp.jitter;
+    return { x:Math.cos(ang)*sp.radius + (g()-0.5)*j, y:(t-0.5)*sp.height + (g()-0.5)*0.04, z:Math.sin(ang)*sp.radius + (g()-0.5)*j };
+  },
+  rings(sp, i, g){
+    const ring = i % sp.rings;
+    const rr = 0.20 + 0.80*(ring/Math.max(1,sp.rings-1)) * (0.85+0.15*g());
+    const ang = g()*TAU + ring*0.7;
+    const w = sp.width;
+    return { x:Math.cos(ang)*rr + (g()-0.5)*w, y:(g()-0.5)*w*0.8 + Math.sin(ang)*0.04, z:Math.sin(ang)*rr + (g()-0.5)*w };
+  },
+  lattice(sp, i, g){
+    const k = Math.max(2, Math.round(Math.cbrt(N)));
+    const ix = i % k, iy = ((i/k)|0) % k, iz = ((i/(k*k))|0) % k;
+    const s = 1.95/Math.max(1,k-1);
+    return { x:(ix-(k-1)/2)*s + (g()-0.5)*sp.jitter, y:(iy-(k-1)/2)*s + (g()-0.5)*sp.jitter, z:(iz-(k-1)/2)*s + (g()-0.5)*sp.jitter };
+  },
+  wave(sp, i, g){
+    const u = g()*2-1, v = g()*2-1;
+    const w = Math.sin(u*sp.f1 + v*sp.f2)*sp.amp + Math.sin(u*sp.f3 - v*sp.f1*0.8)*sp.amp*0.5;
+    return { x:u, y:w, z:v*0.86 };
+  },
+  funnel(sp, i, g){
+    const t = Math.pow(g(), 0.72);
+    const ang = t*sp.turns*TAU + (g()-0.5)*0.5;
+    const r = 0.05 + (1-t)*1.02;
+    return { x:Math.cos(ang)*r, y:(t-0.5)*sp.height, z:Math.sin(ang)*r };
+  },
+  filament(sp, i, g){
+    const li = i % sp.lines, t = g(), ph = li*2.399;
+    const j = sp.jitter;
+    return {
+      x: Math.sin(t*sp.freq + ph)*0.72 + Math.sin(t*sp.freq*2.7 + ph*1.7)*0.24 + (g()-0.5)*j,
+      y: Math.cos(t*sp.freq*0.8 + ph*1.3)*0.55 + (g()-0.5)*j,
+      z: Math.sin(t*sp.freq*1.6 + ph*2.1)*0.62 + (g()-0.5)*j
+    };
+  },
+  twin(sp, i, g){
+    const cx = (i % 2 ? 1 : -1) * sp.gap;
+    const u1 = Math.max(1e-6, g()), u2 = g();
+    const mag = Math.sqrt(-2*Math.log(u1)) * sp.blob;
+    const th = u2*TAU, ph2 = Math.acos(2*g()-1);
+    return {
+      x: cx + mag*Math.sin(ph2)*Math.cos(th),
+      y: mag*Math.cos(ph2)*0.85,
+      z: mag*Math.sin(ph2)*Math.sin(th)
+    };
+  },
+  cloud(sp, i, g){
+    const u1 = Math.max(1e-6, g()), u2 = g();
+    const mag = Math.sqrt(-2*Math.log(u1)) * 0.46;
+    const th = u2*TAU, ph2 = Math.acos(2*g()-1);
+    return {
+      x: mag*Math.sin(ph2)*Math.cos(th)*sp.sx,
+      y: mag*Math.cos(ph2)*sp.sy,
+      z: mag*Math.sin(ph2)*Math.sin(th)*sp.sz
+    };
+  },
+  shell(sp, i, g){
+    const u = g()*2-1;
+    const th = g()*TAU;
+    const r = Math.sqrt(Math.max(0, 1-u*u));
+    const rr = sp.inner + (1-sp.inner)*Math.pow(g(), sp.pow);
+    return { x: r*Math.cos(th)*rr, y: u*rr, z: r*Math.sin(th)*rr };
+  }
+};
+
+
+/* ===== 偏好随机：先挑喜欢的主体/特效，再从里面摇 ===== */
+const PREF_KEY = 'starmap.prefs.v1';
+const MAIN_ITEMS = [
+  { v:'duel', n:'突破（双核对峙）' },
+  { v:'partition', n:'分区（动态）' }, { v:'orbit', n:'轨道' }, { v:'multi', n:'多中心' },
+  { v:'jet', n:'喷流' }, { v:'band', n:'长带' }, { v:'web', n:'星座网' },
+  { v:'cluster', n:'分区（静态）' }, { v:'nebula', n:'星云' }, { v:'sphere', n:'球壳' },
+  { v:'galaxy', n:'星系' }, { v:'river', n:'长河' }, { v:'stream', n:'星河' }, { v:'aurora', n:'极光' }
+];
+const FX_PICK = [
+  { v:'cloud', n:'星云团' }, { v:'flow', n:'连线流光' }, { v:'sea', n:'星海' },
+  { v:'meteor', n:'流星' }, { v:'pulse', n:'脉冲' }
+];
+let PREFS = { mains: ['partition'], sub1s: [], sub2s: [], fx: ['cloud','flow','sea','meteor'] };
+try {
+  const raw = localStorage.getItem(PREF_KEY);
+  if (raw){
+    const o = JSON.parse(raw);
+    Object.assign(PREFS, o);
+    /* 兼容旧版偏好：早期是 {mains:[...]}，后来一度是 {main, sub1, sub2} 单选 */
+    if (!Array.isArray(PREFS.mains)){
+      PREFS.mains = o.mains && o.mains.length ? o.mains.slice() : (o.main ? [o.main] : ['partition']);
+    }
+    delete PREFS.main;
+    if (!Array.isArray(PREFS.sub1s)) PREFS.sub1s = o.sub1 ? [o.sub1] : [];
+    if (!Array.isArray(PREFS.sub2s)) PREFS.sub2s = o.sub2 ? [o.sub2] : [];
+    delete PREFS.sub1; delete PREFS.sub2;
+    if (!Array.isArray(PREFS.fx)) PREFS.fx = ['cloud','flow','sea','meteor'];
+  }
+} catch(e){}
+/* 副形态：内置形态名映射成一种子布局，结构名原样用 */
+const SUB_MAP = { nebula:'cloud', sphere:'shell', galaxy:'spiral', river:'band', stream:'web', aurora:'wave', cluster:'rings', partition:'rings', multi:'cloud', jet:'filament', orbit:'orbit', band:'band', web:'web' };
+const SUB_LAYOUTS = ['rings','filament','cloud','orbit','spiral','shell','band','web','wave'];
+function subLayoutList(){
+  const conv = v => SUB_MAP[v] || (SUB_LAYOUTS.indexOf(v) >= 0 ? v : null);
+  const out = [];
+  for (const v of (PREFS.sub1s || [])){ const c = conv(v); if (c && out.indexOf(c) < 0) out.push(c); }
+  for (const v of (PREFS.sub2s || [])){ const c = conv(v); if (c && out.indexOf(c) < 0) out.push(c); }
+  return out;
+}
+function mainItems(){
+  const arr = MAIN_ITEMS.slice();
+  for (const id in CUSTOM.shapes){
+    arr.push({ v:id, n:(CUSTOM.shapes[id].name || id) + '（自定义）' });
+  }
+  return arr;
+}
+
+function radioGroup(title, items, getVal, setVal){
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-bottom:14px';
+  const h = document.createElement('div');
+  h.textContent = title;
+  h.style.cssText = 'font-size:11px;color:#7f8cab;margin-bottom:8px;letter-spacing:.4px';
+  const box = document.createElement('div');
+  box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px';
+  const btns = [];
+  const paint = (b, on)=>{
+    b.style.cssText = on
+      ? 'padding:5px 11px;border-radius:999px;font-size:11.5px;cursor:pointer;font-family:inherit;border:1px solid rgba(120,190,255,.55);background:rgba(70,130,255,.22);color:#dceaff'
+      : 'padding:5px 11px;border-radius:999px;font-size:11.5px;cursor:pointer;font-family:inherit;border:1px solid rgba(120,150,220,.22);background:rgba(255,255,255,.03);color:#8fa2c0';
+  };
+  const sync = ()=>{ items.forEach((it,i)=> paint(btns[i], it.v === getVal())); };
+  items.forEach((it)=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = it.n;
+    b.onclick = ()=>{ setVal(it.v); sync(); };
+    btns.push(b); box.appendChild(b);
+  });
+  sync();
+  wrap.append(h, box);
+  return wrap;
+}
+function chipGroup(title, items, arr){
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-bottom:15px';
+  const h = document.createElement('div');
+  h.textContent = title;
+  h.style.cssText = 'font-size:11px;color:#7f8cab;margin-bottom:8px;letter-spacing:.4px';
+  const box = document.createElement('div');
+  box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px';
+  items.forEach(it=>{
+    const b = document.createElement('button');
+    b.textContent = it.n;
+    b.type = 'button';
+    const on = ()=> arr.indexOf(it.v) >= 0;
+    const sync = ()=>{ b.style.cssText = on()
+      ? 'padding:5px 11px;border-radius:999px;font-size:11.5px;cursor:pointer;font-family:inherit;border:1px solid rgba(120,190,255,.55);background:rgba(70,130,255,.22);color:#dceaff'
+      : 'padding:5px 11px;border-radius:999px;font-size:11.5px;cursor:pointer;font-family:inherit;border:1px solid rgba(120,150,220,.22);background:rgba(255,255,255,.03);color:#8fa2c0'; };
+    sync();
+    b.onclick = ()=>{
+      const k = arr.indexOf(it.v);
+      if (k >= 0) arr.splice(k,1); else arr.push(it.v);
+      sync();
+    };
+    box.appendChild(b);
+  });
+  wrap.append(h, box);
+  return wrap;
+}
+
+function randomWithPrefs(){
+  const known = v => v && (STRUCT_NAMES.indexOf(v) >= 0 || SHAPE_BUILTIN.some(b => b.v === v) || CUSTOM.shapes[v]);
+  const pool = (PREFS.mains || []).filter(known);
+  if (!pool.length){ toast('先在偏好里勾上至少一个主体形态'); return; }
+  const pick = pool[(Math.random()*pool.length)|0];
+  if (STRUCT_NAMES.indexOf(pick) >= 0){
+    const sp = randomSpec();
+    sp.struct = pick;
+    sp.name = '偏好随机';
+    sp.subs = subLayoutList();
+    RANDOM_SPEC = sp;
+    OPTS.shape = '__rnd';
+  } else if (CUSTOM.shapes[pick]){
+    RANDOM_SPEC = null;
+    OPTS.shape = pick;
+  } else {
+    RANDOM_SPEC = null;
+    OPTS.shape = pick;
+    if (pick === 'cluster'){ OPTS.groupBy = ['kind','scope','tag'][(Math.random()*3)|0]; }
+  }
+  for (const it of FX_PICK) OPTS.fx[it.v] = PREFS.fx.indexOf(it.v) >= 0;
+  applyShape(); initSprites(); buildPanel();
+  refreshCodeIfOpen();
+  toast('偏好随机 · ' + currentSeed());
+}
+
+function openPrefEditor(){
+  const draft = {
+    mains: (PREFS.mains || []).slice(),
+    sub1s: (PREFS.sub1s || []).slice(),
+    sub2s: (PREFS.sub2s || []).slice(),
+    fx: PREFS.fx.slice()
+  };
+  openEditor('偏好随机', '都可以多选，每次从你勾的范围里摇一个组合。主体定骨架，副形态定局部怎么长；副形态不勾就随机。', (body)=>{
+    const mainList = mainItems();
+    body.appendChild(chipGroup('主体形态（可多选，每次挑一个）', mainList, draft.mains));
+    body.appendChild(chipGroup('副形态 1（可多选）', mainList, draft.sub1s));
+    body.appendChild(chipGroup('副形态 2（可多选）', mainList, draft.sub2s));
+    body.appendChild(chipGroup('伴随特效（可多选）', FX_PICK, draft.fx));
+  }, ()=>{
+    if (!draft.mains.length){ toast('至少勾一个主体形态'); return; }
+    PREFS.mains = draft.mains.slice();
+    PREFS.sub1s = draft.sub1s.slice();
+    PREFS.sub2s = draft.sub2s.slice();
+    PREFS.fx = draft.fx.slice();
+    try { localStorage.setItem(PREF_KEY, JSON.stringify(PREFS)); } catch(e){}
+    randomWithPrefs();
+  });
+}
+/* ===== 结构合成器：随机生成「有层级、会动」的结构，seed 决定一切 ===== */
+let EVOLVE = null;
+const STRUCT_NAMES = ['partition','orbit','multi','jet','band','web','duel'];
+/* 抽取权重：分区（partition）是主力，保证随机结果多数带分区 */
+const STRUCT_POOL = ['partition','partition','partition','orbit','orbit','multi','jet','band','web','duel'];
+
+function randomSpec(seed, forceName){
+  const s = (seed === undefined || seed === null)
+    ? ((Math.random()*1e9)|0 >>> 0)
+    : (Number(seed) >>> 0);
+  const g = rnd(s || 1);
+  const R = (a,b)=> a + g()*(b-a);
+  /* 用独立随机流决定“要不要走动态结构”，不消耗主流，保证老种子结果不变 */
+  const sg = rnd(((s ^ 0x9e3779b9) >>> 0) || 7);
+  const structMode = forceName ? (STRUCT_NAMES.indexOf(forceName) >= 0) : (sg() < 0.58);
+  const sp = { name:'随机形态', seed:s, pitch:R(-0.85,-0.05), yaw:R(-0.65,0.65) };
+  if (structMode){
+    sp.struct = forceName || STRUCT_POOL[(g()*STRUCT_POOL.length)|0];
+    sp.name = '随机结构';
+    const st = sp.struct;
+    if (st === 'partition'){
+      sp.groupBy = 'kind';
+      sp.spreadP = R(0.85,1.25);
+      sp.pitch = R(-0.30,-0.14);
+      sp.yaw = R(-0.26,0.26);
+      sp.flatP = R(0.55,1.0);
+      sp.coreN = 1 + ((g()*3)|0);
+    } else if (st === 'orbit'){
+      sp.cores = 1 + ((g()*2)|0);
+      sp.arms = 3 + ((g()*6)|0);
+      sp.flat = R(0.05,0.38);
+      sp.perArm = Math.max(3, Math.round(N/(sp.arms*2.2)));
+    } else if (st === 'multi'){
+      sp.clusters = 2 + ((g()*5)|0);
+      sp.perCluster = Math.max(4, Math.round(N/sp.clusters*1.1));
+      sp.spreadC = R(0.20,0.62);
+    } else if (st === 'jet'){
+      sp.cores = 1 + ((g()*2)|0);
+      sp.jets = 1 + ((g()*2)|0);
+      sp.spreadJet = R(0.10,0.26);
+      sp.jetH = R(0.45,1.35);
+      sp.dir = g() < 0.5 ? 1 : -1;
+    } else if (st === 'band'){
+      sp.turns = R(1.2,3.4);
+      sp.thick = R(0.05,0.24);
+    } else {
+      sp.thick = R(0.05,0.34);
+      sp.twist = R(-1.2,1.2);
+    }
+    return sp;
+  }
+  const names = Object.keys(PROTOS);
+  const proto = forceName || names[(g()*names.length)|0];
+  sp.proto = proto;
+  if (proto === 'spiral'){ sp.arms = 2+((g()*6)|0); sp.turns = R(1.1,3.2); sp.jitter = R(0.10,0.50); sp.thick = R(0.05,0.26); sp.pow = R(0.55,1.25); }
+  else if (proto === 'helix'){ sp.turns = R(1.4,3.6); sp.radius = R(0.22,0.55); sp.height = R(0.9,1.9); sp.jitter = R(0.02,0.12); }
+  else if (proto === 'rings'){ sp.rings = 2+((g()*6)|0); sp.width = R(0.03,0.16); }
+  else if (proto === 'lattice'){ sp.jitter = R(0.0,0.22); sp.pitch = R(-0.5,0.2); }
+  else if (proto === 'wave'){ sp.f1 = R(1.2,3.6); sp.f2 = R(1.2,3.6); sp.f3 = R(2.2,6.5); sp.amp = R(0.12,0.42); }
+  else if (proto === 'funnel'){ sp.turns = R(0.8,2.6); sp.height = R(1.0,2.2); }
+  else if (proto === 'filament'){ sp.lines = 2+((g()*6)|0); sp.freq = R(2.2,6.5); sp.jitter = R(0.03,0.16); }
+  else if (proto === 'twin'){ sp.gap = R(0.30,0.62); sp.blob = R(0.16,0.40); }
+  else if (proto === 'cloud'){ sp.sx = R(0.7,1.5); sp.sy = R(0.4,1.2); sp.sz = R(0.7,1.5); }
+  else if (proto === 'shell'){ sp.inner = R(0.10,0.55); sp.pow = R(0.5,1.6); }
+  return sp;
+}
+
+/* 把一份记忆铺成“组 → 组内轨迹 → 节点”的层级结构，并让组随时间公转/自转 */
+const STRUCT_DEFAULTS = {
+  cores:2, arms:5, flat:0.20, perArm:12,
+  clusters:4, perCluster:60, spreadC:0.50,
+  jets:2, spreadJet:0.16, jetH:1.00, dir:1,
+  turns:2.40, thick:0.12, twist:0.60,
+  groupBy:'kind', spreadP:0.95, flatP:0.85, coreN:2
+};
+function buildEvolve(sp){
+  sp = Object.assign({}, STRUCT_DEFAULTS, sp || {});
+  const g = rnd((sp.seed >>> 0) || 1);
+  const R = (a,b)=> a + g()*(b-a);
+  const type = sp.struct || 'orbit';
+  const subs = (Array.isArray(sp.subs) && sp.subs.length) ? sp.subs : null;
+  const order = nodes.map((n,i)=>i).sort((a,b)=> nodes[b].imp - nodes[a].imp);
+  let ptr = 0;
+  const take = (k)=>{ const out=[]; while (out.length < k && ptr < order.length) out.push(order[ptr++]); return out; };
+  const groups = [];
+  const mk = (o)=>{ groups.push(Object.assign({ cx:0,cy:0,cz:0,r0:0,orbit0:0,ratio:1,parent:-1,angle:0,omega:0,tilt:0,h0:0,items:[],wx:0,wy:0,wz:0 }, o)); return groups.length-1; };
+  /* 把一组节点铺成某种子形态（环/丝/团/轨道/螺旋/壳/带/网/波），
+     副形态 1 / 副形态 2 就是从这里生效的 */
+  const put = (gi, list, rad, jitter, sub)=>{
+    const gr = groups[gi];
+    if (sub) gr.sub = sub;
+    const M = Math.max(1, list.length);
+    list.forEach((idx,k)=>{
+      const t = k/M;
+      const u = Math.pow(g(), 0.75);
+      let a0, rr, h;
+      switch (sub || 'cloud'){
+        case 'rings':
+          a0 = t*TAU + (g()-0.5)*0.35;
+          rr = rad * (0.55 + 0.45*u) * (jitter||1.0);
+          h  = (g()-0.5)*rad*0.18;
+          break;
+        case 'filament':
+          a0 = t*TAU*0.45 + (g()-0.5)*1.9;
+          rr = rad * (0.18 + 0.82*t) * (jitter||1.0) * (0.55+0.45*g());
+          h  = (g()-0.5)*rad*0.75;
+          break;
+        case 'orbit':
+          a0 = t*TAU + (g()-0.5)*1.0;
+          rr = rad * (0.72 + 0.28*u) * (jitter||1.0);
+          h  = (g()-0.5)*rad*0.10;
+          break;
+        case 'spiral':
+          rr = rad * (0.08 + 0.92*t) * (jitter||1.0);
+          a0 = t*TAU*2.15 + rr*3.4 + (g()-0.5)*0.30;
+          h  = (g()-0.5)*rad*0.30;
+          break;
+        case 'shell': {
+          /* 黄金角均匀铺在球面上：真正一层空心的壳，节点不往球心堆 */
+          const j  = (k + 0.5) / M;
+          const zz = 1 - 2*j;
+          const sh = Math.sqrt(Math.max(0, 1 - zz*zz));
+          a0 = k * 2.399963229728653;
+          rr = rad * sh * (jitter||1.0);
+          h  = zz * rad * (jitter||1.0);
+          break;
+        }
+        case 'band':
+          a0 = t*TAU*0.30 + (g()-0.5)*1.4;
+          rr = rad * (0.35 + 0.75*Math.sin(t*Math.PI)) * (jitter||1.0);
+          h  = (g()-0.5)*rad*0.22;
+          break;
+        case 'web':
+          a0 = k*(0.22 + g()*0.40);
+          rr = rad * (0.20 + 0.80*Math.sqrt(u)) * (jitter||1.0);
+          h  = (g()-0.5)*rad*0.70;
+          break;
+        case 'wave':
+          a0 = t*TAU + (g()-0.5)*0.9;
+          rr = rad * (0.55 + 0.45*u) * (jitter||1.0);
+          h  = Math.sin(t*TAU*1.6)*rad*0.55 + (g()-0.5)*rad*0.14;
+          break;
+        default: /* cloud */
+          a0 = k/M*TAU + (g()-0.5)*1.1;
+          rr = rad * (0.10 + u*(jitter||1.0)*0.72);
+          h  = (g()-0.5)*rad*0.85;
+      }
+      gr.items.push({ i: idx, r: rr, a0, h, ratio: 1 });
+      if (nodeGroupOf.length) nodeGroupOf[idx] = gi;
+    });
+  };
+
+  if (type === 'partition'){
+    /* 分区骨架：自我当核心，各类记忆各占一块，围成一圈慢慢转；
+       每块内部再按子形态排（环 / 丝 / 团 / 轨道），所以每块长得都不一样。 */
+    const giCore = mk({ omega: (g()<0.5?-1:1)*R(0.05,0.16) });
+    const selfs = [];
+    for (let i=0;i<N;i++) if (nodes[i].k === 'self') selfs.push(i);
+    const coreIdx = selfs.length ? selfs.slice(0, Math.max(1, sp.coreN || 2)) : take(Math.max(1, sp.coreN || 2));
+    coreIdx.forEach((idx,k)=>{ groups[giCore].items.push({ i: idx, r: k*0.045, a0: k*2.1, h: 0, ratio: 1 }); });
+    const taken = new Set(coreIdx);
+
+    const src = groupNodes().filter(gp => gp.key !== 'self');
+    const psubs = subs || ['rings','filament','cloud','orbit'];
+    const cntGroups = Math.max(2, src.length);
+    src.forEach((gp, ci)=>{
+      const ang = ci/cntGroups*TAU + (g()-0.5)*0.16;
+      const dist = (sp.spreadP || 0.95) * (1.0 + g()*0.14);
+      const gi = mk({
+        cx: Math.cos(ang)*dist, cy: Math.sin(ang)*dist*0.74*(sp.flatP||0.8), cz: (g()-0.5)*0.16,
+        omega: (g()<0.5?-1:1)*R(0.10,0.36), tilt: R(-0.42,0.42),
+        parent: giCore, r0: dist, orbit0: ang, ratio: 1, h0: 0
+      });
+      const list = gp.idx.filter(i => !taken.has(i));
+      put(gi, list, Math.min(0.235, 0.070 + 0.046*Math.sqrt(list.length/10)), 1.0, psubs[ci % psubs.length]);
+      clusterInfo.push({ gi, x:0, y:0, z:0, rad:0.17, label: gp.label, count: list.length, color: gp.color });
+    });
+    clusterInfo.push({ gi: giCore, x:0, y:0, z:0, rad:0.13, label: '自我', count: selfs.length || coreIdx.length, color: themeRGB.kinds.self || themeRGB.nebula });
+    const leftovers = [];
+    for (let i=0;i<N;i++) if (!taken.has(i) && !groups.some(gr=>gr.items.some(it=>it.i===i))) leftovers.push(i);
+    if (leftovers.length) put(giCore, leftovers, 0.95, 0.4);
+  } else if (type === 'orbit'){
+    const gi0 = mk({ omega: (g()<0.5?-1:1)*R(0.05,0.20), tilt: R(-0.25,0.25) });
+    take(Math.max(1, sp.cores)).forEach((idx,k)=>{
+      groups[gi0].items.push({ i: idx, r: k===0 ? 0 : 0.05+0.05*k, a0: k*2.1, h: 0, ratio: 1 });
+    });
+    const arms = Math.max(2, sp.arms);
+    /* 斐波那契球面：各瓣在三维里均匀分居，不再全挤在一条平面上 */
+    for (let a=0; a<arms; a++){
+      const phi = Math.acos(1 - 2*(a + 0.5)/arms);
+      const theta = Math.PI * (1 + Math.sqrt(5)) * a;
+      const dist = R(0.40, 0.78) * (0.85 + sp.flat*0.4);
+      const ang = Math.atan2(Math.sin(phi)*Math.sin(theta), Math.sin(phi)*Math.cos(theta));
+      const gi = mk({
+        cx: Math.sin(phi)*Math.cos(theta)*dist, cy: Math.cos(phi)*dist*0.72, cz: Math.sin(phi)*Math.sin(theta)*dist,
+        omega: (g()<0.5?-1:1)*R(0.12,0.52),
+        tilt: R(-0.5,0.5),
+        parent: gi0, r0: dist, orbit0: ang,
+        ratio: (g()<0.5?-1:1)*R(0.55,1.3),
+        h0: (g()-0.5)*sp.flat*0.6
+      });
+      put(gi, take(Math.max(3, Math.round(sp.perArm*(0.6+g()*0.9)))), R(0.075,0.135), 1.0, subs ? subs[a % subs.length] : undefined);
+    }
+    if (ptr < order.length && groups[gi0]){
+      put(gi0, order.slice(ptr), 0.92, 0.35, subs ? subs[0] : undefined);
+    }
+  } else if (type === 'multi'){
+    const cl = Math.max(2, sp.clusters);
+    for (let c=0; c<cl; c++){
+      const ang = c/cl*TAU + R(-0.35,0.35);
+      const dist = R(0.16, sp.spreadC);
+      const gi = mk({
+        cx: Math.cos(ang)*dist, cy: (g()-0.5)*0.34, cz: Math.sin(ang)*dist,
+        omega: (g()<0.5?-1:1)*R(0.08,0.34), tilt: R(-0.55,0.55)
+      });
+      const list = take(Math.max(4, Math.round(sp.perCluster*(0.55+g()*0.9))));
+      if (list.length){
+        groups[gi].items.push({ i:list[0], r:0, a0:0, h:0, ratio:1 });
+        put(gi, list.slice(1), R(0.07,0.16), 1.0, subs ? subs[c % subs.length] : undefined);
+      }
+    }
+    if (ptr < order.length){ put(0, order.slice(ptr), 0.9, 0.4); }
+  } else if (type === 'jet'){
+    const giCore = mk({ omega: (g()<0.5?-1:1)*R(0.12,0.40) });
+    const giDisk = mk({ omega: -Math.sign(sp.dir)*R(0.15,0.48), tilt: R(-0.28,0.28) });
+    take(Math.max(1, sp.cores)).forEach((idx,k)=>{
+      groups[giCore].items.push({ i: idx, r: k*0.04, a0: k*2.3, h: 0, ratio: 1 });
+    });
+    put(giDisk, take(Math.max(10, Math.round(N*0.34))), R(0.34,0.54), 0.18, subs ? subs[0] : undefined);
+    for (let j=0; j<Math.max(1, sp.jets); j++){
+      const sgn = (j % 2 === 0) ? 1 : -1;
+      const gi = mk({ omega: sgn*R(0.06,0.22) });
+      const list = take(Math.max(6, Math.round(N*0.16)));
+      list.forEach((idx,k)=>{
+        const u = (k+1)/list.length;
+        groups[gi].items.push({
+          i: idx,
+          r: 0.04 + u*sp.spreadJet*(0.6+g()*0.8),
+          a0: sgn*0.7 + u*1.1 + g()*0.3,
+          h: sgn*(0.30 + u*sp.jetH),
+          ratio: 1
+        });
+      });
+    }
+    if (ptr < order.length){ put(giDisk, order.slice(ptr), R(0.30,0.50), 0.3); }
+  } else if (type === 'duel'){
+    /* 突破：自我节点自己团成一个球（那团球就是黑洞），规则同理；
+       其余记忆分成两股，各自绕着自己的球转，形成两个吸积盘。全部由节点本身排出来。 */
+    const selfs = [], rules = [], others = [];
+    for (let i=0;i<N;i++){
+      const k = nodes[i].k;
+      if (k === 'self') selfs.push(i);
+      else if (k === 'rule') rules.push(i);
+      else others.push(i);
+    }
+    const R = (a,b)=> a + g()*(b-a);
+    const sep = (sp.duelGap != null ? sp.duelGap : 1.0) * 0.52;
+    const giA  = mk({ cx:-sep*1.40, cy:0, cz:0, omega: R(0.05,0.11), tilt: R(0.26,0.44) });
+    const giAd = mk({ cx:-sep*1.40, cy:0, cz:0, omega: R(0.16,0.30), tilt: R(0.62,0.86) });
+    const giB  = mk({ cx: sep*1.40, cy:0, cz:0, omega: -R(0.05,0.11), tilt: -R(0.26,0.44) });
+    const giBd = mk({ cx: sep*1.40, cy:0, cz:0, omega: -R(0.16,0.30), tilt: -R(0.62,0.86) });
+    const ballR = (c)=> 0.300 * Math.max(1, Math.pow(c/12, 0.26));
+    put(giA, selfs.length ? selfs : take(2), ballR(selfs.length || 2), 0.55, 'shell');
+    put(giB, rules.length ? rules : take(2), ballR(rules.length || 2), 0.55, 'shell');
+    for (const idx of (selfs.length ? selfs : [])) nodes[idx].ball = true;
+    for (const idx of (rules.length ? rules : [])) nodes[idx].ball = true;
+    const half = Math.max(1, Math.round(others.length/2));
+    const diskR = 0.54 * Math.max(0.85, Math.min(1.3, Math.sqrt(N/240)));
+    put(giAd, others.slice(0, half), diskR, 1.0, 'spiral');
+    put(giBd, others.slice(half), diskR, 1.0, 'spiral');
+    for (const idx of others) nodes[idx].disk = true;
+    clusterInfo.push({ gi: giA, x:0, y:0, z:0, rad:0.12, label: '自我', count: selfs.length, color: [255,172,112] });
+    clusterInfo.push({ gi: giB, x:0, y:0, z:0, rad:0.12, label: '规则', count: rules.length, color: [214,236,255] });  } else if (type === 'band'){
+    const gi = mk({ omega: (g()<0.5?-1:1)*R(0.03,0.14), tilt: R(-0.38,0.38) });
+    const total = Math.max(1, order.length);
+    order.forEach((idx,k)=>{
+      const u = k/(total-1 || 1);
+      groups[gi].items.push({
+        i: idx,
+        r: 0.06 + u*0.96,
+        a0: u*sp.turns*TAU*0.28 + (g()-0.5)*0.25,
+        h: (g()-0.5)*sp.thick*(0.6+u*0.9),
+        ratio: 1
+      });
+    });
+  } else {
+    const gi = mk({ omega: (g()<0.5?-1:1)*R(0.04,0.16), tilt: R(-0.32,0.32) });
+    let a0 = 0;
+    order.forEach((idx,k)=>{
+      const u = k/Math.max(1, order.length-1);
+      a0 += 0.32 + g()*0.85;
+      groups[gi].items.push({
+        i: idx,
+        r: 0.10 + u*0.86 + (g()-0.5)*0.10,
+        a0: a0 + u*sp.twist*1.6,
+        h: (g()-0.5)*sp.thick,
+        ratio: 1
+      });
+    });
+  }
+
+  EVOLVE = { type, t:0, groups };
+  evolveStep(0.0001);
+}
+
+/* 每帧推进：组中心公转 → 组内节点自转。父组先算，子组才能挂上去。 */
+function evolveStep(dt){
+  const e = EVOLVE; if (!e) return;
+  e.t += dt;
+  for (let gi=0; gi<e.groups.length; gi++){
+    const gr = e.groups[gi];
+    gr.angle += gr.omega * dt;
+    if (gr.parent >= 0 && e.groups[gr.parent]){
+      const p = e.groups[gr.parent];
+      const a = gr.orbit0 + p.angle * gr.ratio;
+      gr.wx = p.wx + Math.cos(a) * gr.r0;
+      gr.wz = p.wz + Math.sin(a) * gr.r0;
+      gr.wy = p.wy + (gr.h0 || 0) + (gr.cy || 0);
+    } else {
+      gr.wx = gr.cx; gr.wy = gr.cy; gr.wz = gr.cz;
+    }
+    const ct = Math.cos(gr.tilt), st = Math.sin(gr.tilt);
+    for (const it of gr.items){
+      const a = it.a0 + gr.angle * it.ratio;
+      const lx = Math.cos(a) * it.r;
+      const lz = Math.sin(a) * it.r;
+      const ly = it.h;
+      const y2 = ly*ct - lz*st;
+      const z2 = ly*st + lz*ct;
+      const n = nodes[it.i];
+      n.tx = (gr.wx + lx) * OPTS.spread;
+      n.ty = (gr.wy + y2) * OPTS.spread;
+      n.tz = (gr.wz + z2) * OPTS.spread;
+    }
+  }
+  if (clusterInfo.length){
+    for (const c of clusterInfo){
+      if (c.gi == null) continue;
+      const gr = e.groups[c.gi];
+      if (gr){ c.x = gr.wx; c.y = gr.wy; c.z = gr.wz; }
+    }
+  }
+}
+
+function seedString(sp){ return sp ? (sp.struct || sp.proto) + '-' + (sp.seed >>> 0).toString(36) : ''; }
+/* 当前形态对外的“种子代码”：随机形态=原型-随机数；自定义=其 id；内置=形态名本身 */
+function currentSeed(){
+  if (OPTS.shape === '__rnd' && RANDOM_SPEC) return seedString(RANDOM_SPEC);
+  if (CUSTOM.shapes[OPTS.shape]) return 'custom-' + OPTS.shape;
+  return OPTS.shape || '';
+}
+/* 载入任意形式的种子：内置形态名 / 自定义 id / 原型-随机数 / 结构-随机数 */
+function applySeed(str){
+  let s = String(str || '').trim();
+  if (!s) return 'empty';
+  /* 形态 JSON：外部 AI 看图后直接给一份完整参数，比短种子更能表达具体形状 */
+  if (s.charAt(0) === '{'){
+    let sp = null;
+    try { sp = JSON.parse(s); } catch(e){ return 'bad'; }
+    if (!sp || typeof sp !== 'object') return 'bad';
+    const proto = sp.proto || sp.prototype;
+    if (sp.struct && STRUCT_NAMES.indexOf(sp.struct) < 0) return 'bad';
+    if (!sp.struct && proto && !PROTOS[proto]) return 'bad';
+    if (!sp.struct && !proto) sp.struct = 'partition';
+    if (proto) sp.proto = proto;
+    if (typeof sp.seed !== 'number') sp.seed = (Math.random()*1e9)|0;
+    sp.name = sp.name || '外部形态';
+    if (sp.theme && THEMES[sp.theme]){
+      OPTS.theme = sp.theme;
+      themeTgt = themeToRGB(THEMES[sp.theme]);
+    }
+    RANDOM_SPEC = sp;
+    OPTS.shape = '__rnd';
+    applyShape(); initSprites(); buildPanel(); refreshCodeIfOpen();
+    return 'ok';
+  }
+  const cm = /^custom-(.+)$/.exec(s);
+  if (cm && CUSTOM.shapes[cm[1]]) s = cm[1];
+  if (SHAPE_BUILTIN.some(b => b.v === s) || CUSTOM.shapes[s]){
+    OPTS.shape = s;
+    RANDOM_SPEC = null;
+    applyShape(); initSprites(); buildPanel(); refreshCodeIfOpen();
+    return 'ok';
+  }
+  const sp = parseSeed(s);
+  if (!sp) return 'bad';
+  RANDOM_SPEC = sp;
+  OPTS.shape = '__rnd';
+  applyShape(); initSprites(); buildPanel(); refreshCodeIfOpen();
+  return 'ok';
+}
+function parseSeed(str){
+  const m = String(str||'').trim().match(/^([a-z]+)-([0-9a-z]+)$/i);
+  if (!m) return null;
+  const name = m[1].toLowerCase();
+  if (!PROTOS[name] && STRUCT_NAMES.indexOf(name) < 0) return null;
+  return randomSpec(parseInt(m[2], 36) >>> 0, name);
+}
+function saveRandomShape(){
+  if (!RANDOM_SPEC) return;
+  const draft = JSON.parse(JSON.stringify(RANDOM_SPEC));
+  openEditor('保存形态', '这个形态是随机生成的，起个名字存下来，下次直接在列表里点', (body)=>{
+    fieldRow(body, '名字', 'text', '我喜欢的形态', v=> draft.name = v || '未命名形态');
+  }, ()=>{
+    const id = 's' + Date.now().toString(36);
+    CUSTOM.shapes[id] = draft;
+    OPTS.shape = id;
+    saveCustom(); closeEditor(); applyShape(); buildPanel();
+  });
+}
+function loadCustom(){
+  try {
+    const o = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '{}');
+    CUSTOM = { themes:o.themes||{}, shapes:o.shapes||{}, fx:o.fx||{} };
+  } catch(e){ CUSTOM = { themes:{}, shapes:{}, fx:{} }; }
+  for (const k in CUSTOM.themes) THEMES[k] = CUSTOM.themes[k];
+  for (const id in CUSTOM.fx) if (!(id in OPTS.fx)) OPTS.fx[id] = true;
+}
+function saveCustom(){
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify({ themes:CUSTOM.themes, shapes:CUSTOM.shapes, fx:CUSTOM.fx })); } catch(e){}
+}
+
+/* ---- 小编辑器 ---- */
+let edOnOk = null;
+function openEditor(title, sub, buildBody, onOk){
+  document.getElementById('edTitle').textContent = title;
+  document.getElementById('edSub').textContent = sub;
+  const body = document.getElementById('edBody');
+  body.innerHTML = '';
+  buildBody(body);
+  edOnOk = onOk;
+  document.getElementById('editor').classList.add('show');
+}
+function closeEditor(){
+  document.getElementById('editor').classList.remove('show');
+  edOnOk = null;
+}
+function fieldRow(parent, label, kind, val, onChange){
+  const d = document.createElement('div');
+  d.className = 'fld';
+  const l = document.createElement('label'); l.textContent = label;
+  let i;
+  if (kind === 'select'){
+    i = document.createElement('select');
+    for (const k in val){ const o = document.createElement('option'); o.value = k; o.textContent = val[k]; i.appendChild(o); }
+    i.onchange = ()=> onChange(i.value);
+  } else {
+    i = document.createElement('input');
+    if (kind === 'color'){ i.type = 'color'; i.value = val || '#7fa8ff'; i.oninput = ()=> onChange(i.value); }
+    else if (kind === 'range'){ i.type = 'range'; i.min = val[0]; i.max = val[1]; i.step = val[2]; i.value = val[3]; i.oninput = ()=> onChange(parseFloat(i.value)); }
+    else { i.type = 'text'; i.value = val || ''; i.oninput = ()=> onChange(i.value); }
+  }
+  d.appendChild(l); d.appendChild(i); parent.appendChild(d);
+  return i;
+}
+function newThemeEditor(){
+  const draft = {
+    name:'我的主题', bg:['#0a1024','#04050b'], nebula:'#4a6edc', nebulaA:.10,
+    kinds:{ episode:'#8fb8ff', fact:'#5fe0c8', self:'#ffd479', person:'#ff9ecb', thread:'#b48cff', rule:'#ffb37a', msg:'#9fb8e8' },
+    link:'#5a78c8', star:'#9fb4e8'
+  };
+  openEditor('自定义主题', '颜色改了立刻生效，保存后出现在主题列表里', (body)=>{
+    fieldRow(body, '名字', 'text', draft.name, v=> draft.name = v || '自定义');
+    fieldRow(body, '背景暗', 'color', draft.bg[0], v=> draft.bg[0] = v);
+    fieldRow(body, '背景底', 'color', draft.bg[1], v=> draft.bg[1] = v);
+    const kv = document.createElement('div'); kv.className = 'kv'; body.appendChild(kv);
+    for (const k in draft.kinds) fieldRow(kv, KIND_CN[k]||k, 'color', draft.kinds[k], v=> draft.kinds[k] = v);
+    fieldRow(body, '连线', 'color', draft.link, v=> draft.link = v);
+    fieldRow(body, '星点', 'color', draft.star, v=> draft.star = v);
+  }, ()=>{
+    const id = 'c' + Date.now().toString(36);
+    CUSTOM.themes[id] = draft;
+    THEMES[id] = draft;
+    OPTS.theme = id; themeTgt = themeToRGB(draft);
+    saveCustom(); closeEditor(); initSprites(); buildPanel();
+  });
+}
+
+/* ---- 自定义形态 ---- */
+function newShapeEditor(){
+  const draft = { base:'galaxy', arms:4, spiral:2.6, thick:0.14, pow:0.75, pitch:-0.62, name:'我的星系' };
+  openEditor('自定义形态', '星系：臂数 / 螺旋 / 盘厚 / 指数；球壳：内圈与收缩指数', (body)=>{
+    fieldRow(body, '名字', 'text', draft.name, v=> draft.name = v || '自定义');
+    const sel = document.createElement('div'); sel.className = 'fld';
+    sel.innerHTML = '<label>基础</label>';
+    const s = document.createElement('select');
+    s.style.cssText = 'flex:1;padding:6px 9px;font-size:12px;background:rgba(6,9,17,.8);color:#e6eeff;border:1px solid rgba(120,150,220,.22);border-radius:7px;font-family:inherit';
+    s.innerHTML = '<option value="galaxy">星系（旋臂）</option><option value="sphere">球壳（同心）</option><option value="nebula">星云（力导向）</option>';
+    s.value = draft.base;
+    s.onchange = ()=>{ draft.base = s.value; };
+    sel.appendChild(s); body.appendChild(sel);
+    fieldRow(body, '旋臂数', 'range', [1,8,1,4], v=> draft.arms = v);
+    fieldRow(body, '螺旋', 'range', [0.5,6,0.1,2.6], v=> draft.spiral = v);
+    fieldRow(body, '盘厚', 'range', [0.02,0.5,0.01,0.14], v=> draft.thick = v);
+    fieldRow(body, '分布指数', 'range', [0.3,2,0.05,0.75], v=> draft.pow = v);
+  }, ()=>{
+    const id = 's' + Date.now().toString(36);
+    CUSTOM.shapes[id] = draft;
+    OPTS.shape = id;
+    saveCustom(); closeEditor(); applyShape(); buildPanel();
+  });
+}
+/* ---- 自定义特效 ---- */
+function newFxEditor(){
+  const draft = { name:'我的特效', kind:'sparkle', count:160, hue:200, speed:1, size:1.4, alpha:0.5, seed:(Math.random()*99999)|0 };
+  openEditor('自定义特效', '选一种底子再调：数量决定疏密，色相决定颜色，存下来就在列表里', (body)=>{
+    fieldRow(body, '名字', 'text', draft.name, v=> draft.name = v || '自定义特效');
+    const sel = fieldRow(body, '样式', 'select', FX_KINDS, v=> draft.kind = v);
+    sel.value = draft.kind;
+    fieldRow(body, '数量', 'range', [10, 800, 10, 160], v=> draft.count = v);
+    fieldRow(body, '色相', 'range', [0, 360, 1, 200], v=> draft.hue = v);
+    fieldRow(body, '速度', 'range', [0.2, 4, 0.1, 1], v=> draft.speed = v);
+    fieldRow(body, '大小', 'range', [0.6, 6, 0.1, 1.4], v=> draft.size = v);
+    fieldRow(body, '透明度', 'range', [0.05, 1, 0.05, 0.5], v=> draft.alpha = v);
+  }, ()=>{
+    const id = 'f' + Date.now().toString(36);
+    CUSTOM.fx[id] = draft;
+    OPTS.fx[id] = true;
+    saveCustom(); closeEditor(); buildPanel();
+  });
+}
+if (document.getElementById('addFx')) document.getElementById('addFx').onclick = ()=> newFxEditor();
+
+/* ---------------- 面板折叠：「》」把手点一次开、再点一次收 ---------------- */
+let panelOpen = true;
+function setPanel(open){
+  panelOpen = open;
+  panel.classList.toggle('collapsed', !open);
+  const u = document.getElementById('unfold');
+  u.classList.toggle('open', open);
+  u.textContent = open ? '《' : '》';
+  document.body.classList.toggle('panel-open', open);
+  u.title = open ? '收起面板' : '展开面板';
+}
+document.getElementById('unfold').onclick = ()=> setPanel(!panelOpen);
+window.__togglePanel = ()=> setPanel(!panelOpen);
+
+setPanel(true);
+loadCustom();
+
+document.getElementById('addTheme').onclick = ()=> newThemeEditor();
+if (document.getElementById('addShape')) document.getElementById('addShape').onclick = ()=> newShapeEditor();
+document.getElementById('edCancel').onclick = closeEditor;
+document.getElementById('edOk').onclick = ()=>{ if (edOnOk) edOnOk(); };
+document.getElementById('editor').onclick = (e)=>{ if (e.target.id === 'editor') closeEditor(); };
+
+/* ---------------- 数据源 ---------------- */
+async function useSource(id){
+  const ld = document.getElementById('loading');
+  if (ld) { ld.style.display = 'flex'; ld.style.opacity = 1; ld.querySelector('.txt').textContent = '正在读取记忆…'; }
+  await new Promise(r=>setTimeout(r, 30));
+  let d = null;
+  try { d = await window.starmap.load(id); } catch(err){ d = null; }
+  if (!d){
+    if (ld) ld.querySelector('.txt').textContent = '读不到这个数据源：' + id;
+    return;
+  }
+  DATA = d;
+  OPTS.linkThreshold = d.linkMode === 'vector' ? LINK_DEFAULTS.vector
+    : (d.nodes.length <= 50 ? 0.06 : d.nodes.length <= 200 ? 0.10 : 0.20);
+  nodes = d.nodes.map(n => Object.assign({}, n));
+  N = nodes.length;
+  proj = new Float32Array(N*4);
+  pairCache = null;
+  selected = -1; hovered = -1; focusCache = { i:-1, list:[] };
+  closeCard();
+  decodeVectors();
+  edges = buildEdges();
+  computeLayout();
+  buildAdj();
+  buildFlowList();
+  applyShape();
+  fitK = 0;
+  initStars();
+  updateHud();
+  buildPanel();
+  if (ld){ ld.style.opacity = 0; setTimeout(()=>{ ld.style.display='none'; }, 460); }
+}
+
+/* 数据源列表：可自己加、可移出列表（只是不显示，不动文件） */
+let HIDDEN_SRC = [];
+try { HIDDEN_SRC = JSON.parse(localStorage.getItem('starmap.hiddenSrc.v1') || '[]'); } catch(e){ HIDDEN_SRC = []; }
+let SRC_LIST = [];
+function saveHiddenSrc(){ try { localStorage.setItem('starmap.hiddenSrc.v1', JSON.stringify(HIDDEN_SRC)); } catch(e){} }
+
+function renderSources(list){
+  SRC_LIST = list || [];
+  const box = document.getElementById('sources');
+  if (!box) return;
+  box.innerHTML = '';
+  const vis = SRC_LIST.filter(s => HIDDEN_SRC.indexOf(s.id) < 0);
+  if (!vis.length){
+    box.innerHTML = '<div class="empty">没有显示中的数据源。点下面「添加文件」，或恢复被移出的源。</div>';
+  }
+  vis.forEach(s=>{
+    const b = document.createElement('button');
+    b.className = 'src' + (s.id === OPTS.source ? ' on' : '');
+    b.innerHTML = '<span class="n">'+s.stats.total+'</span>'
+      + '<div class="t"><span class="dot"></span>'+esc(s.title)+'</div>'
+      + '<div class="s">'+esc(s.subtitle||'')+'</div>'
+      + '<span class="del" title="从列表移除（不删文件）">✕</span>';
+    b.onclick = (e)=>{
+      if (e.target.classList && e.target.classList.contains('del')){
+        e.stopPropagation();
+        HIDDEN_SRC.push(s.id); saveHiddenSrc();
+        toast('已从列表移除 · 记忆文件没动，随时可恢复');
+        if (OPTS.source === s.id){
+          const next = SRC_LIST.filter(x=> HIDDEN_SRC.indexOf(x.id) < 0 && x.id !== s.id)[0];
+          if (next){ OPTS.source = next.id; renderSources(SRC_LIST); useSource(next.id); return; }
+        }
+        renderSources(SRC_LIST);
+        return;
+      }
+      OPTS.source = s.id;
+      [...box.children].forEach(c=>c.classList.remove('on'));
+      b.classList.add('on');
+      useSource(s.id);
+    };
+    box.appendChild(b);
+  });
+  if (HIDDEN_SRC.length){
+    const r = document.createElement('button');
+    r.className = 'src restore';
+    r.textContent = '恢复被移出的 ' + HIDDEN_SRC.length + ' 个源';
+    r.onclick = ()=>{ HIDDEN_SRC = []; saveHiddenSrc(); renderSources(SRC_LIST); toast('已全部恢复'); };
+    box.appendChild(r);
+  }
+}
+
+async function addSourceFiles(){
+  if (!window.starmap.addSourceFiles){ toast('这个环境不支持选文件'); return; }
+  const r = await window.starmap.addSourceFiles();
+  if (!r || r.canceled) return;
+  if (!r.added){ toast('没有加进来，检查文件格式（JSON / JSONL）'); return; }
+  toast('已加入 ' + r.added + ' 个文件 · 记忆文件未改动');
+  let info = { sources: [] };
+  try { info = await window.starmap.listSources(); } catch(e){}
+  renderSources(info.sources || []);
+}
+
+async function openSourceDir(){
+  if (!window.starmap.openSourceDir){ toast('这个环境不支持打开目录'); return; }
+  await window.starmap.openSourceDir();
+}
+document.getElementById('addSrc').onclick = addSourceFiles;
+document.getElementById('openSrcDir').onclick = openSourceDir;
+document.querySelectorAll('.author a').forEach(a=>{
+  a.onclick = (e)=>{ e.preventDefault(); const u = a.getAttribute('data-url'); if (window.starmap && window.starmap.openExternal) window.starmap.openExternal(u); };
+});
+async function boot(){
+  resize();
+  initSprites();
+
+  let info = { sources: [] };
+  try { info = await window.starmap.listSources(); } catch(e){}
+  document.getElementById('ver').textContent = info.versions ? 'v0.2 · electron '+info.versions.electron.split('.')[0] : 'v0.2';
+
+  renderSources(info.sources || []);
+  buildPanel();
+
+  const vis = (info.sources||[]).filter(s=> HIDDEN_SRC.indexOf(s.id) < 0);
+  const first = vis.find(s=>s.id===OPTS.source) || vis[0];
+  if (first){
+    OPTS.source = first.id;
+    renderSources(info.sources || []);
+    await useSource(first.id);
+  } else {
+    const ld = document.getElementById('loading');
+    if (ld) ld.querySelector('.txt').textContent = '没有可用的记忆数据源';
+  }
+  requestAnimationFrame(loop);
+}
+
+setTimeout(()=>{ try{ boot(); }catch(err){
+  const ld = document.getElementById('loading');
+  if (ld) ld.innerHTML = '<div style="color:#f88;font-size:13px;max-width:520px;text-align:center">启动失败：'+esc(err.message)+'</div>';
+  console.error(err);
+} }, 60);
+
+// 验收/截图入口
+window.__pickSource = (id) => { OPTS.source = id; return useSource(id); };
+window.__opts = OPTS;
+</script>
+<div id="toast"></div>
+</body>
+</html>
