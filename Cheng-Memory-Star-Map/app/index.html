@@ -2868,10 +2868,30 @@ function pick(clientX, clientY){
 stage.addEventListener('pointerdown', e=>{
   if (e.target !== cv) return;
   touchInteraction();                 // 一按下就停转，别让它边转边被拖
-  if (e.button === 1){ panning = true; lastX=e.clientX; lastY=e.clientY; e.preventDefault(); stage.classList.add('panning'); return; }
-  dragging = true; lastX=e.clientX; lastY=e.clientY; stage.classList.add('dragging');
+
+  /* 右键 / 中键 = 平移；左键 = 旋转。
+     右键在画布上要拦掉默认菜单，否则一按就弹系统菜单，根本拖不动。 */
+  if (e.button === 2 || e.button === 1){
+    panning = true; lastX=e.clientX; lastY=e.clientY;
+    e.preventDefault();
+    stage.classList.add('panning');
+    stage.setPointerCapture?.(e.pointerId);
+    return;
+  }
+  if (e.button !== 0) return;
+  dragging = true; lastX=e.clientX; lastY=e.clientY;
+  stage.classList.add('dragging');
+  stage.setPointerCapture?.(e.pointerId);
 });
-window.addEventListener('pointerup', ()=>{ dragging=false; panning=false; stage.classList.remove('dragging'); stage.classList.remove('panning'); });
+window.addEventListener('pointerup', ()=>{
+  dragging=false; panning=false;
+  stage.classList.remove('dragging'); stage.classList.remove('panning');
+});
+
+/* 画布上屏蔽右键菜单（只在星图区域，不影响其他地方） */
+stage.addEventListener('contextmenu', e=>{
+  if (e.target === cv || e.target.closest('#cv')) e.preventDefault();
+});
 stage.addEventListener('pointermove', e=>{
   if (panning){
     const dx=e.clientX-lastX, dy=e.clientY-lastY;
