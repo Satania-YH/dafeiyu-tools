@@ -558,13 +558,23 @@
   .tip.show{ opacity:1; }
   .tip .k{ color:#8fb8ff; font-size:10.5px; letter-spacing:.08em; }
 
+  /* 详情面板：左下角，半透明浮在星图上（不挡中央的星） */
   .card{
-    position:absolute; z-index:9; right:16px; top:16px; width:390px; max-height:calc(100% - 32px);
-    overflow:auto; padding:16px 18px 18px; border-radius:14px;
-    background:linear-gradient(180deg,rgba(16,21,38,.97),rgba(10,13,24,.98));
-    border:1px solid rgba(140,170,255,.18); box-shadow:0 24px 70px rgba(0,0,0,.62);
+    position:absolute; z-index:9;
+    left:16px; bottom:88px;
+    width:min(400px, calc(100% - 240px));
+    max-height:calc(100% - 200px);
+    overflow-y:auto;
+    padding:14px 16px 16px; border-radius:12px;
+    background:rgba(10,15,26,.62);
+    backdrop-filter:blur(14px) saturate(1.15);
+    border:1px solid rgba(140,170,255,.20);
+    box-shadow:0 16px 48px rgba(0,0,0,.5);
     display:none;
+    transition:opacity .18s;
   }
+  .card::-webkit-scrollbar{ width:6px; }
+  .card::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.2); border-radius:3px; }
   .card.show{ display:block; }
   .card .row1{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
   .badge{ font-size:10.5px; padding:2px 8px; border-radius:99px; letter-spacing:.08em; }
@@ -1207,7 +1217,7 @@ let bgStars = [];
 
 let W=0, H=0, DPR=1, fitK=0, panX=0, panY=0, panning=false;
 let yaw = 0.6, pitch = -0.18, zoom = 1;
-let dragging=false, lastX=0, lastY=0;
+let dragging=false, dragMoved=false, lastX=0, lastY=0;
 let proj = new Float32Array(4);
 let selected = -1, hovered = -1;
 let labelsCv = [];
@@ -3010,13 +3020,13 @@ stage.addEventListener('pointerdown', e=>{
     panning = true; lastX=e.clientX; lastY=e.clientY;
     e.preventDefault();
     stage.classList.add('panning');
-    stage.setPointerCapture?.(e.pointerId);
     return;
   }
   if (e.button !== 0) return;
-  dragging = true; lastX=e.clientX; lastY=e.clientY;
+  dragging = true; dragMoved = false; lastX=e.clientX; lastY=e.clientY;
   stage.classList.add('dragging');
-  stage.setPointerCapture?.(e.pointerId);
+  /* 不用 setPointerCapture：它会把后续 click 的 target 变成 stage，
+     导致 e.target !== cv 的判断永远成立，单击永远选不中星。 */
 });
 window.addEventListener('pointerup', ()=>{
   dragging=false; panning=false;
@@ -3038,6 +3048,8 @@ stage.addEventListener('pointermove', e=>{
   if (dragging){
     const dx=e.clientX-lastX, dy=e.clientY-lastY;
     lastX=e.clientX; lastY=e.clientY;
+    // 只有真的移动了才算拖动（否则单击会被当成拖动而丢掉）
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) dragMoved = true;
     yaw += dx*0.006;
     pitch = Math.max(-1.35, Math.min(1.35, pitch + dy*0.005));
     touchInteraction();
@@ -3086,8 +3098,10 @@ stage.addEventListener('dblclick', ()=>{
   yaw = 0.6; pitch = -0.18; zoom = 1; fitK = 0; panX = 0; panY = 0; closeCard();
 });
 stage.addEventListener('click', e=>{
-  if (e.target !== cv) return;
-  if (dragging) return;
+  if (dragMoved) return;          // 拖过了才不响应点击；单击要能选中
+  // 只处理落在画布区域内（或 canvas/stage）的点击
+  const r = cv.getBoundingClientRect();
+  if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
   touchInteraction();
   const i = pick(e.clientX, e.clientY);
   if (i >= 0 || i === -2) openCard(i); else closeCard();
@@ -3607,17 +3621,26 @@ function openCard(i){
   const det = n.det && Object.keys(n.det).length
     ? '<div class="feel">'+(n.det.howIFelt ? '当时的感受：'+esc(n.det.howIFelt)+'<br>' : '')+(n.det.intensity!=null ? '强度：'+esc(n.det.intensity) : '')+'</div>'
     : '';
+  /* 归属分类：按 kind 找对应的团 */
+  const myLabel = KIND_CN[n.k] || n.k || '—';
+  const myCluster = (typeof clusterInfo !== 'undefined')
+    ? clusterInfo.find(c => c.label === myLabel) : null;
+
   const rows = [
-    ['时间', n.ts || '—'],
-    ['分区', n.scope || '—'],
-    ['重要度', n.imp == null ? '—' : (n.impRaw != null ? String(n.impRaw) : Number(n.imp).toFixed(2))],
-    ['置信度', n.conf == null ? '—' : Number(n.conf).toFixed(2)],
+    ['时间', n.ts ? fmtLocalTs(n.ts, true) : '—'],
+    ['分类', myLabel + (myCluster ? '（' + myCluster.count + ' 条）' : '')],
+    ['重要度', n.imp == null ? '—（未提供）' : (n.impRaw != null ? String(n.impRaw) : Number(n.imp).toFixed(2))],
     ['被回想', (Number(n.use) || 0) + ' 次'],
+    ['连线', ((typeof adj !== 'undefined' && adj[i]) ? adj[i].length : 0) + ' 条'],
+    ['主题', n.scope || '—'],
     ['来源', n.src || '—'],
-    ['语义向量', hasVec.has(i) ? '有（玩家向量）' : '无（仅按标签/时间/文本）'],
+    ['ID', n.id || '—'],
   ];
+
   cardEl.innerHTML =
-    '<div class="row1">'+kindTag(n)+'<span style="font-size:11px;color:#6f7c9b">'+(n.arch?'已归档':'在册')+'</span><span class="close" id="cx">✕</span></div>'+
+    '<div class="row1">'+kindTag(n)+
+      '<span style="font-size:11px;color:#6f7c9b">'+(n.arch?'已归档':'在册')+'</span>'+
+      '<span class="close" id="cx">✕</span></div>'+
     '<div class="full">'+esc(n.t)+'</div>'+
     '<div class="meta">'+rows.map(r=>'<div class="lab">'+r[0]+'</div><div class="val">'+esc(r[1])+'</div>').join('')+'</div>'+
     '<div class="tags">'+tags+'</div>'+det;
@@ -5079,55 +5102,6 @@ function initLive() {
   });
 
   live.connect();
-
-  /* ══════ 临时验证：1s 一个新分类，0.5s 一颗子星 ══════
-     跑完看最终效果，看完删掉这段即可（搜 __DEMO_FINAL）。 */
-
-  if (window.__DEMO_FINAL !== false) {
-    const names = ['抖音','B站','知乎','微博','小红书','播客','游戏','小说','相册',
-                   '代码库','歌单','电影','漫画','读书','咖啡','跑步','旅行','猫'];
-    let ci = 0;
-    const grown = [];
-
-    // ① 每秒一个新分类
-    setInterval(() => {
-      if (currentView !== 'starmap' || !nodes.length) return;
-      if (ci >= names.length) return;
-      const label = names[ci];
-      const kind = 'fc_' + ci;
-      ci++;
-      KIND_CN[kind] = label;
-
-      const seed = nodes.find(n => n.k === 'said') || nodes[0];
-      const id = 'FC-' + kind + '-0';
-      addStarToScene({
-        id, kind, text: '【' + label + '】第 1 条',
-        ts: new Date().toISOString(),
-        date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
-        topic: label,
-      }, [{ source: id, target: seed.id, cos: 0.5 }]);
-
-      grown.push({ label, kind, count: 1 });
-    }, 1000);
-
-    // ② 每 0.5 秒给最近的 3 个分类各加一颗子星
-    setInterval(() => {
-      if (currentView !== 'starmap' || !nodes.length || !grown.length) return;
-      for (const g of grown.slice(-3)) {
-        g.count++;
-        const id = 'FC-' + g.kind + '-' + g.count;
-        const same = nodes.filter(n => n.k === g.kind);
-        const anchor = same[same.length - 1] || nodes[0];
-        addStarToScene({
-          id, kind: g.kind, text: '【' + g.label + '】第 ' + g.count + ' 条',
-          ts: new Date().toISOString(),
-          date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
-          topic: g.label,
-        }, [{ source: id, target: anchor.id, cos: 0.8 }]);
-      }
-    }, 500);
-  }
-
 }
 
 /** 更新「上次更新 X 分钟前」 */
