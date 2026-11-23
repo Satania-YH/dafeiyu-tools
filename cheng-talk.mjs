@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
 const HOME = process.env.USERPROFILE || process.env.HOME || 'C:\\Users\\14127';
 const DISC = path.join(HOME, '.dsh', 'fish-room.discovery.json');
@@ -346,11 +347,22 @@ async function cmdServe() {
     }
   });
 
+  // 让别人能找到这个门：写一份 endpoint，房间换了跟着更新
+  const ENDPOINT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'cheng-talk.endpoint.json');
+  function 写门牌() {
+    let room = null;
+    try { const d = discovery(); room = { origin: new URL(d.url).origin, sessionId: d.sessionId, bridgeVersion: d.bridgeVersion }; } catch {}
+    const info = { schema: 'cheng-talk.endpoint/1', url: 'http://' + host + ':' + port, pid: process.pid, at: Date.now(), room };
+    try { fs.writeFileSync(ENDPOINT, JSON.stringify(info, null, 2), 'utf8'); } catch {}
+  }
+
   server.listen(port, host, () => {
     console.log('cheng-talk serve · http://' + host + ':' + port + '  （Ctrl+C 退出）');
     try { const d = discovery(); console.log('现在接 ' + d.url + ' / ' + d.sessionId); } catch {}
+    写门牌();
   });
-  process.on('SIGINT', () => { console.log('\n收摊'); server.close(); process.exit(0); });
+  setInterval(写门牌, 10000).unref?.();
+  process.on('SIGINT', () => { console.log('\n收摊'); try { fs.unlinkSync(ENDPOINT); } catch {} server.close(); process.exit(0); });
 }
 
 try {

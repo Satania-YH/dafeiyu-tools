@@ -7,7 +7,9 @@
   [string]$IconPath = 'D:\大肥鱼工具\dafeiyu-room.ico',
   [int]$PollSeconds = 10,
   [string]$NodeExe = 'E:\nodejs\node.exe',
-  [string]$ScheduleScript = 'D:\大肥鱼工具\schedule-retarget.mjs'
+  [string]$ScheduleScript = 'D:\大肥鱼工具\schedule-retarget.mjs',
+  [string]$TalkScript = 'D:\大肥鱼工具\cheng-talk.mjs',
+  [int]$TalkPort = 17801
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
@@ -118,6 +120,31 @@ function Repoint-QqIfStale([string]$sid, $hdata) {
   Log ('qq: 起手补指 -> ' + $sid + ' ; repointed: ' + ($need -join ', ') + ' ; backup .bak-roomsync-' + $stamp)
   return $true
 }
+# ---- 和澄说话的小门（cheng-talk serve）----
+# Alma 那边要能直接跟澄说话，不借鱼鱼窝房间。这门自己每次请求都现读 discovery 文件，
+# 房间换了它自己就跟上；托盘这边只负责「门一直开着」——没开就拉起来。
+function Test-TalkPort {
+  try {
+    $c = Get-NetTCPConnection -State Listen -LocalPort $TalkPort -ErrorAction Stop
+    return [bool]$c
+  } catch { return $false }
+}
+function Ensure-ChengTalk {
+  if (Test-TalkPort) { return $true }
+  if (-not (Test-Path $TalkScript)) { Log 'talk: 找不到 cheng-talk.mjs，跳过'; return $false }
+  if (-not (Test-Path $NodeExe)) { Log ('talk: 找不到 node: ' + $NodeExe); return $false }
+  try {
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $NodeExe
+    $psi.Arguments = ('"' + $TalkScript + '" serve --port ' + $TalkPort)
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    $psi.WorkingDirectory = (Split-Path -Parent $TalkScript)
+    [System.Diagnostics.Process]::Start($psi) | Out-Null
+    Log ('talk: 门没开着，拉起来了（127.0.0.1:' + $TalkPort + '）')
+    return $true
+  } catch { Log ('talk: 拉不起来 ' + $_.Exception.Message); return $false }
+}
 function Check-QqOnce([string]$sid, $hdata) {
   if ($script:qqChecked) { return }
   $script:qqChecked = $true
@@ -206,6 +233,7 @@ function Invoke-Check {
   # 定期看一眼：鱼鱼窝那边的「会话」要是空的（换过房、重装过插件、被人清掉），就补上
   $script:tick = [int]$script:tick + 1
   if (($script:tick % 3) -eq 1 -and $sid) { Sync-FishRoomIfEmpty $sid }
+  if (($script:tick % 3) -eq 2) { Ensure-ChengTalk | Out-Null }
   $script:lastMsg = '已接 ' + (Short $sid)
 }
 
