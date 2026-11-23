@@ -184,6 +184,87 @@
 
   .sb-none{ padding:20px 14px; text-align:center; font-size:11.5px; color:#4d5871; }
 
+  /* ---------------- 时间滑条：底部，累计截止 ---------------- */
+  #timeBar{
+    position:absolute; left:50%; bottom:16px; transform:translateX(-50%);
+    /* 左右各让出 230px 给 stats / 操作提示，避免窄窗重叠 */
+    width:min(720px, max(380px, calc(100% - 470px))); z-index:22;
+    display:flex; align-items:center; gap:15px;
+    padding:7px 15px 9px; border-radius:12px;
+    /* 和搜索框同一套透明语言，只靠细边和轻模糊分层 */
+    background:rgba(10,15,26,.34);
+    border:1px solid rgba(140,170,255,.14);
+    backdrop-filter:blur(9px) saturate(1.1);
+    pointer-events:auto; cursor:default; user-select:none;
+    transition:background .22s, border-color .22s, box-shadow .22s;
+  }
+  #timeBar:hover{ background:rgba(12,18,32,.48); border-color:rgba(140,170,255,.24); }
+  #timeBar.scrub{
+    background:rgba(10,15,26,.74); border-color:rgba(255,212,121,.34);
+    box-shadow:0 0 24px rgba(255,212,121,.10);
+  }
+
+  .tm-play{
+    flex:none; height:27px; padding:0 12px; border-radius:8px; cursor:pointer;
+    font-family:inherit; font-size:11.5px; letter-spacing:.04em; white-space:nowrap;
+    background:rgba(255,212,121,.08); border:1px solid rgba(255,212,121,.24);
+    color:#ffd479; transition:.16s;
+  }
+  .tm-play:hover{ background:rgba(255,212,121,.16); border-color:rgba(255,212,121,.44); }
+  .tm-play.on{ background:rgba(255,212,121,.20); border-color:rgba(255,212,121,.58); color:#fff0c9; }
+
+  .tm-track{ position:relative; flex:1; height:36px; min-width:0; }
+  .tm-rail{
+    position:absolute; left:9px; right:9px; top:12px; height:2px;
+    background:rgba(140,170,255,.15); border-radius:1px;
+  }
+  .tm-fill{
+    position:absolute; left:9px; top:12px; height:2px; border-radius:1px;
+    background:linear-gradient(90deg,rgba(255,212,121,.20),rgba(255,212,121,.86));
+    box-shadow:0 0 9px rgba(255,212,121,.30);
+    transition:width .30s cubic-bezier(.4,0,.2,1);
+  }
+  .tm-dot{
+    position:absolute; top:12px; transform:translate(-50%,-50%);
+    width:16px; height:16px; padding:0; border:none; background:transparent;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tm-dot .tm-knob{
+    width:5px; height:5px; border-radius:50%;
+    background:rgba(140,170,255,.42);
+    transition:.22s;
+  }
+  .tm-dot:hover .tm-knob{ background:rgba(200,220,255,.85); transform:scale(1.3); }
+  .tm-dot.past .tm-knob{ background:rgba(255,212,121,.55); }
+  .tm-dot.on .tm-knob{
+    width:9px; height:9px; background:#ffd479;
+    box-shadow:0 0 12px rgba(255,212,121,.85), 0 0 0 3px rgba(255,212,121,.16);
+  }
+  .tm-dot .tm-lab{
+    position:absolute; top:13px; left:50%; transform:translateX(-50%);
+    font-size:9.5px; color:#5c6884; letter-spacing:.03em; white-space:nowrap;
+    font-variant-numeric:tabular-nums; transition:color .2s;
+    pointer-events:none;
+  }
+  .tm-dot:hover .tm-lab{ color:#9fb4e0; }
+  .tm-dot.past .tm-lab{ color:#8b7a52; }
+  .tm-dot.on .tm-lab{ color:#ffd479; }
+
+  .tm-readout{
+    flex:none; font-size:10.5px; color:#7f8db0; letter-spacing:.04em;
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+    display:flex; align-items:baseline; gap:6px;
+    min-width:120px; justify-content:flex-end;
+  }
+  .tm-readout .tm-date{ color:#dbe6fa; font-weight:600; font-size:11.5px; }
+  .tm-readout .tm-wd{ color:#7f8db0; font-size:10px; }
+  .tm-readout .tm-n{
+    color:#ffd479; font-weight:600; font-size:12.5px; margin-left:2px;
+    font-variant-numeric:tabular-nums;
+  }
+  .tm-readout .tm-n::after{ content:'条'; font-size:9.5px; color:#7f8db0; font-weight:400; margin-left:1px; }
+
   /* ---------------- 记忆时间轴：铺满中间整块区域 ---------------- */
   #timeline{
     position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
@@ -673,6 +754,12 @@
     </div>
 
     <div class="hud stats" id="stats"></div>
+    <!-- 时间滑条：滑到哪天，星图就长到哪天（累计截止） -->
+    <div id="timeBar">
+      <button class="tm-play" id="tmPlay" title="从第一天开始，一天一天长出来">▶ 播放成长</button>
+      <div class="tm-track" id="tmTrack"></div>
+      <div class="tm-readout" id="tmReadout"></div>
+    </div>
     <div id="codeBox">
       <div class="hd"><span>当前形态 · 种子代码</span><span class="hdr"><button class="mini" id="codeCopyTop">一键复制</button><span class="x" id="codeClose">✕</span></span></div>
       <pre id="codeText"></pre>
@@ -716,6 +803,30 @@
    * 前端要的是：
    *   { nodes:[{id,k,t,ts,imp,conf,scope,tags,...}], vecB64, dim, linkMode, stats }
    */
+  /**
+   * 重要度归一化到 0..1。
+   * 上游口径不统一：insight 给的是 3..5 的整数，memory 给的是 "critical"/"normal"，
+   * 其余类型没有。直接拿去算 Math.pow(4, 1.45) 会让星大 7 倍糊成一团白球，
+   * 所以这里如实换算：3→0.5 4→0.7 5→0.9，字符串按语义给，缺省 null（不编造）。
+   */
+  function normImp(v) {
+    if (v == null) return null;
+    if (typeof v === 'string') {
+      const s = v.trim().toLowerCase();
+      if (s === 'critical' || s === 'high' || s === 'very-high') return 0.92;
+      if (s === 'important' || s === 'medium') return 0.70;
+      if (s === 'normal' || s === 'low') return 0.50;
+      const num = Number(s);
+      return Number.isFinite(num) ? normImp(num) : null;
+    }
+    const x = Number(v);
+    if (!Number.isFinite(x)) return null;
+    if (x <= 1) return Math.max(0.05, x);            // 已经是 0..1
+    if (x <= 5) return 0.20 + (x - 1) * 0.18;        // 1..5 → 0.20..0.92
+    if (x <= 10) return 0.20 + (x / 10) * 0.72;      // 1..10
+    return 0.92;                                     // 再大就封顶
+  }
+
   function adaptGraph(g) {
     const nodes = (g.nodes || []).map(n => ({
       id: n.id,
@@ -724,9 +835,11 @@
       t: n.text,                    // 前端用 n.t
       ts: n.ts || '',
       date: n.date || '',
-      // 不编 importance：只有 insight/memory 有真的
-      imp: n.importance != null ? n.importance : null,
+      // 归一化到 0..1；没有就 null，前端用 0.05 兜底（不编造）
+      imp: normImp(n.importance),
+      impRaw: n.importance != null ? n.importance : null,
       conf: null,
+      use: Number(n.use) || 0,     // 被回想次数：服务端有就给，没有就 0（不能留 undefined）
       scope: n.topic || '',
       tags: n.topic ? [n.topic] : [],
       degree: n.degree || 0,
@@ -1460,7 +1573,12 @@ function groupNodes(){
   return out;
 }
 
+/* 分区标签 → 该团节点索引。cluster 形态下 clusterInfo 不带 gi，
+   所以在这里顺手存一份，供滑条按团统计"显示出几条"。 */
+const CL_LABEL_IDX = new Map();
+
 function applyShape(){
+  CL_LABEL_IDX.clear();
   const shape = OPTS.shape;
   const cs = shape === '__rnd' ? RANDOM_SPEC : CUSTOM.shapes[shape];
   const base = cs ? (cs.base || cs.struct || cs.proto || shape) : shape;
@@ -1609,7 +1727,8 @@ function applyShape(){
         n.tz = (czz + mag*Math.sin(ph)*Math.sin(th)) * OPTS.spread;
         nodeGroup[i] = gi;
       }
-      clusterInfo.push({ x:cxx, y:cyy, z:czz, rad, label:grp.label, count:grp.idx.length, color:grp.color });
+      clusterInfo.push({ x:cxx, y:cyy, z:czz, rad, gi, label:grp.label, count:grp.idx.length, color:grp.color });
+      CL_LABEL_IDX.set(grp.label, grp.idx);
     });
     yaw = cs && cs.yaw != null ? cs.yaw : 0;
     pitch = cs && cs.pitch != null ? cs.pitch : -0.04;
@@ -1744,6 +1863,8 @@ function fxDust(ctx){
   for (let i=0;i<N;i++){
     const d = proj[i*4+3];
     if (!(d > 0.02)) continue;
+    const sv = tbV(i);                    // 星还没长出来，它的微尘也不该有
+    if (sv <= 0.01) continue;
     const sx = proj[i*4], sy = proj[i*4+1];
     const n = nodes[i], imp = n.imp || 0.5;
     const nr = rnd(((i+1)*2654435761 ^ (OPTS.seed||20261118)) >>> 0);
@@ -1751,7 +1872,7 @@ function fxDust(ctx){
     const col = themeRGB.kinds[n.k] || themeRGB.star;
     for (let k=0;k<cnt;k++){
       const a2 = nr()*Math.PI*2, rr = 3 + nr()*10;
-      ctx.fillStyle = rgbStr(col, (0.07 + 0.24*nr()*imp) * (0.7+0.5*OPTS.glow));
+      ctx.fillStyle = rgbStr(col, (0.07 + 0.24*nr()*imp) * (0.7+0.5*OPTS.glow) * sv);
       ctx.beginPath(); ctx.arc(sx + Math.cos(a2)*rr, sy + Math.sin(a2)*rr, 0.75 + nr()*0.5, 0, 7); ctx.fill();
     }
   }
@@ -1768,6 +1889,8 @@ function fxPulse(ctx, cx, cy, tNow){
   for (const i of idx.slice(0, 8)){
     const d = proj[i*4+3];
     if (!(d > 0.02)) continue;
+    const pv = tbV(i);
+    if (pv <= 0.5) continue;              // 还没长出来的星不发脉冲
     const sx = proj[i*4], sy = proj[i*4+1];
     const imp = nodes[i].imp || 0.5;
     const R0 = 10 + 18*imp, span = 40 + 70*imp;
@@ -1775,7 +1898,7 @@ function fxPulse(ctx, cx, cy, tNow){
     for (let k=0;k<2;k++){
       const ph = ((tNow*0.00020 + k*0.5 + i*0.137) % 1);
       const r = R0 + ph*span;
-      const a = (1-ph)*(1-ph)*0.22*imp*(0.7+OPTS.glow);
+      const a = (1-ph)*(1-ph)*0.22*imp*(0.7+OPTS.glow) * pv;
       ctx.beginPath(); ctx.arc(sx, sy, r, 0, 7);
       ctx.strokeStyle = rgbStr(col, a);
       ctx.lineWidth = 1.0 + 2.0*(1-ph);
@@ -2065,10 +2188,13 @@ function draw(){
   const focusColor = (focusKind && themeRGB.kinds[focusKind]) || themeRGB.link;
 
   for (const e of edges){
+    // 时间滑条：两端只要有一头还没"长出来"，这条线就不该存在
+    const ev = Math.min(tbV(e.a), tbV(e.b));
+    if (ev <= 0.004) continue;
     const ax=proj[e.a*4], ay=proj[e.a*4+1], bx=proj[e.b*4], by=proj[e.b*4+1];
     const depth = (proj[e.a*4+3]+proj[e.b*4+3])/2;
     const isF = focus>=0 && (e.a===focus || e.b===focus);
-    let a = (0.038 + 0.16*Math.max(0,(depth+1)/2) * Math.max(0,(e.w-0.6)/0.4)) * (OPTS.linkAlpha || 1);
+    let a = (0.038 + 0.16*Math.max(0,(depth+1)/2) * Math.max(0,(e.w-0.6)/0.4)) * (OPTS.linkAlpha || 1) * ev;
     if (EVOLVE && nodeGroupOf.length){
       const ga = nodeGroupOf[e.a], gb = nodeGroupOf[e.b];
       if (ga >= 0 && gb >= 0 && ga !== gb) a *= 0.26;
@@ -2091,7 +2217,11 @@ function draw(){
   if (focus>=0 && extra.length){
     ctx.save(); ctx.setLineDash([4,5]); ctx.lineWidth = 1;
     const fx=proj[focus*4], fy=proj[focus*4+1];
+    const fv = tbV(focus);
     for (const r of extra){
+      const rv = Math.min(fv, tbV(r.j));
+      if (rv <= 0.004) continue;
+      ctx.globalAlpha = rv;
       ctx.strokeStyle = r.type==='tag' ? 'rgba(255,205,110,.42)' : 'rgba(110,220,215,.40)';
       ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(proj[r.j*4], proj[r.j*4+1]); ctx.stroke();
     }
@@ -2108,6 +2238,8 @@ function draw(){
     for (let k=0;k<flowList.length && k<cap;k++){
       const e = edges[flowList[k]];
       if (e._ph === undefined) e._ph = Math.random();
+      const ev = Math.min(tbV(e.a), tbV(e.b));
+      if (ev < 0.86) continue;             // 还没长齐的边不跑光点
       const ax=proj[e.a*4], ay=proj[e.a*4+1], bx=proj[e.b*4], by=proj[e.b*4+1];
       const len = Math.hypot(bx-ax, by-ay);
       if (len < 46) continue;
@@ -2138,18 +2270,27 @@ function draw(){
     const n = nodes[i];
     const x=proj[i*4], y=proj[i*4+1], persp=proj[i*4+2], z=proj[i*4+3];
     if (x<-40||x>W+40||y<-40||y>H+40) continue;
+    // 时间滑条：还没到日子的星不画。v 从 0 → 1 就是"长出来"的过程
+    const v = tbV(i);
+    if (v <= 0.004) continue;
     const imp = Math.max(0.05, n.imp);
-    const useBoost = 1 + 0.16*Math.log(1+n.use);
+    // n.use 可能没有（服务端没给这条字段），别让 Math.log 吃 undefined 变 NaN
+    const useBoost = 1 + 0.16*Math.log(1 + (Number(n.use) || 0));
     let size = OPTS.sizeBase * Math.pow(imp, OPTS.sizePower) * useBoost * (persp/(REF/2.6)) * 1.70;
     if (n.bh) size *= 0.34;
     if (n.ball) size *= 1.65;
     if (n.disk) size *= 0.78;
     size = Math.max(2.7, Math.min(72, size));
+    if (!Number.isFinite(size)) continue;
+    size *= 0.42 + 0.58*v;                 // 长出过程：先小后大
+    if (!Number.isFinite(size) || size < 0.4) continue;
     const depthA = 0.42 + 0.58*Math.max(0,(z+1)/2);
     const confA = 0.55 + 0.45*Math.max(0,n.conf);
-    let alpha = depthA * confA * (0.55 + 0.45*OPTS.glow);
+    let alpha = depthA * confA * (0.55 + 0.45*OPTS.glow) * v;
     if (n.arch) alpha *= 0.35;
     if (focus>=0 && i!==focus && !focusSet.has(i)) alpha *= 0.42;
+    // 刚长出来的星：多一层白热光晕，1.2 秒内逐渐收回
+    const flash = (v > 0.01 && v < 0.999) ? (1 - v) : 0;
 
     const big = !n.disk && OPTS.fx.rays && (n.ball || size > 6.0 || imp > 0.62);
     const spr = big ? (sprites[n.k] || sprites.__miss) : (spritesDim[n.k] || spritesDim.__miss);
@@ -2159,6 +2300,22 @@ function draw(){
     ctx.drawImage(spr, x-hs/2, y-hs/2, hs, hs);
     ctx.globalAlpha = Math.min(1, alpha);
     ctx.drawImage(spr, x-size/2, y-size/2, size, size);
+
+    // 刚长出来的那一下：白热光圈，快速衰减
+    // 注意 size 在这一帧可能已经被 v 缩到很小，光圈半径不能只跟着它走，
+    // 否则 v≈0 的瞬间 fr≈0，紧接着 v 跳上来又炸成一个大白球。
+    if (flash > 0.02){
+      const fr = Math.max(9, size) * (1.15 + 0.55*flash);
+      const fa = Math.min(0.42, flash * 0.40);
+      ctx.globalAlpha = fa;
+      const fg = ctx.createRadialGradient(x, y, 0, x, y, fr);
+      fg.addColorStop(0, 'rgba(255,248,225,.70)');
+      fg.addColorStop(0.45, 'rgba(255,224,160,.22)');
+      fg.addColorStop(1, 'rgba(255,210,120,0)');
+      ctx.fillStyle = fg;
+      ctx.beginPath(); ctx.arc(x, y, fr, 0, 7); ctx.fill();
+      ctx.globalAlpha = Math.min(1, alpha);
+    }
 
 
     if (focus>=0 && i!==focus && focusSet.has(i)){
@@ -2183,10 +2340,30 @@ function draw(){
 
   // —— 分区标签：每个团心的投影点牵一条引线出来，写分类名 + 条数
   if (clusterInfo.length){
+    // 滑条把某一天的星全藏了，那一片的分区标签也该跟着退场
+    const grpVis = new Map();
+    for (let i=0;i<N;i++){
+      const g = (EVOLVE && nodeGroupOf.length) ? nodeGroupOf[i] : (nodeGroup[i] != null ? nodeGroup[i] : -1);
+      if (g < 0) continue;
+      const rec = grpVis.get(g) || { seen:0, total:0 };
+      rec.total++;
+      if (tbV(i) > 0.5) rec.seen++;
+      grpVis.set(g, rec);
+    }
     ctx.save();
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     for (const c of clusterInfo){
+      let gv = c.gi != null ? grpVis.get(c.gi) : null;
+      // cluster 形态下 clusterInfo 没有 gi，靠 applyShape 时缓存的 label→索引表对上
+      if (!gv && CL_LABEL_IDX.has(c.label)){
+        const idx = CL_LABEL_IDX.get(c.label);
+        let seen = 0;
+        for (let k=0;k<idx.length;k++) if (tbV(idx[k]) > 0.5) seen++;
+        gv = { seen, total: idx.length };
+      }
+      const cAlpha = gv && gv.total ? gv.seen / gv.total : 1;
+      if (cAlpha <= 0.02) continue;
       let tx = c.x, ty = c.y, tz = c.z;
       if (c.gi != null && EVOLVE && EVOLVE.groups[c.gi]){
         const gr = EVOLVE.groups[c.gi];
@@ -2197,6 +2374,7 @@ function draw(){
       const px = cx + r[0]*persp*fitK, py = cy + r[1]*persp*fitK;
       if (px < -240 || px > W+240 || py < -240 || py > H+240) continue;
       const lx = px - 20, ly = py - 34;
+      ctx.globalAlpha = Math.max(0.10, cAlpha);
       ctx.strokeStyle = rgbStr(c.color, 0.42);
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -2213,7 +2391,11 @@ function draw(){
       ctx.shadowBlur = 0;
       ctx.font = '11px "Microsoft YaHei",sans-serif';
       ctx.fillStyle = 'rgba(198,214,242,.52)';
-      ctx.fillText(c.count + ' 条', lx+1, ly+8);
+      // 条数跟着滑条走：显示出 / 总数，别让人以为滑走了还在
+      const cntNow = gv && gv.total ? gv.seen : c.count;
+      const cntTxt = (cntNow === c.count) ? (c.count + ' 条') : (cntNow + ' / ' + c.count + ' 条');
+      ctx.fillText(cntTxt, lx+1, ly+8);
+      ctx.globalAlpha = 1;
     }
     ctx.restore();
   }
@@ -2443,6 +2625,9 @@ function sbGoto(i) {
   if (i < 0 || i >= nodes.length) return;
   const n = nodes[i];
 
+  // 这颗星被时间滑条挡在后面？先把截止日推到它那一天，不然跳过去是空的
+  if (typeof tbReveal === 'function') tbReveal(i);
+
   // 相机对准这颗星的方向
   const x = n.px || 0, y = n.py || 0, z = n.pz || 0;
   const r = Math.hypot(x, y, z) || 1;
@@ -2520,6 +2705,282 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+/* ══════════ 时间滑条：累计截止 ══════════
+   设计定稿（不再改口径）：
+   1. 累计截止 —— 滑到第 D 天，显示第 0..D 天的全部记忆
+   2. 布局只算一次 —— 位置在 computeLayout 里按全量算，滑条只控制显隐
+   3. 按本地日切（UTC+8）—— 服务端已按本地日给好 n.date，前端不再换算
+   所以：新星是"原地长出来"的，不会重排；滑到最早也不会重新布局。 */
+
+const TB = {
+  days: [],          // ['2026-11-20', ...] 升序（本地日）
+  counts: [],        // 每天新增条数
+  nodeDay: [],       // 每个节点属于第几天；-1 = 没有日期（永远可见）
+  cut: -1,           // 当前截止到第几天
+  vis: null,         // Float32Array，每个节点的显现进度 0..1
+  vTarget: null,     // 目标值
+  playing: false,
+  timer: null,
+};
+
+const tmBar = document.getElementById('timeBar');
+const tmTrack = document.getElementById('tmTrack');
+const tmReadout = document.getElementById('tmReadout');
+const tmPlay = document.getElementById('tmPlay');
+
+const TMW = ['周日','周一','周二','周三','周四','周五','周六'];
+function tbWeekday(date){
+  const t = Date.parse(date + 'T00:00:00+08:00');
+  return Number.isFinite(t) ? TMW[new Date(t).getDay()] : '';
+}
+function tbMd(date){ return String(date||'').slice(5) || '—'; }
+
+/** 某节点现在的显现进度 */
+function tbV(i){
+  const v = TB.vis;
+  if (!v || i < 0 || i >= v.length) return 1;
+  return v[i];
+}
+
+/** 从 nodes 重新统计天数与归属（载入、增量新增时调用） */
+function tbBuild(){
+  const set = new Set();
+  for (const n of nodes){ if (n && n.date) set.add(n.date); }
+  const days = [...set].sort();
+
+  TB.days = days;
+  TB.counts = days.map(()=>0);
+  TB.nodeDay = new Array(nodes.length).fill(-1);
+
+  const idx = new Map();
+  days.forEach((d,i)=> idx.set(d,i));
+  for (let i=0;i<nodes.length;i++){
+    const di = idx.get(nodes[i].date);
+    if (di === undefined) continue;
+    TB.nodeDay[i] = di;
+    TB.counts[di]++;
+  }
+
+  // 保留上一次的滑条位置（新增星不该把视图跳走）
+  const prevDate = (TB.cut >= 0 && TB.days[TB.cut]) ? TB.days[TB.cut] : null;
+  const keep = prevDate ? days.indexOf(prevDate) : -1;
+  TB.cut = keep >= 0 ? keep : (days.length ? days.length - 1 : -1);
+
+  TB.vis = new Float32Array(nodes.length);
+  TB.vTarget = new Float32Array(nodes.length);
+  tbSync(prevDate == null);        // 首次载入直接到位，不做淡入
+  tbRender();
+}
+
+/** 重算目标显隐；immediate=true 时直接跳到目标值 */
+function tbSync(immediate){
+  const cut = TB.cut;
+  for (let i=0;i<nodes.length;i++){
+    const di = TB.nodeDay[i];
+    const on = (di < 0 || di <= cut) ? 1 : 0;
+    TB.vTarget[i] = on;
+    if (immediate) TB.vis[i] = on;
+  }
+  // 新扩充出来的槽位（增量新增）直接给目标值，避免整屏闪烁
+  for (let i=TB.vTarget.length;i<nodes.length;i++){
+    TB.vTarget[i] = 1; TB.vis[i] = 1;
+  }
+}
+
+/** 增量加进来一颗新星：把滑条的槽位同步扩一格，不重排、不跳位 */
+function tbExtendForNew(){
+  if (!TB.vis || TB.vis.length === nodes.length) return;
+  const oldN = TB.vis.length;
+  const nv = new Float32Array(nodes.length);
+  const nt = new Float32Array(nodes.length);
+  nv.set(TB.vis.subarray(0, Math.min(oldN, nodes.length)));
+  nt.set(TB.vTarget.subarray(0, Math.min(oldN, nodes.length)));
+  TB.vis = nv; TB.vTarget = nt;
+  TB.nodeDay.length = nodes.length;
+  for (let i=oldN;i<nodes.length;i++) TB.nodeDay[i] = -1;
+
+  // 新星如果落在已截止的日子里，直接给它"已长出"，避免用户以为没录上
+  const newDate = nodes[nodes.length-1] && nodes[nodes.length-1].date;
+  if (newDate){
+    let di = TB.days.indexOf(newDate);
+    if (di < 0){ TB.days.push(newDate); TB.days.sort(); di = TB.days.indexOf(newDate); tbRender(); }
+    TB.nodeDay[nodes.length-1] = di;
+    TB.counts[di] = (TB.counts[di]||0) + 1;
+    if (di <= TB.cut){ TB.vis[nodes.length-1] = 0; TB.vTarget[nodes.length-1] = 1; }  // 让它自己闪一下长出来
+    tbReadoutUpdate();
+  }
+}
+
+/** 搜索/跳转时，如果目标星被滑条挡住了，把截止日推到它那一天 */
+function tbReveal(i){
+  const di = TB.nodeDay[i];
+  if (di == null || di < 0) return false;
+  if (di <= TB.cut) return false;
+  tbSetCut(di);
+  return true;
+}
+
+/** 每帧推进显现进度 */
+function tbEase(k){
+  const v = TB.vis, t = TB.vTarget;
+  if (!v || !t) return;
+  const n = Math.min(v.length, nodes.length);
+  for (let i=0;i<n;i++){
+    const d = t[i] - v[i];
+    if (d === 0) continue;
+    v[i] += d * k;
+    if (Math.abs(d) < 0.004) v[i] = t[i];
+  }
+}
+
+/** 画滑条本身 */
+function tbRender(){
+  if (!tmTrack) return;
+  const days = TB.days;
+  const M = days.length;
+
+  if (!M){
+    tmTrack.innerHTML = '<div class="tm-rail"></div>';
+    if (tmReadout) tmReadout.innerHTML = '';
+    if (tmPlay) tmPlay.style.display = 'none';
+    return;
+  }
+  if (tmPlay) tmPlay.style.display = '';
+
+  const posOf = (i)=> M <= 1 ? 0.5 : i/(M-1);
+  let html = '<div class="tm-rail"></div>';
+
+  // 已走过的那一段：琥珀色
+  const cutPos = M <= 1 ? 0.5 : Math.max(0, TB.cut)/(M-1);
+  html += `<div class="tm-fill" style="width:calc((100% - 18px) * ${cutPos.toFixed(4)})"></div>`;
+
+  for (let i=0;i<M;i++){
+    const p = posOf(i);
+    // 天数多的时候只标首尾和当前，免得挤成一团
+    const showLab = M <= 8 || i === 0 || i === M-1 || i === TB.cut;
+    const cls = 'tm-dot' + (i <= TB.cut ? ' past' : '') + (i === TB.cut ? ' on' : '');
+    html += `<button class="${cls}" data-i="${i}" title="${esc(days[i])} ${tbWeekday(days[i])} · ${TB.counts[i]} 条"
+      style="left:calc(9px + (100% - 18px) * ${p.toFixed(4)})">
+      <span class="tm-knob"></span>
+      ${showLab ? `<span class="tm-lab">${esc(tbMd(days[i]))}</span>` : ''}
+    </button>`;
+  }
+
+  tmTrack.innerHTML = html;
+  tmTrack.querySelectorAll('.tm-dot').forEach(b=>{
+    b.onclick = (e)=>{ e.stopPropagation(); tbSetCut(Number(b.dataset.i)); };
+  });
+
+  tbReadoutUpdate();
+}
+
+/** 右下角读数：日期 + 累计条数 */
+function tbReadoutUpdate(){
+  if (!tmReadout) return;
+  const d = TB.days[TB.cut];
+  if (!d){ tmReadout.innerHTML = ''; return; }
+  let vis = 0;
+  for (let i=0;i<nodes.length;i++){ if (TB.nodeDay[i] < 0 || TB.nodeDay[i] <= TB.cut) vis++; }
+  tmReadout.innerHTML =
+    `<span class="tm-date">${esc(tbMd(d))}</span>` +
+    `<span class="tm-wd">${esc(tbWeekday(d))}</span>` +
+    `<span class="tm-n">${vis}</span>`;
+}
+
+/** 设置截止日 */
+function tbSetCut(i, silent){
+  const M = TB.days.length;
+  if (!M) return;
+  const cut = Math.max(0, Math.min(M-1, i|0));
+  if (cut === TB.cut && !silent) { /* 同一天也刷新一下读数 */ }
+  TB.cut = cut;
+  tbSync(false);
+
+  // 只改类和位置，不重建 DOM（拖动时不闪）
+  if (tmTrack){
+    tmTrack.querySelectorAll('.tm-dot').forEach(b=>{
+      const bi = Number(b.dataset.i);
+      b.classList.toggle('past', bi <= cut);
+      b.classList.toggle('on', bi === cut);
+    });
+    const fill = tmTrack.querySelector('.tm-fill');
+    if (fill){
+      const cutPos = M <= 1 ? 0.5 : cut/(M-1);
+      fill.style.width = `calc((100% - 18px) * ${cutPos.toFixed(4)})`;
+    }
+  }
+  tbReadoutUpdate();
+
+  // 滑走之后还挂着隐藏星的卡片/悬停，收掉
+  if (selected >= 0 && tbV(selected) < 0.5) closeCard();
+  if (hovered >= 0 && tbV(hovered) < 0.5){ hovered = -1; tipEl.classList.remove('show'); }
+}
+
+/* ---- 播放成长 ---- */
+function tbStopPlay(){
+  TB.playing = false;
+  if (TB.timer){ clearTimeout(TB.timer); TB.timer = null; }
+  if (tmPlay){ tmPlay.classList.remove('on'); tmPlay.textContent = '▶ 播放成长'; }
+}
+
+function tbPlay(){
+  if (TB.playing){ tbStopPlay(); return; }
+  if (TB.days.length < 2){ toast('只有一天，没得长'); return; }
+
+  TB.playing = true;
+  if (tmPlay){ tmPlay.classList.add('on'); tmPlay.textContent = '⏸ 停止'; }
+  tbSetCut(0, true);
+
+  const step = ()=>{
+    if (!TB.playing) return;
+    const next = TB.cut + 1;
+    if (next >= TB.days.length){ tbStopPlay(); return; }
+    tbSetCut(next, true);
+    TB.timer = setTimeout(step, 1150);
+  };
+  TB.timer = setTimeout(step, 900);
+}
+
+if (tmPlay) tmPlay.onclick = (e)=>{ e.stopPropagation(); tbPlay(); };
+
+// 滑条上的滚轮/拖拽不要传给星图（缩放、旋转）
+if (tmBar){
+  tmBar.addEventListener('wheel', (e)=>{ e.stopPropagation(); }, {passive:true});
+  tmBar.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); });
+  tmBar.addEventListener('dblclick', (e)=>{ e.stopPropagation(); });
+
+  // 在轨道上横向拖动 = 连续挑日子
+  let scrubbing = false;
+  const dayAtX = (clientX)=>{
+    const r = tmTrack.getBoundingClientRect();
+    const x = Math.max(0, Math.min(r.width, clientX - r.left));
+    const inner = Math.max(1, r.width - 18);
+    const t = Math.max(0, Math.min(1, (x - 9) / inner));
+    return Math.round(t * (TB.days.length - 1));
+  };
+  tmTrack.addEventListener('pointerdown', (e)=>{
+    if (e.button !== 0) return;
+    scrubbing = true;
+    tmBar.classList.add('scrub');
+    tmTrack.setPointerCapture(e.pointerId);
+    tbStopPlay();
+    tbSetCut(dayAtX(e.clientX));
+    e.preventDefault();
+  });
+  tmTrack.addEventListener('pointermove', (e)=>{
+    if (!scrubbing) return;
+    tbSetCut(dayAtX(e.clientX));
+  });
+  const endScrub = (e)=>{
+    if (!scrubbing) return;
+    scrubbing = false;
+    tmBar.classList.remove('scrub');
+    try { tmTrack.releasePointerCapture(e.pointerId); } catch(_){}
+  };
+  tmTrack.addEventListener('pointerup', endScrub);
+  tmTrack.addEventListener('pointercancel', endScrub);
+}
+
 /* ---------------- 详情卡 ---------------- */
 function kindTag(n){
   const c = n.k && THEMES[OPTS.theme] && THEMES[OPTS.theme].kinds[n.k] || '#9fb4e8';
@@ -2535,9 +2996,9 @@ function openCard(i){
   const rows = [
     ['时间', n.ts || '—'],
     ['分区', n.scope || '—'],
-    ['重要度', Number(n.imp).toFixed(2)],
-    ['置信度', Number(n.conf).toFixed(2)],
-    ['被回想', n.use + ' 次'],
+    ['重要度', n.imp == null ? '—' : (n.impRaw != null ? String(n.impRaw) : Number(n.imp).toFixed(2))],
+    ['置信度', n.conf == null ? '—' : Number(n.conf).toFixed(2)],
+    ['被回想', (Number(n.use) || 0) + ' 次'],
     ['来源', n.src || '—'],
     ['语义向量', hasVec.has(i) ? '有（玩家向量）' : '无（仅按标签/时间/文本）'],
   ];
@@ -2569,34 +3030,44 @@ function updateHud(){
 /* ---------------- 主循环 ---------------- */
 let lastT = 0;
 function loop(t){
-  const dt = Math.min(50, t-lastT || 16); lastT = t; tNow = t;
+  // 整个循环体包在 try 里：一帧出错不能让整条 rAF 链断掉（断了就是永久黑屏）
+  try {
+    const dt = Math.min(50, t-lastT || 16); lastT = t; tNow = t;
 
-  // 位置平滑追目标（形态切换的"一点点变换"）
-  const k = 1 - Math.pow(0.90, dt/16.7);
-  for (let i=0;i<N;i++){
-    const n = nodes[i];
-    if (n.tx === undefined) continue;
-    n.px += (n.tx - n.px)*k;
-    n.py += (n.ty - n.py)*k;
-    n.pz += (n.tz - n.pz)*k;
+    // 位置平滑追目标（形态切换的"一点点变换"）
+    const k = 1 - Math.pow(0.90, dt/16.7);
+    for (let i=0;i<N;i++){
+      const n = nodes[i];
+      if (n.tx === undefined) continue;
+      n.px += (n.tx - n.px)*k;
+      n.py += (n.ty - n.py)*k;
+      n.pz += (n.tz - n.pz)*k;
+    }
+
+    // 时间滑条：显现进度平滑推进（滑过去是长出来，不是瞬间开关）
+    tbEase(1 - Math.pow(0.86, dt/16.7));
+
+    // 主题色平滑过渡
+    mixTo(themeRGB.bg[0], themeTgt.bg[0], k*0.9);
+    mixTo(themeRGB.bg[1], themeTgt.bg[1], k*0.9);
+    mixTo(themeRGB.nebula, themeTgt.nebula, k*0.9);
+    mixTo(themeRGB.link, themeTgt.link, k*0.9);
+    mixTo(themeRGB.star, themeTgt.star, k*0.9);
+    for (const kk in themeTgt.kinds){
+      if (!themeRGB.kinds[kk]) themeRGB.kinds[kk] = themeTgt.kinds[kk].slice();
+      else mixTo(themeRGB.kinds[kk], themeTgt.kinds[kk], k*0.9);
+    }
+    if (++spriteTick % 6 === 0) initSprites();
+
+    if (!dragging && OPTS.autoRotate && baseShape() !== 'cluster') yaw += OPTS.autoRotate*0.001*dt;
+    // 设置页盖住时不用画，省 CPU（切回来第一帧照常）
+    if (currentView !== 'settings') draw();
+  } catch (err) {
+    // 只报一次，别刷屏
+    if (!loop._warned){ loop._warned = true; console.warn('[loop]', err); }
+  } finally {
+    requestAnimationFrame(loop);      // 无论如何都要续上
   }
-
-  // 主题色平滑过渡
-  mixTo(themeRGB.bg[0], themeTgt.bg[0], k*0.9);
-  mixTo(themeRGB.bg[1], themeTgt.bg[1], k*0.9);
-  mixTo(themeRGB.nebula, themeTgt.nebula, k*0.9);
-  mixTo(themeRGB.link, themeTgt.link, k*0.9);
-  mixTo(themeRGB.star, themeTgt.star, k*0.9);
-  for (const kk in themeTgt.kinds){
-    if (!themeRGB.kinds[kk]) themeRGB.kinds[kk] = themeTgt.kinds[kk].slice();
-    else mixTo(themeRGB.kinds[kk], themeTgt.kinds[kk], k*0.9);
-  }
-  if (++spriteTick % 6 === 0) initSprites();
-
-  if (!dragging && OPTS.autoRotate && baseShape() !== 'cluster') yaw += OPTS.autoRotate*0.001*dt;
-  // 设置页盖住时不用画，省 CPU（切回来第一帧照常）
-  if (currentView !== 'settings') draw();
-  requestAnimationFrame(loop);
 }
 
 /* ---------------- 面板 UI ---------------- */
@@ -3874,8 +4345,26 @@ function addStarToScene(node, edges) {
     t: node.text || '',
     ts: node.ts || '',
     date: node.date || '',
-    imp: node.importance != null ? node.importance : null,
+    imp: (function(v){
+      // 增量推送的星也要按同一口径归一化，否则又会出现大白球
+      if (v == null) return null;
+      if (typeof v === 'string'){
+        const s = v.trim().toLowerCase();
+        if (s === 'critical' || s === 'high' || s === 'very-high') return 0.92;
+        if (s === 'important' || s === 'medium') return 0.70;
+        if (s === 'normal' || s === 'low') return 0.50;
+        const num = Number(s); return Number.isFinite(num) ? (num <= 1 ? Math.max(0.05, num) : 0.20 + (Math.min(num,5)-1)*0.18) : null;
+      }
+      const x = Number(v);
+      if (!Number.isFinite(x)) return null;
+      if (x <= 1) return Math.max(0.05, x);
+      if (x <= 5) return 0.20 + (x - 1) * 0.18;
+      if (x <= 10) return 0.20 + (x / 10) * 0.72;
+      return 0.92;
+    })(node.importance),
+    impRaw: node.importance != null ? node.importance : null,
     conf: null,
+    use: Number(node.use) || 0,
     scope: node.topic || '',
     tags: node.topic ? [node.topic] : [],
     degree: (edges || []).length,
@@ -3894,6 +4383,7 @@ function addStarToScene(node, edges) {
 
   if (typeof buildAdj === 'function') buildAdj();
   if (typeof buildFlowList === 'function') buildFlowList();
+  if (typeof tbExtendForNew === 'function') tbExtendForNew();   // 滑条槽位跟着扩，别重排
   if (typeof updateHud === 'function') updateHud();
   if (typeof toast === 'function') toast(`新记忆：${(node.text || '').slice(0, 20)}…`);
 }
@@ -3979,6 +4469,7 @@ async function useSource(id){
   applyShape();
   fitK = 0;
   initStars();
+  tbBuild();                 // 先把天数与截止位定下来，再画
   updateHud();
   buildPanel();
   if (ld){ ld.style.opacity = 0; setTimeout(()=>{ ld.style.display='none'; }, 460); }

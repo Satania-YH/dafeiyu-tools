@@ -40,6 +40,7 @@ import { EventWatcher, readAll } from './watcher.mjs';
 import { readAllContent } from './sources.mjs';
 import { check as checkSchema, loadSaved, saveSnapshot } from './schema-watch.mjs';
 import { cleanEvent } from './clean.mjs';
+import { buildDateMap, applyDateMap } from './backfill-dates.mjs';
 
 /* ══════════ 启动参数 ══════════ */
 
@@ -95,6 +96,10 @@ async function loadFull(opts = {}) {
   if (graphPath && exists(graphPath)) {
     try {
       const graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
+      // 日期回填：把没有 ts 的 insight/memory 节点补上真实时间（内存里补，不写 graph.json）
+      const dm = buildDateMap(graph.nodes || [], P.mnemonDb);
+      const fixed = applyDateMap(graph, dm);
+      if (fixed) console.log(`[回填] 补齐 ${fixed} 个节点的时间戳`);
       loaded = await GS.loadFromGraph(graph, { vectorsJsonPath: vectorsPath });
       loaded.graphPath = graphPath;
       loaded.vectorsPath = vectorsPath;
