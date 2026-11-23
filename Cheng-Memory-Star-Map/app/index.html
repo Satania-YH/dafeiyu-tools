@@ -92,7 +92,8 @@
   /* ---------------- 搜索框：透明浮层，贴在星图顶部 ---------------- */
   #searchBox{
     position:absolute; left:50%; top:14px; transform:translateX(-50%);
-    width:min(520px, calc(100% - 120px)); z-index:20;
+    /* 和底部播放条同宽（两处规则要一起改，改一处就对不齐了） */
+    width:min(720px, max(380px, calc(100% - 470px))); z-index:20;
     pointer-events:auto;
     cursor:default;              /* 盖掉 stage 的 grab */
     user-select:text;            /* body 是 none，输入框要能选字 */
