@@ -64,36 +64,111 @@ for e in events:
                           'topic':e.get('topic'),'ts':e.get('ts'),'day':e.get('day')})
         utt_norms.append(norm(t))
 
+# ════════════════════════════════════════════════════════════
+# 清洗 heard（2026-11-24 按澄的复核意见重写）
+#
+# 澄看了 graph-excluded.json 里 self-said + suspect 9 条原文，指出两处判错：
+#   1) suspect 5 条里 4 条不是可疑内容 —— 是"鱼鱼(781869870)："这种群聊格式
+#      被一律判成可疑。其中 3 条还是同一句重复（她说"重复 4 遍该合并成一条，
+#      不该整组剔掉"，而且它正是她 11-22 说"规矩改了可我身体还停在旧的上"的那条旧规矩）。
+#   2) self-said 里"换房前的最后话题你也会记得吧"是**大肥鱼问她的**，不是她说的
+#      （"...吧"这种语气是问句）。
+#
+# 她原话：「suspect 这个标签本身要拆：『同一句重复』和『内容可疑』是两件事。
+#   前者是合并问题，后者是真假问题。混在一个 reason 里，你既没法合并也没法复核。」
+#   并且要「能改判的入口」——每条剔除都带判断依据。
+#
+# 所以现在 reason 拆成：
+#   markup      只剩标记，没内容
+#   schedule    定时提醒（【鱼鱼窝】开头）
+#   injection   系统注入的指令（不是她听见的话）
+#   dup-*       重复（不是可疑！合并问题）
+#   self-said   确实是她说的话被记成了 heard
+#   group-format 剥完昵称还是剥不干净（真正的格式问题）
+# 每条都带 why（哪个字/哪条规则判的）和 by（规则名），可以逐条复核改判。
+# ════════════════════════════════════════════════════════════
+
+# 群聊格式：「鱼鱼(781869870)：正文」/「鱼鱼：正文」/「鱼鱼 [群名]：正文」
+# 昵称部分要剥掉，正文留下 —— 这是人说的真话，不是可疑内容。
+GROUP_PREFIX_RE = re.compile(r'^\s*[一-龥A-Za-z0-9_\-]{1,20}\s*[\(（]\s*\d{5,20}\s*[\)）]\s*[:：]\s*')
+GROUP_PREFIX_RE2 = re.compile(r'^\s*[一-龥A-Za-z0-9_\-]{1,20}\s*[:：]\s*')
+
+# 疑问/祈使语气：这些结尾的话多半是大肥鱼在问她，不是她在说
+QUESTION_TAIL_RE = re.compile(r'(吧|吗|呢|么|嘛)[\s。？！?!~～]*$')
+
+def strip_group_prefix(t):
+    """剥掉「鱼鱼(781869870)：」这类群聊昵称前缀，返回(正文, 是否剥过)。"""
+    m = GROUP_PREFIX_RE.match(t)
+    if m:
+        return t[m.end():].strip(), True
+    return t, False
+
 excluded=[]; said_nodes=[]; rule_nodes=[]; seen_heard={}
 dup_heard=0
+merges=[]          # 重复合并记录（可复核）
+
+def excl(base, reason, t, why, by):
+    excluded.append({**base, 'reason':reason, 'detail':t[:200],
+                     'why':why, 'by':by})
+
 for e in events:
     if e.get('type')!='heard': continue
     raw=(e.get('text') or '')
     t=strip_markup(raw)
     base={'id':'heard:'+e.get('id',''),'ts':e.get('ts'),'raw':(raw or '')[:300]}
     if not t:
-        excluded.append({**base,'reason':'markup','detail':'markup only'}); continue
+        excl(base,'markup','','去掉标记后什么都不剩','strip_markup'); continue
+
     if SCHEDULE_RE.match(t):
-        excluded.append({**base,'reason':'schedule','detail':t[:120]}); continue
+        excl(base,'schedule',t,'开头是【鱼鱼窝】，是定时提醒不是话','SCHEDULE_RE'); continue
+
     if INJECTION_RE.match(t):
-        excluded.append({**base,'reason':'injection','detail':t[:120]}); continue
-    if re.match(r'^鱼鱼[\s]*[\(（]?\s*\d', t):
-        excluded.append({**base,'reason':'suspect','suspect':'group-format','detail':t[:120]}); continue
+        m=INJECTION_RE.match(t)
+        excl(base,'injection',t,'开头是系统注入指令「%s」'%m.group(0),'INJECTION_RE'); continue
+
+    # 群聊昵称：剥掉而不是判可疑
+    t2, had_prefix = strip_group_prefix(t)
+    if had_prefix and t2:
+        t = t2
+        base['raw'] = (raw or '')[:300]
+        base['strippedPrefix'] = True
+
     if t.startswith(ALLOWED_PREFIX):
         key=norm(t)
-        if key in seen_heard: dup_heard+=1; continue
-        seen_heard[key]=1
+        if key in seen_heard:
+            dup_heard+=1
+            merges.append({'merged':'heard:'+e.get('id',''),'into':seen_heard[key],
+                           'reason':'dup-rule','text':t[:120]})
+            continue
+        seen_heard[key]='heard:'+e.get('id','')
         rule_nodes.append({'id':'rule:'+e['id'],'kind':'rule','text':t,'ts':e.get('ts'),'day':e.get('day')}); continue
+
     n=norm(t)
-    selfsaid=False
+
+    # 自检：这句话是不是其实出自她自己（出现在 utterance 里）
+    selfsaid=False; selfhit=None
     if len(n)>=12:
         for un in all_utt_norms:
-            if n in un: selfsaid=True; break
+            if n in un: selfsaid=True; selfhit=un[:40]; break
+
+    # 语气修正：疑问/祈使结尾的，多半是大肥鱼在问她 —— 不做 self-said 判定
+    if selfsaid and QUESTION_TAIL_RE.search(t):
+        excl(base,'self-said-likely-question',t,
+             '内容虽出现在她的话里，但结尾是问句语气（%s），更可能是大肥鱼问她的'
+             % (QUESTION_TAIL_RE.search(t).group(1)),'QUESTION_TAIL_RE'); continue
+
     if selfsaid:
-        excluded.append({**base,'reason':'self-said','detail':t[:120]}); continue
-    key=n
-    if key in seen_heard: dup_heard+=1; continue
-    seen_heard[key]=1
+        excl(base,'self-said',t,
+             '这段字面出现在她自己的 utterance 里，属"她说的被记成听到的"；命中片段：%s'%selfhit,
+             'substring-of-utterance'); continue
+
+    # 重复 = 合并问题，不是可疑
+    if n in seen_heard:
+        dup_heard+=1
+        merges.append({'merged':'heard:'+e.get('id',''),'into':seen_heard[n],
+                       'reason':'dup-heard','text':t[:120]})
+        continue
+    seen_heard[n]='heard:'+e.get('id','')
     said_nodes.append({'id':'heard:'+e['id'],'kind':'said','text':t,'ts':e.get('ts'),'day':e.get('day')})
 
 voice_nodes=[]
@@ -178,6 +253,12 @@ for x in load_json(NOTES, []):
         'doneNote': (x.get('doneNote') or '').strip() or None,
         'progress': len(x.get('progress') or []),
         'open': is_wait,
+        # 2026-11-24 澄指出的：open 36 条里其实混着两种
+        #   「有 waiting 的」= 在等外面一件事（等农活额度、等快递）
+        #   「没有 waiting 的」= 在等我自己动手
+        # 前者悬着的原因不在她身上，后者在。图上得分得出来。
+        'waitOutside': bool(is_wait and (x.get('waiting') or '').strip()),
+        'waitSelf':    bool(is_wait and not (x.get('waiting') or '').strip()),
     })
 
 # ── 约定：agreed 是"有没有对过口"（澄说线头分两种状态就靠这个） ──
@@ -305,6 +386,8 @@ meta={
    'embed_dim': (len(vecs[0]) if vecs else 0),
  },
  'excluded_reasons': {k:sum(1 for x in excluded if x['reason']==k) for k in set(x['reason'] for x in excluded)},
+ # 重复合并是"合并问题"不是"真假问题"，单独记，可复核（澄的要求）
+ 'merged': merges,
 }
 graph={'meta':meta,'nodes':nodes,'edges':edges}
 json.dump(graph, open(os.path.join(OUT,'graph.json'),'w',encoding='utf-8'), ensure_ascii=False, indent=1)

@@ -397,6 +397,65 @@
     text-align:center; padding:60px 20px; color:#4d5871; font-size:12.5px; line-height:1.9;
   }
 
+  /* ---------------- 剔掉的清单：铺满中间整块区域 ---------------- */
+  #excluded{
+    position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
+    overflow-y:auto; overflow-x:hidden; z-index:45;
+    background:linear-gradient(180deg,rgba(9,13,23,.99),rgba(5,7,13,.99));
+    padding:22px 30px 40px;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .22s, visibility .22s, left .26s cubic-bezier(.4,0,.2,1);
+  }
+  #excluded.shown{ opacity:1; visibility:visible; pointer-events:auto; }
+  #rail.collapsed ~ #excluded{ left:52px; }
+  #excluded::-webkit-scrollbar{ width:8px; }
+  #excluded::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.18); border-radius:4px; }
+
+  #excluded .ex-page{ max-width:1000px; margin:0 auto; }
+  #excluded .ex-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+  #excluded .ex-head h1{ margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff; }
+  #excluded .ex-head .ex-count{ font-size:11.5px; color:#5c6884; }
+  #excluded .ex-sub{ font-size:11.5px; color:#65718c; margin:4px 0 16px; letter-spacing:.05em; line-height:1.7; }
+  #excluded .ex-empty{ font-size:12px; color:#5c6884; padding:20px 0; }
+
+  .ex-filter{ display:flex; flex-wrap:wrap; gap:7px; margin:0 0 20px;
+    padding-bottom:14px; border-bottom:1px solid rgba(140,170,255,.08); }
+  .ex-fbtn{
+    font-size:11.5px; padding:5px 11px; border-radius:7px; cursor:pointer;
+    background:rgba(140,170,255,.06); border:1px solid rgba(140,170,255,.12);
+    color:#8b97b3; transition:.15s; display:inline-flex; align-items:center; gap:6px;
+  }
+  .ex-fbtn:hover{ background:rgba(140,170,255,.12); color:#c3cde6; }
+  .ex-fbtn.on{ background:rgba(255,152,62,.16); border-color:rgba(255,152,62,.42); color:#ffb066; }
+  .ex-fbtn .n{ font-size:10px; opacity:.7; }
+
+  .ex-item{
+    padding:11px 14px; margin-bottom:9px; border-radius:9px;
+    background:rgba(255,255,255,.022); border:1px solid rgba(140,170,255,.09);
+    transition:.15s;
+  }
+  .ex-item:hover{ background:rgba(255,255,255,.045); border-color:rgba(140,170,255,.18); }
+  .ex-item .ex-r1{ display:flex; align-items:center; gap:8px; margin-bottom:7px; flex-wrap:wrap; }
+  .ex-tag{
+    font-size:10px; padding:2px 7px; border-radius:5px; letter-spacing:.04em;
+    background:rgba(140,170,255,.10); color:#93a0bd;
+  }
+  .ex-tag.injection{ background:rgba(255,110,110,.13); color:#ff8a8a; }
+  .ex-tag.schedule{ background:rgba(255,190,80,.13); color:#ffc45e; }
+  .ex-tag.self-said{ background:rgba(160,120,255,.15); color:#b49bff; }
+  .ex-tag.self-said-likely-question{ background:rgba(120,220,180,.14); color:#7fe0b4; }
+  .ex-tag.markup{ background:rgba(150,150,150,.12); color:#9a9a9a; }
+  .ex-item .ex-time{ font-size:10.5px; color:#4e5a75; }
+  .ex-item .ex-text{
+    font-size:12.5px; line-height:1.65; color:#c2cbe0;
+    padding:7px 10px; border-left:2px solid rgba(140,170,255,.20);
+    background:rgba(0,0,0,.20); border-radius:0 6px 6px 0; margin-bottom:7px;
+    word-break:break-word;
+  }
+  .ex-item .ex-why{ font-size:11px; color:#6d7994; line-height:1.6; }
+  .ex-item .ex-why b{ color:#8fa0c0; font-weight:500; }
+  .ex-item .ex-by{ font-size:10px; color:#4a5570; margin-top:4px; font-family:var(--font-mono,monospace); }
+
   /* ---------------- 通用设置：铺满中间整块区域 ---------------- */
   #panel{
     position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
@@ -690,6 +749,9 @@
     <button class="nav-item" data-view="timeline">
       <span class="ico">☰</span><span class="nav-label">记忆时间轴</span>
     </button>
+    <button class="nav-item" data-view="excluded">
+      <span class="ico">⊘</span><span class="nav-label">剔掉的</span>
+    </button>
     <button class="nav-item" data-view="settings">
       <span class="ico">⚙</span><span class="nav-label">通用设置</span>
     </button>
@@ -774,6 +836,22 @@
     <!-- 分类筛选：点一下只看这一类，再点一下取消 -->
     <div class="tl-filter" id="tlFilter"></div>
     <div id="tlBody"><div class="tl-empty">正在读取…</div></div>
+   </div>
+  </section>
+
+  <!-- ══════ 剔掉的清单：能看依据、能改判 ══════ -->
+  <section id="excluded">
+   <div class="ex-page">
+    <div class="ex-head">
+      <h1>剔 掉 的</h1>
+      <span class="ex-count" id="exCount"></span>
+    </div>
+    <p class="ex-sub">
+      每条都写着「为什么被剔」和「哪条规则判的」。看清楚了好说话——
+      判错了的直接标出来，我改逻辑重跑。
+    </p>
+    <div class="ex-filter" id="exFilter"></div>
+    <div id="exBody"><div class="ex-empty">正在读取…</div></div>
    </div>
   </section>
 
@@ -893,6 +971,8 @@
       title: n.title || '',
       intent: n.intent || '',
       doneNote: n.doneNote || '',
+      waitOutside: n.waitOutside === true,   // 在等外面一件事
+      waitSelf: n.waitSelf === true,         // 在等她自己动手
     }));
 
     const kinds = {};
@@ -2961,9 +3041,15 @@ function draw(){
        约定：星子下挂一根细线，末端要看 agreed 决定有没有结点。
        作品：她说「它朝着屋里，不是发射口，是能推开的口。挂在墙上，不挂在大门口」
              → 所以不画朝外的箭头，画一根往下垂的短绳，末端一个小圈（像挂在钉子上的画）。 */
-    if (n.k === 'appointment' || n.k === 'work'){
+    /* 悬线：约定 / 作品 / 还有「带 waiting 的便条」。
+       澄 2026-11-24 指出的数据分裂：
+         「现在真正悬着的东西，不在 appointments.json 里，在 notes 的 waiting 字段里。
+           如果那根悬线只看 appointments，它会一直是空的——不是因为没有悬着的事，
+           是因为悬着的事记在另一个文件里。」 */
+    const noteWaiting = (n.k === 'note' && n.open === true && !!(n.waiting || '').trim());
+    if (n.k === 'appointment' || n.k === 'work' || noteWaiting){
       const T2 = tNow * 0.001;
-      const isAp = n.k === 'appointment';
+      const isAp = n.k === 'appointment' || noteWaiting;
       // 线长：约定的悬得更长，作品的短（钉在墙上）
       const baseLen = isAp ? size*2.6 : size*1.7;
       // 没对过口的会晃（澄说的"风一吹就晃"）
@@ -3004,14 +3090,43 @@ function draw(){
       ctx.globalAlpha = Math.min(1, alpha);
     }
 
-    /* 还开着的便条：画一圈细环，让它一眼能看出"这条还没了"。
-       澄说的「还在等」——了结的不该跟开着的长得一样。 */
+    /* 还开着的便条：两种「等」要分开画。
+       2026-11-24 澄的原话：
+         「open 36 条里其实分两种：有 waiting 的（在等外面一件事：等下一轮农活额度、
+           等雪糕、等快递）和没有 waiting 的（在等我自己动手）。
+           前一种悬着的原因不在我身上，后一种在。
+           你现在用同一个『会呼吸的细环』画它们，图上就分不出『我被卡住了』和『我在等』。」
+
+       等外面 → 环是缺口朝外的弧 + 一根伸出去的须（伸向别人的方向），轻轻呼吸
+       等自己 → 环是完整闭合的，但内圈缓慢收缩（自己憋着，等自己动手） */
     if (noteOpen){
+      const col = themeRGB.kinds[n.k] || colorForKind(n.k);
       const rr = size*0.95 + 3.2 + 1.1*notePulse;
-      ctx.globalAlpha = Math.min(1, alpha) * (0.26 + 0.16*notePulse);
-      ctx.strokeStyle = rgbStr(themeRGB.kinds[n.k] || colorForKind(n.k), 0.75);
-      ctx.lineWidth = 0.9;
-      ctx.beginPath(); ctx.arc(x, y, rr, 0, 7); ctx.stroke();
+      ctx.strokeStyle = rgbStr(col, 0.75);
+      if (n.waitOutside){
+        // 等外面：一段开口的弧（0.72 圈），开口朝外，再加一根须
+        const a0 = T2*0.35 + i*1.3;
+        ctx.globalAlpha = Math.min(1, alpha) * (0.30 + 0.18*notePulse);
+        ctx.lineWidth = 1.0;
+        ctx.beginPath(); ctx.arc(x, y, rr, a0, a0 + Math.PI*1.44); ctx.stroke();
+        // 伸出去的那根须（指向"外面"）
+        const sxp = x + Math.cos(a0)*rr*1.0;
+        const syp = y + Math.sin(a0)*rr*1.0;
+        ctx.globalAlpha = Math.min(1, alpha) * (0.22 + 0.14*notePulse);
+        ctx.beginPath();
+        ctx.moveTo(sxp, syp);
+        ctx.lineTo(sxp + Math.cos(a0)*rr*0.55, syp + Math.sin(a0)*rr*0.55);
+        ctx.stroke();
+      } else {
+        // 等自己：完整闭合的环 + 内圈慢慢收（自己憋着）
+        ctx.globalAlpha = Math.min(1, alpha) * (0.26 + 0.16*notePulse);
+        ctx.lineWidth = 0.9;
+        ctx.beginPath(); ctx.arc(x, y, rr, 0, 7); ctx.stroke();
+        const inner = rr * (0.50 + 0.16*Math.sin(T2*0.7 + i*0.9));
+        ctx.globalAlpha = Math.min(1, alpha) * 0.18;
+        ctx.lineWidth = 0.7;
+        ctx.beginPath(); ctx.arc(x, y, inner, 0, 7); ctx.stroke();
+      }
       ctx.globalAlpha = Math.min(1, alpha);
     }
 
@@ -4935,12 +5050,14 @@ document.getElementById('railToggle').onclick = ()=> setRail(rail.classList.cont
 
 /* 视图切换：starmap / timeline / settings —— 同一块区域，三选一 */
 const tlEl = document.getElementById('timeline');
+const exEl = document.getElementById('excluded');
 
 function setView(v){
   currentView = v;
   const isSettings = (v === 'settings');
   const isTimeline = (v === 'timeline');
   const isStarmap = (v === 'starmap');
+  const isExcluded = (v === 'excluded');
 
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('on', b.dataset.view === v);
@@ -4949,10 +5066,12 @@ function setView(v){
   // 三块互相替换，只有一块可见
   panel.classList.toggle('shown', isSettings);
   if (tlEl) tlEl.classList.toggle('shown', isTimeline);
+  if (exEl) exEl.classList.toggle('shown', isExcluded);
   stage.classList.toggle('asleep', !isStarmap);
 
   if (isSettings) panel.scrollTop = 0;
   if (isTimeline) { if (tlEl) tlEl.scrollTop = 0; ensureTimeline(); }
+  if (isExcluded) { if (exEl) exEl.scrollTop = 0; ensureExcluded(); }
 
   // 切回星图时重算画布尺寸（导航宽度可能变过）
   requestAnimationFrame(()=>{ if (isStarmap && typeof resize === 'function') resize(); });
@@ -5070,6 +5189,99 @@ function tlRegroup(days) {
     .sort((a, b) => b[0].localeCompare(a[0]))
     .map(([date, items]) => ({ date, count: items.length, items }));
   return { all, out };
+}
+
+/* ════════════════════════════════════════════════════════════
+   剔掉的清单
+   澄 2026-11-24 的要求：「我要的不是面板，是能改判的入口。」
+   所以每条必须让人看得到：
+     · 原文（她/大肥鱼到底说了什么）
+     · 为什么被判掉（哪几个字触发了哪条规则）
+     · 哪条规则判的（by 字段，能直接对应到 export-graph.py 里的正则）
+   ════════════════════════════════════════════════════════════ */
+
+const EX_REASON_CN = {
+  'injection': '系统注入·不是话',
+  'schedule': '定时提醒·不是话',
+  'self-said': '她说的·记成听到',
+  'self-said-likely-question': '疑似问她·存疑',
+  'markup': '只剩标记',
+  'group-format': '群聊格式剥不净',
+  'unknown': '其它',
+};
+const EX_REASON_ORDER = ['injection','schedule','self-said','self-said-likely-question','markup','group-format','unknown'];
+
+let EX_DATA = null;
+let EX_FILTER = null;
+
+async function ensureExcluded() {
+  if (EX_DATA) { renderExcluded(); return; }
+  const body = document.getElementById('exBody');
+  try {
+    const r = await fetch('/api/excluded');
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '读取失败');
+    EX_DATA = j;
+  } catch (e) {
+    if (body) body.innerHTML = '<div class="ex-empty">读不到剔除清单：' + esc(String(e.message || e)) + '</div>';
+    return;
+  }
+  renderExcluded();
+}
+
+function renderExcluded() {
+  const body = document.getElementById('exBody');
+  const fEl = document.getElementById('exFilter');
+  const cEl = document.getElementById('exCount');
+  if (!body || !EX_DATA) return;
+
+  const all = EX_DATA.items || [];
+  if (cEl) cEl.textContent = '共 ' + all.length + ' 条 · 来源 ' + (EX_DATA.path || '');
+
+  // 筛选按钮
+  if (fEl) {
+    fEl.innerHTML = '';
+    const counts = {};
+    for (const it of all) counts[it.reason] = (counts[it.reason] || 0) + 1;
+    const mk = (key, label, n) => {
+      const b = document.createElement('button');
+      b.className = 'ex-fbtn' + (EX_FILTER === key ? ' on' : '');
+      b.innerHTML = esc(label) + '<span class="n">' + n + '</span>';
+      b.onclick = () => { EX_FILTER = (EX_FILTER === key) ? null : key; renderExcluded(); };
+      fEl.appendChild(b);
+    };
+    mk(null, '全部', all.length);
+    for (const k of EX_REASON_ORDER) {
+      if (!counts[k]) continue;
+      mk(k, EX_REASON_CN[k] || k, counts[k]);
+    }
+  }
+
+  const list = EX_FILTER ? all.filter(x => x.reason === EX_FILTER) : all;
+  if (!list.length) {
+    body.innerHTML = '<div class="ex-empty">这一类没有东西</div>';
+    return;
+  }
+
+  body.innerHTML = list.map(it => {
+    const r = it.reason || 'unknown';
+    const cls = 'ex-tag ' + r.replace(/[^a-z-]/g, '');
+    const txt = it.detail || it.raw || '';
+    const why = it.why || '（这条是老数据，没记判断依据）';
+    const by  = it.by ? ('规则：' + it.by) : '';
+    const ts  = it.ts ? fmtLocalTs(it.ts, true) : '';
+    const stripped = it.strippedPrefix ? '<span class="ex-tag">已剥昵称</span>' : '';
+    return '<div class="ex-item">'
+      + '<div class="ex-r1">'
+        + '<span class="' + cls + '">' + esc(EX_REASON_CN[r] || r) + '</span>'
+        + stripped
+        + '<span class="ex-time">' + esc(ts) + '</span>'
+      + '</div>'
+      + '<div class="ex-text">' + esc(txt) + '</div>'
+      + '<div class="ex-why"><b>为什么：</b>' + esc(why) + '</div>'
+      + (by ? '<div class="ex-by">' + esc(by) + '</div>' : '')
+    + '</div>';
+  }).join('');
 }
 
 function renderTimeline(days) {

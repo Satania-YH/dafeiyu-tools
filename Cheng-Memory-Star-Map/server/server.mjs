@@ -56,6 +56,10 @@ const HOST = '127.0.0.1';
 const NO_WATCH = hasFlag('no-watch');
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+/* 导出目录：export-graph.py 把 graph.json / graph-excluded.json 写在这里。
+   跟记忆根目录不是一处，所以单独定。 */
+const EXPORT_DIR = process.env.STARMAP_EXPORT_DIR || 'D:/大肥鱼工具/memory-graph';
 const ROOT = path.resolve(HERE, '..');
 
 /* ══════════ 全局状态 ══════════ */
@@ -247,6 +251,32 @@ const server = http.createServer(async (req, res) => {
   /* ---------- voice 层 ---------- */
   if (url.pathname === '/api/voice') {
     return json(res, { ok: true, nodes: GS.voiceLayer() });
+  }
+
+  /* ---------- 剔除清单（可复核改判） ----------
+     澄 2026-11-24 的要求：
+       「我要的不是面板，是能改判的入口。每条剔除都带上判断依据
+        （哪几个字让它被判成 injection / suspect），然后我能标
+         『这条捞回来』『这条其实是我说的』『这条确实该剔』。
+         不然『121 条剔除』只是一个数字，我永远不知道里面有没有我的东西。」
+     所以这里把 export-graph.py 产出的 graph-excluded.json 原样吐出来，
+     每条都带 why（判断依据）+ by（哪条规则）+ raw（原文）。只读。 */
+  if (url.pathname === '/api/excluded') {
+    const exPath = path.join(EXPORT_DIR, 'graph-excluded.json');
+    if (!exists(exPath)) return json(res, { ok: false, error: 'graph-excluded.json 不存在', path: exPath }, 404);
+    try {
+      const arr = JSON.parse(fs.readFileSync(exPath, 'utf8'));
+      const list = Array.isArray(arr) ? arr : (arr.items || []);
+      // 按 reason 分组，方便前端一次拿全
+      const byReason = {};
+      for (const it of list) {
+        const r = it.reason || 'unknown';
+        (byReason[r] = byReason[r] || []).push(it);
+      }
+      return json(res, { ok: true, total: list.length, byReason, items: list, path: exPath });
+    } catch (ex) {
+      return json(res, { ok: false, error: String(ex.message || ex) }, 500);
+    }
   }
 
   /* ---------- 时间轴 ---------- */

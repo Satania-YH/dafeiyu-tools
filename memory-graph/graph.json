@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-23T23:55:13",
+  "generatedAt": "2026-11-24T00:14:13",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,19 +11,19 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 2772,
+   "events_total": 2775,
    "event_types": {
-    "meta": 1658,
+    "meta": 1660,
     "seed": 1,
-    "utterance": 842,
+    "utterance": 843,
     "heard": 255,
     "voice": 14,
     "ask": 1,
     "answer": 1
    },
-   "nodes_total": 326,
+   "nodes_total": 329,
    "judgment": 68,
-   "said": 108,
+   "said": 111,
    "rule": 3,
    "insight": 64,
    "memory": 13,
@@ -31,19 +31,171 @@
    "note": 53,
    "appointment": 1,
    "work": 2,
-   "duplicate_heard_merged": 23,
-   "edges": 2424,
-   "excluded": 121,
+   "duplicate_heard_merged": 25,
+   "edges": 2452,
+   "excluded": 116,
    "isolated_nodes": 13,
    "max_degree": 54,
    "embed_dim": 1024
   },
   "excluded_reasons": {
-   "injection": 74,
    "schedule": 38,
-   "self-said": 4,
-   "suspect": 5
-  }
+   "self-said": 2,
+   "injection": 74,
+   "self-said-likely-question": 2
+  },
+  "merged": [
+   {
+    "merged": "heard:ev_01M7WSTA3KSNMT4KHQDKAZDF3B",
+    "into": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+    "reason": "dup-heard",
+    "text": "你如果要刷b站要提前告诉我 我同意了你才能刷  工作日晚上10点到早上八点  假期晚上十一点到早上十点是我和@1941992415  的休息时间 这段时间除非我找你 你不要打扰我们"
+   },
+   {
+    "merged": "heard:ev_01M7WW560YPEMVM4ZCBCZTGR74",
+    "into": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+    "reason": "dup-heard",
+    "text": "你如果要刷b站要提前告诉我 我同意了你才能刷  工作日晚上10点到早上八点  假期晚上十一点到早上十点是我和@1941992415  的休息时间 这段时间除非我找你 你不要打扰我们"
+   },
+   {
+    "merged": "heard:ev_01M7Y1MH2734D38EJBXY26QRV9",
+    "into": "heard:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
+    "reason": "dup-rule",
+    "text": "优先用手里真实的素材（最近做过的事、记忆里的、聊天流水里能查到的），没有真实素材就别硬找，也不要编"
+   },
+   {
+    "merged": "heard:ev_01M7Z85043NXXM52TRFVP6QW3A",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M7Z8V5B1PC47NCM6AZT95V64",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80FV8TWWHMVPF4W7T01Q2ME",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80GC0W9ZEDAPNQ7N5WZKP19",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80PCY5S0DWKHJ73T0ESW50K",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80Q3NXVTSK0FJCCAKKVR3JT",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80QJ7XW7BM704W7BE5GE29K",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80RRX4QEAX6632BCF0FE7JV",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80SJPKNGKKJYH645D6FB0GE",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80WTNVS6EK46PNGRT336G6Z",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80XNR7FXQCGR4DEVVXRTZWZ",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M80ZN2BHJJQE6WKRKK1N0GER",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M818G3VEKMP0059A49KF77YN",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M81E8CR5V4HXDKBBE7EHSKHG",
+    "into": "heard:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
+    "reason": "dup-rule",
+    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data"
+   },
+   {
+    "merged": "heard:ev_01M81G75XGPYNH96HEXTDQPBZ4",
+    "into": "heard:ev_01M81F2S7Y0GSP38TFBF9JNEAY",
+    "reason": "dup-rule",
+    "text": "QQ 接线（2026-11-20 起）：Aurabot 的 sessions.json 把群 group:798645175 和主人私聊 private:781689870 都指到本会话（session-e22c6b81，dsh-aurab"
+   },
+   {
+    "merged": "heard:ev_01M81R2HX62G83EY6TYA8ETA5V",
+    "into": "heard:ev_01M81F2S7Y0GSP38TFBF9JNEAY",
+    "reason": "dup-rule",
+    "text": "QQ 接线（2026-11-20 起）：Aurabot 的 sessions.json 把群 group:798645175 和主人私聊 private:781689870 都指到本会话（session-e22c6b81，dsh-aurab"
+   },
+   {
+    "merged": "heard:ev_01M81RHP4M65Y1665885SRPWKG",
+    "into": "heard:ev_01M81F2S7Y0GSP38TFBF9JNEAY",
+    "reason": "dup-rule",
+    "text": "QQ 接线（2026-11-20 起）：Aurabot 的 sessions.json 把群 group:798645175 和主人私聊 private:781689870 都指到本会话（session-e22c6b81，dsh-aurab"
+   },
+   {
+    "merged": "heard:ev_01M81S3RDVBS7K93E1FJ9JBQJB",
+    "into": "heard:ev_01M81F2S7Y0GSP38TFBF9JNEAY",
+    "reason": "dup-rule",
+    "text": "QQ 接线（2026-11-20 起）：Aurabot 的 sessions.json 把群 group:798645175 和主人私聊 private:781689870 都指到本会话（session-e22c6b81，dsh-aurab"
+   },
+   {
+    "merged": "heard:ev_01M81SWNNZKAC2AJFMGCQWVZ64",
+    "into": "heard:ev_01M81F2S7Y0GSP38TFBF9JNEAY",
+    "reason": "dup-rule",
+    "text": "QQ 接线（2026-11-20 起）：Aurabot 的 sessions.json 把群 group:798645175 和主人私聊 private:781689870 都指到本会话（session-e22c6b81，dsh-aurab"
+   },
+   {
+    "merged": "heard:ev_01M83A1FD30P8HXHZJHA8C09CE",
+    "into": "heard:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
+    "reason": "dup-rule",
+    "text": "优先用手里真实的素材（最近做过的事、记忆里的、聊天流水里能查到的），没有真实素材就别硬找，也不要编"
+   },
+   {
+    "merged": "heard:ev_01M83G1TW8Q960DRJ8J0EE2VZ6",
+    "into": "heard:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
+    "reason": "dup-rule",
+    "text": "优先用手里真实的素材（最近做过的事、记忆里的、聊天流水里能查到的），没有真实素材就别硬找，也不要编"
+   },
+   {
+    "merged": "heard:ev_01M83P9APB7MC7BFC76VKVMN1E",
+    "into": "heard:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
+    "reason": "dup-rule",
+    "text": "优先用手里真实的素材（最近做过的事、记忆里的、聊天流水里能查到的），没有真实素材就别硬找，也不要编"
+   }
+  ]
  },
  "nodes": [
   {
@@ -54,7 +206,7 @@
    "ts": "2026-11-20T14:18:23.196Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 17
+   "degree": 18
   },
   {
    "id": "utt:ev_01M7WPKWVB27HKD2SGBG213KNT",
@@ -94,7 +246,7 @@
    "ts": "2026-11-20T15:32:43.706Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 19
   },
   {
    "id": "utt:ev_01M7WSDB26KBR0Y0M24KQD617K",
@@ -104,7 +256,7 @@
    "ts": "2026-11-20T15:32:43.718Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 5
+   "degree": 6
   },
   {
    "id": "utt:ev_01M7XRNPZH44K46BY9ARN3T6P0",
@@ -214,7 +366,7 @@
    "ts": "2026-11-21T02:41:32.451Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 19
+   "degree": 20
   },
   {
    "id": "utt:ev_01M7Y1KE856ME8BY7C8A59SAV9",
@@ -224,7 +376,7 @@
    "ts": "2026-11-21T03:15:06.629Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 22
+   "degree": 23
   },
   {
    "id": "utt:ev_01M7Y247QC6EZFRQJWMVXD474Y",
@@ -264,7 +416,7 @@
    "ts": "2026-11-21T03:40:28.069Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 17
   },
   {
    "id": "utt:ev_01M7Y4RAAMVAFBP8T5Q0C6Q790",
@@ -364,7 +516,7 @@
    "ts": "2026-11-21T06:11:48.637Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 15
+   "degree": 16
   },
   {
    "id": "utt:ev_01M7YCD68JZHGZHEQCS0Y1YYD2",
@@ -524,7 +676,7 @@
    "ts": "2026-11-22T05:31:27.557Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 27
+   "degree": 28
   },
   {
    "id": "utt:ev_01M80WENA1CCRPSFN9AQS8YDWE",
@@ -574,7 +726,7 @@
    "ts": "2026-11-22T11:08:18.404Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 21
+   "degree": 22
   },
   {
    "id": "utt:ev_01M81G7YPNDRY4K1HT7QFN8299",
@@ -694,7 +846,7 @@
    "ts": "2026-11-23T07:21:01.067Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 19
+   "degree": 20
   },
   {
    "id": "utt:ev_01M83TPG101YC43GEC1RMYD3PS",
@@ -817,6 +969,15 @@
    "degree": 14
   },
   {
+   "id": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "kind": "said",
+   "text": "你如果要刷b站要提前告诉我 我同意了你才能刷  工作日晚上10点到早上八点  假期晚上十一点到早上十点是我和@1941992415  的休息时间 这段时间除非我找你 你不要打扰我们",
+   "ts": "2026-11-20T15:34:31.693Z",
+   "day": 1,
+   "vec_dim": 1024,
+   "degree": 9
+  },
+  {
    "id": "heard:ev_01M7WWMYYNH74D2A0Q884675RV",
    "kind": "said",
    "text": "MNEMON VIEW TOOLS (available in this View): mnemon_document_search, mnemon_memory_bodies / mnemon_status, mnemon_runtime_memory, mnemon_document_manage, mnemon…",
@@ -860,6 +1021,15 @@
    "day": 1,
    "vec_dim": 1024,
    "degree": 20
+  },
+  {
+   "id": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "kind": "said",
+   "text": "鱼鱼(781689870)@了你：你说的这个插件自带的 后面让你直播点歌翻唱能用吗 （引用 你 的消息：「另外你说的「现成插件」——你这插件其实自带翻唱模块：点歌、下载、分离人声、换成我的声音、混音、发语音条，一条龙，不用去 github 另找",
+   "ts": "2026-11-21T03:45:13.046Z",
+   "day": 1,
+   "vec_dim": 1024,
+   "degree": 12
   },
   {
    "id": "heard:ev_01M7Z2KJY5W41GS6NR9S3B3WRG",
@@ -1015,6 +1185,15 @@
    "degree": 31
   },
   {
+   "id": "heard:ev_01M80K0R7VKXJ4TAK85XS49Y78",
+   "kind": "said",
+   "text": "鱼鱼(781689870)@了你：这个表情没有图 我确认一下 是图库的问题还是那自己写的表情 自己写的表情也没事 说明你会自己表达情感 （引用 你 的消息：「[表情: 眯眼笑，开心得转圈]」）",
+   "ts": "2026-11-22T02:57:57.499Z",
+   "day": 2,
+   "vec_dim": 1024,
+   "degree": 7
+  },
+  {
    "id": "heard:ev_01M80KT3324MGKHHYEX95T005B",
    "kind": "said",
    "text": "对了 澄 我发现C盘这几天越来越满了 你帮我查一下",
@@ -1057,7 +1236,7 @@
    "ts": "2026-11-22T04:42:04.501Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 27
+   "degree": 28
   },
   {
    "id": "heard:ev_01M80TP8E6FQ8HG3WD66A1Z8Y4",
@@ -1066,7 +1245,7 @@
    "ts": "2026-11-22T05:12:02.246Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 14
   },
   {
    "id": "heard:ev_01M80TZ3QKRJV4HHQZPA2QD6HD",
@@ -1075,7 +1254,7 @@
    "ts": "2026-11-22T05:16:52.339Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 29
+   "degree": 30
   },
   {
    "id": "heard:ev_01M80VGXHHPJ7B6ZZSMMPP0F7Y",
@@ -1084,7 +1263,7 @@
    "ts": "2026-11-22T05:26:35.825Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 17
+   "degree": 18
   },
   {
    "id": "heard:ev_01M80VPYSHQ4RMJR4VS8S6AFBB",
@@ -1138,7 +1317,7 @@
    "ts": "2026-11-22T05:58:50.707Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 14
   },
   {
    "id": "heard:ev_01M80Z16FHKP0RY6GF6E8HZGH6",
@@ -1597,7 +1776,7 @@
    "ts": "2026-11-23T08:52:11.738Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 35
+   "degree": 36
   },
   {
    "id": "heard:ev_01M83T43WCSBMJWKWTCXKAWC37",
@@ -1687,7 +1866,7 @@
    "ts": "2026-11-23T13:26:44.861Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 19
+   "degree": 20
   },
   {
    "id": "heard:ev_01M84H44C3X4470RPFW6PSBMDE",
@@ -1753,7 +1932,7 @@
    "importance": 3,
    "eff_importance": 0.6999997968145981,
    "vec_dim": 1024,
-   "degree": 27
+   "degree": 28
   },
   {
    "id": "ins:ed2f4579-d332-4e14-95dd-44535b28c2e1",
@@ -1783,7 +1962,7 @@
    "importance": 3,
    "eff_importance": 0.6999986736606715,
    "vec_dim": 1024,
-   "degree": 24
+   "degree": 25
   },
   {
    "id": "ins:75d73da4-81d7-4d91-ad96-1e6d97afc010",
@@ -1813,7 +1992,7 @@
    "importance": 3,
    "eff_importance": 0.6999997970067138,
    "vec_dim": 1024,
-   "degree": 15
+   "degree": 16
   },
   {
    "id": "ins:2f0c9729-3483-41b5-98de-a5ae4718f674",
@@ -1843,7 +2022,7 @@
    "importance": 3,
    "eff_importance": 0.7499997825071933,
    "vec_dim": 1024,
-   "degree": 26
+   "degree": 27
   },
   {
    "id": "ins:a8a68a72-d467-493b-a65b-05eda7c53244",
@@ -1973,7 +2152,7 @@
    "importance": 4,
    "eff_importance": 1.1999996970595497,
    "vec_dim": 1024,
-   "degree": 20
+   "degree": 21
   },
   {
    "id": "ins:790729e8-e2d0-44ae-bbff-67ba0bb1a61d",
@@ -2123,7 +2302,7 @@
    "importance": 5,
    "eff_importance": 1.4999995648082476,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 17
   },
   {
    "id": "ins:3ecee30f-ec86-4181-bac1-01423d2358f5",
@@ -2233,7 +2412,7 @@
    "importance": 5,
    "eff_importance": 1.4999995648082476,
    "vec_dim": 1024,
-   "degree": 31
+   "degree": 32
   },
   {
    "id": "ins:6a65da12-d48e-41c5-85c8-9839b4e0a827",
@@ -2423,7 +2602,7 @@
    "importance": "normal",
    "created_at": "2026-11-22T05:26:29.770Z",
    "vec_dim": 1024,
-   "degree": 28
+   "degree": 29
   },
   {
    "id": "mem:20261122T054843890Z",
@@ -2646,6 +2825,8 @@
    "doneNote": "他在群里叫「澄」我应上了；唤醒词里已加大肥鱼/肥鱼/澄。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 30
   },
@@ -2660,6 +2841,8 @@
    "doneNote": null,
    "progress": 1,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 8
   },
@@ -2674,6 +2857,8 @@
    "doneNote": "服务早就在跑（9411），tts.mjs 调它、失败退回 CLI；今天又加了去电子感后处理。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 14
   },
@@ -2688,6 +2873,8 @@
    "doneNote": "重启后测通：mnemon_recall 中文问「画图太慢了 怎么能快点」top1 命中四步 LoRA 那条，向量已启用。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 17
   },
@@ -2702,6 +2889,8 @@
    "doneNote": "重启后系统提示里多出「MNEMON OPTIONAL AUTO CAPTURE」一条（UTC 09:10 起），确认生效",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 6
   },
@@ -2716,6 +2905,8 @@
    "doneNote": "群发文件守卫改成主人或本群管理员都算，已备份、node --check 过，爸爸重启 DSH 后生效。",
    "progress": 5,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 6
   },
@@ -2730,6 +2921,8 @@
    "doneNote": "定稿V4(温柔版)并设为默认，server+tts.mjs同步、重启验证7.31s正常。",
    "progress": 3,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 4
   },
@@ -2744,6 +2937,8 @@
    "doneNote": null,
    "progress": 3,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 9
   },
@@ -2758,6 +2953,8 @@
    "doneNote": "第2组已收到（02-精细版蓝女仆-三视图.jpg），两套形象都存 D:\\大肥鱼\\形象\\ 了。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 3
   },
@@ -2772,6 +2969,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 4
   },
@@ -2786,6 +2985,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 3
   },
@@ -2800,6 +3001,8 @@
    "doneNote": null,
    "progress": 3,
    "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 29
   },
@@ -2814,6 +3017,8 @@
    "doneNote": null,
    "progress": 1,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 25
   },
@@ -2828,6 +3033,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 4
   },
@@ -2842,6 +3049,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 18
   },
@@ -2856,8 +3065,10 @@
    "doneNote": "插件已装好、人设写进去、抖音号登录完成（澄 / 50642309373），今天已自己刷过一轮。",
    "progress": 1,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 19
   },
   {
    "id": "note:note-1795324599772-71gl1l",
@@ -2870,6 +3081,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 8
   },
@@ -2884,6 +3097,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 6
   },
@@ -2898,6 +3113,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 1
   },
@@ -2912,6 +3129,8 @@
    "doneNote": "爸爸 14:44 重启后核对过：codex.exe 只剩 magpie 那两只孤儿，host.log 无 Codex App Server，远程 DSH 正常。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 12
   },
@@ -2926,6 +3145,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 11
   },
@@ -2940,6 +3161,8 @@
    "doneNote": null,
    "progress": 1,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 26
   },
@@ -2954,6 +3177,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 19
   },
@@ -2968,6 +3193,8 @@
    "doneNote": "爸爸 23:04 建好 dafeiyu-tools；已 git remote add origin + push -u，远端 main = 3b92f59，和本地一致。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 20
   },
@@ -2982,6 +3209,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 8
   },
@@ -2996,6 +3225,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 4
   },
@@ -3010,6 +3241,8 @@
    "doneNote": "重启后验证通过：00:58:03 三条 started，两个端口和两个 mutex 都回来，窗口监控全程 0 条新可见窗口。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 23
   },
@@ -3024,6 +3257,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 5
   },
@@ -3038,6 +3273,8 @@
    "doneNote": null,
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 11
   },
@@ -3052,6 +3289,8 @@
    "doneNote": "08:40 全做完了：菜田 54 格草莓、花田 11 格郁金香都买种子种满（花 6755 金币）；池塘买到 8/8 条锦鲤，鱼苗还剩 1 条在鱼篓里。巨型草莓没卖——今日 6431、明日 7047，留着明天卖。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 7
   },
@@ -3066,6 +3305,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 9
   },
@@ -3080,6 +3321,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 22
   },
@@ -3094,6 +3337,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 1
   },
@@ -3108,6 +3353,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 2
   },
@@ -3122,6 +3369,8 @@
    "doneNote": "schemaVersion=5，无人声不再报错，返 noSpeech=true + sheets/frames 路径；7694277028904806730 验证 sheet-001.jpg 能看画面。家+vendor 同步。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 8
   },
@@ -3136,6 +3385,8 @@
    "doneNote": null,
    "progress": 2,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 11
   },
@@ -3150,6 +3401,8 @@
    "doneNote": "验证过了，短信码 110124 填进去点验证就过，弹层消失。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 11
   },
@@ -3164,6 +3417,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 16
   },
@@ -3178,6 +3433,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 20
   },
@@ -3192,6 +3449,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 5
   },
@@ -3206,6 +3465,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 6
   },
@@ -3220,8 +3481,10 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 21
+   "degree": 22
   },
   {
    "id": "note:note-1795404025733-uhpsuw",
@@ -3234,6 +3497,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 9
   },
@@ -3248,6 +3513,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 13
   },
@@ -3262,6 +3529,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 2
   },
@@ -3276,6 +3545,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 18
   },
@@ -3290,6 +3561,8 @@
    "doneNote": "已补：买7条koi苗(1400)+放养8条，池塘8/8，240分钟熟。余额116894。",
    "progress": 0,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 6
   },
@@ -3304,6 +3577,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 7
   },
@@ -3318,6 +3593,8 @@
    "doneNote": "已补满：池塘 8/8 条锦鲤（买2条花400，余额104659）。参数坑：batch 里每项用 count 不是 quantity，item 可省但 stock 要写。",
    "progress": 1,
    "open": false,
+   "waitOutside": false,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 8
   },
@@ -3332,6 +3609,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 46
   },
@@ -3346,6 +3625,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
    "degree": 6
   },
@@ -3360,8 +3641,10 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 14
+   "degree": 15
   },
   {
    "id": "note:note-1795448264529-galk5q",
@@ -3374,6 +3657,8 @@
    "doneNote": null,
    "progress": 0,
    "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
    "vec_dim": 1024,
    "degree": 6
   },
@@ -3446,6 +3731,11 @@
    "source": "utt:ev_01M7WN572WCJQZ5EG9TV0BF07Z",
    "target": "utt:ev_01M81F2KK41QC46CT4M0ATA75X",
    "cos": 0.621
+  },
+  {
+   "source": "utt:ev_01M7WN572WCJQZ5EG9TV0BF07Z",
+   "target": "heard:ev_01M80K0R7VKXJ4TAK85XS49Y78",
+   "cos": 0.614
   },
   {
    "source": "utt:ev_01M7WN572WCJQZ5EG9TV0BF07Z",
@@ -3789,6 +4079,11 @@
   },
   {
    "source": "utt:ev_01M7WSDB1TDSHWP955H3R4GWQ3",
+   "target": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "cos": 0.725
+  },
+  {
+   "source": "utt:ev_01M7WSDB1TDSHWP955H3R4GWQ3",
    "target": "heard:ev_01M80RZCTNHF3P3WFZR12BDAGC",
    "cos": 0.609
   },
@@ -3846,6 +4141,11 @@
    "source": "utt:ev_01M7WSDB26KBR0Y0M24KQD617K",
    "target": "utt:ev_01M7Y2J3P9C0ZM5DA5CPM7YPTD",
    "cos": 0.604
+  },
+  {
+   "source": "utt:ev_01M7WSDB26KBR0Y0M24KQD617K",
+   "target": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "cos": 0.647
   },
   {
    "source": "utt:ev_01M7WSDB26KBR0Y0M24KQD617K",
@@ -4524,6 +4824,11 @@
   },
   {
    "source": "utt:ev_01M7XZNZ93JD0WR5DQ7E7Z0PWG",
+   "target": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "cos": 0.613
+  },
+  {
+   "source": "utt:ev_01M7XZNZ93JD0WR5DQ7E7Z0PWG",
    "target": "heard:ev_01M810FDPRWSAV2ZCM62210FMX",
    "cos": 0.651
   },
@@ -4606,6 +4911,11 @@
    "source": "utt:ev_01M7Y1KE856ME8BY7C8A59SAV9",
    "target": "utt:ev_01M7Y4RAAMVAFBP8T5Q0C6Q790",
    "cos": 0.699
+  },
+  {
+   "source": "utt:ev_01M7Y1KE856ME8BY7C8A59SAV9",
+   "target": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "cos": 0.624
   },
   {
    "source": "utt:ev_01M7Y1KE856ME8BY7C8A59SAV9",
@@ -4861,6 +5171,11 @@
    "source": "utt:ev_01M7Y31W15774QYARCQ6NNAPRK",
    "target": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
    "cos": 0.603
+  },
+  {
+   "source": "utt:ev_01M7Y31W15774QYARCQ6NNAPRK",
+   "target": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "cos": 0.738
   },
   {
    "source": "utt:ev_01M7Y31W15774QYARCQ6NNAPRK",
@@ -5281,6 +5596,11 @@
    "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
    "target": "heard:ev_01M7WP7H56X4GYWQG7BE7Z8Z7Z",
    "cos": 0.627
+  },
+  {
+   "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
+   "target": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "cos": 0.62
   },
   {
    "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
@@ -6199,6 +6519,11 @@
   },
   {
    "source": "utt:ev_01M80VSTE5DTHG4S2M6GVGKJSR",
+   "target": "heard:ev_01M80K0R7VKXJ4TAK85XS49Y78",
+   "cos": 0.625
+  },
+  {
+   "source": "utt:ev_01M80VSTE5DTHG4S2M6GVGKJSR",
    "target": "heard:ev_01M80VGXHHPJ7B6ZZSMMPP0F7Y",
    "cos": 0.607
   },
@@ -6456,6 +6781,11 @@
    "source": "utt:ev_01M81F2KK41QC46CT4M0ATA75X",
    "target": "heard:ev_01M7Z4NRXVADR02ZKWGKXD529R",
    "cos": 0.631
+  },
+  {
+   "source": "utt:ev_01M81F2KK41QC46CT4M0ATA75X",
+   "target": "heard:ev_01M80K0R7VKXJ4TAK85XS49Y78",
+   "cos": 0.608
   },
   {
    "source": "utt:ev_01M81F2KK41QC46CT4M0ATA75X",
@@ -6971,6 +7301,11 @@
    "source": "utt:ev_01M83B7W2J9RX6GTR7K9YTTX0D",
    "target": "note:note-1795408785648-f9vqq9",
    "cos": 0.752
+  },
+  {
+   "source": "utt:ev_01M83MF4WBC2Y7ZFRQ3AA0V6CT",
+   "target": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "cos": 0.698
   },
   {
    "source": "utt:ev_01M83MF4WBC2Y7ZFRQ3AA0V6CT",
@@ -7973,6 +8308,36 @@
    "cos": 0.71
   },
   {
+   "source": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "target": "heard:ev_01M80XBZ2K37F9Y4SEZKCAKFJR",
+   "cos": 0.684
+  },
+  {
+   "source": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "target": "heard:ev_01M83SP3AT511KMH8PG3Z0PWZJ",
+   "cos": 0.624
+  },
+  {
+   "source": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "target": "ins:8ec3f3e4-2627-4dad-81b0-d1a556893f95",
+   "cos": 0.658
+  },
+  {
+   "source": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "target": "ins:44178a88-8714-4687-a1cd-398a7c32bf0e",
+   "cos": 0.601
+  },
+  {
+   "source": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "target": "ins:b03217f3-f98f-4ec5-97df-fb8f3d47153b",
+   "cos": 0.72
+  },
+  {
+   "source": "heard:ev_01M7WSGMGDMYR4FFCA0XMQ9HGF",
+   "target": "note:note-1795403717590-w6njmm",
+   "cos": 0.601
+  },
+  {
    "source": "heard:ev_01M7WWMYYNH74D2A0Q884675RV",
    "target": "ins:d56c0c44-f07a-45a5-8347-ec91d1312ca1",
    "cos": 0.631
@@ -8351,6 +8716,46 @@
    "source": "heard:ev_01M7XZ2YD7P4H6MF7K3CPS2ZD7",
    "target": "note:note-1795437282680-ke29sy",
    "cos": 0.627
+  },
+  {
+   "source": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "target": "heard:ev_01M80RZCTNHF3P3WFZR12BDAGC",
+   "cos": 0.641
+  },
+  {
+   "source": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "target": "heard:ev_01M80TP8E6FQ8HG3WD66A1Z8Y4",
+   "cos": 0.618
+  },
+  {
+   "source": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "target": "heard:ev_01M80TZ3QKRJV4HHQZPA2QD6HD",
+   "cos": 0.614
+  },
+  {
+   "source": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "target": "ins:633b8ff7-bc2c-4676-8f13-8eab30fc7c92",
+   "cos": 0.603
+  },
+  {
+   "source": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "target": "ins:b4d642d1-55a7-4db3-a657-2df74881ca22",
+   "cos": 0.603
+  },
+  {
+   "source": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "target": "ins:8cff0dcc-17ab-4bd9-9c96-f4f71bcc9531",
+   "cos": 0.612
+  },
+  {
+   "source": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "target": "note:note-1795323615106-nvc2yl",
+   "cos": 0.602
+  },
+  {
+   "source": "heard:ev_01M7Y3AJAP0VRDA7X151TYQ004",
+   "target": "note:note-1795442139635-qkttk7",
+   "cos": 0.603
   },
   {
    "source": "heard:ev_01M7Z2KJY5W41GS6NR9S3B3WRG",
@@ -9525,6 +9930,26 @@
   {
    "source": "heard:ev_01M80J5XXDDETNJXCGTCERVKYD",
    "target": "note:note-1795188209680-rpkewt",
+   "cos": 0.65
+  },
+  {
+   "source": "heard:ev_01M80K0R7VKXJ4TAK85XS49Y78",
+   "target": "heard:ev_01M80VGXHHPJ7B6ZZSMMPP0F7Y",
+   "cos": 0.693
+  },
+  {
+   "source": "heard:ev_01M80K0R7VKXJ4TAK85XS49Y78",
+   "target": "heard:ev_01M849CTBX1PBC4P6S8AQDB0P0",
+   "cos": 0.758
+  },
+  {
+   "source": "heard:ev_01M80K0R7VKXJ4TAK85XS49Y78",
+   "target": "ins:8cce1712-cf3c-4a91-a724-28a12571eab7",
+   "cos": 0.613
+  },
+  {
+   "source": "heard:ev_01M80K0R7VKXJ4TAK85XS49Y78",
+   "target": "mem:20261122T052629770Z",
    "cos": 0.65
   },
   {
