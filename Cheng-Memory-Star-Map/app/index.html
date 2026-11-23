@@ -1815,15 +1815,28 @@ function applyShape(){
       const cyy = uy * rr * 0.72;
       const czz = Math.sin(ang) * ring * rr;
 
-      const rad = 0.052 + 0.100*Math.sqrt(grp.idx.length/sz);
+      /* 团半径：只跟"颗数"有关，但收紧。
+         原来是 0.052 + 0.100*sqrt(n/sz)，再配高斯散布（尾巴拖很长），
+         结果子星飘得离分类星很远。现在改成"球内均匀 + 硬边界"，
+         子星一定落在团心周围 rad 以内。 */
+      const n0 = grp.idx.length;
+      // 颗数越多半径略大，但封顶 0.20，保证不会飘出去
+      const rad = Math.min(0.20, 0.055 + 0.030 * Math.cbrt(n0));
+
       for (const i of grp.idx){
         const n = nodes[i];
-        const u1 = Math.max(1e-6, g()), u2 = g();
-        const mag = Math.sqrt(-2*Math.log(u1)) * rad * 0.62;
-        const th = u2*Math.PI*2, ph = Math.acos(2*g()-1);
-        n.tx = (cxx + mag*Math.sin(ph)*Math.cos(th)) * OPTS.spread;
-        n.ty = (cyy + mag*Math.cos(ph)) * OPTS.spread;
-        n.tz = (czz + mag*Math.sin(ph)*Math.sin(th)) * OPTS.spread;
+        /* 球内均匀取点：方向用球面均匀，半径用 cbrt(U) 保证体内均匀
+           （直接用 U 会让星星都贴着中心堆） */
+        const u = g() * 2 - 1;
+        const phi = g() * Math.PI * 2;
+        const s = Math.sqrt(Math.max(0, 1 - u * u));
+        const rr2 = rad * Math.cbrt(g());      // 0..rad，体积均匀
+        n.tx = (cxx + Math.cos(phi) * s * rr2) * OPTS.spread;
+        n.ty = (cyy + u * rr2) * OPTS.spread;
+        n.tz = (czz + Math.sin(phi) * s * rr2) * OPTS.spread;
+        /* 团里星太多就缩小每颗星，挤得下也看得清（放大后还是分得开）。
+           40 颗以内不缩，之后按 1/sqrt 递减，最小到 40%。 */
+        n.shrink = n0 <= 40 ? 1 : Math.max(0.40, Math.sqrt(40 / n0));
         nodeGroup[i] = gi;
       }
       clusterInfo.push({ x:cxx, y:cyy, z:czz, rad, gi, label:grp.label, count:grp.idx.length, color:grp.color });
@@ -2721,10 +2734,10 @@ function draw(){
     if (n.bh) size *= 0.34;
     if (n.ball) size *= 1.65;
     if (n.disk) size *= 0.78;
-    /* 团太挤时星星会按 shrink 缩小（由局部重排算出）。
+    /* 团里星太多时按 shrink 缩小（在 applyShape 里按颗数算好），
        缩得再多也留 2px，放大之后还是看得见是个点。 */
     if (n.shrink != null && n.shrink < 1) size *= n.shrink;
-    size = Math.max(2.0, Math.min(72, size));
+    size = Math.max(2.2, Math.min(72, size));
     if (!Number.isFinite(size)) continue;
     size *= 0.42 + 0.58*v;                 // 长出过程：先小后大
     if (!Number.isFinite(size) || size < 0.4) continue;
@@ -2837,8 +2850,18 @@ function draw(){
       ctx.beginPath();
       ctx.moveTo(px+3, py-3); ctx.lineTo(lx-5, ly); ctx.lineTo(lx+108, ly);
       ctx.stroke();
-      ctx.fillStyle = rgbStr(c.color, 0.9);
-      ctx.fillRect(px-2.5, py-2.5, 5, 5);
+      /* 团心标记：原来只是 5×5 的小方块，在一片散开的星星里几乎看不出
+         "星星归这里"。改成小方块 + 柔光晕，让标签和星团明确连在一起。 */
+      const coreR = 16 + Math.min(14, c.count * 0.12);
+      const halo = ctx.createRadialGradient(px, py, 0, px, py, coreR);
+      halo.addColorStop(0,   rgbStr(c.color, 0.30));
+      halo.addColorStop(0.45, rgbStr(c.color, 0.10));
+      halo.addColorStop(1,   'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(px, py, coreR, 0, 7); ctx.fill();
+
+      ctx.fillStyle = rgbStr(c.color, 0.95);
+      ctx.fillRect(px-3, py-3, 6, 6);
       ctx.font = '600 13px "Microsoft YaHei",sans-serif';
       ctx.shadowColor = rgbStr(c.color, 0.85); ctx.shadowBlur = 10;
       ctx.fillStyle = rgbStr(c.color, 0.97);
@@ -3573,9 +3596,6 @@ function loop(t){
       n.py += (n.ty - n.py)*k;
       n.pz += (n.tz - n.pz)*k;
     }
-
-    // 团内局部重排：把排队中的分类团松弛一步（只动本团，别的团不碰）
-    try { stepClusterRelayout(); } catch (e) { /* 重排出错不影响画面 */ }
 
     // 时间滑条：显现进度平滑推进（滑过去是长出来，不是瞬间开关）
     tbEase(1 - Math.pow(0.86, dt/16.7));
@@ -4954,70 +4974,6 @@ function initLive() {
 
   live.connect();
 
-  /* ══════ 临时压力测试：大分类 + 小星同时长出来 ══════
-     规则：每 2 秒新增一个大分类，每个大分类每 1 秒长一颗小星。
-     只是给用户看位置挤不挤、会不会打架，确认后整段删掉。
-     开关：window.__DEMO_GROW = false 关闭 */
-
-  if (window.__DEMO_GROW !== false) {
-    // 造出来的分类，每个自己有个计数器
-    const catNames = ['抖音','B站','知乎','微博','小红书','播客','游戏','小说','日记本','相册',
-                      '代码库','歌单','电影','漫画','读书','咖啡','跑步','旅行','散步','猫',
-                      '雨天','夏天','深夜','清晨','工作台','键盘','显示器','耳机','相机','手账',
-                      '菜谱','花','树','星空','海','山','风','雪','旧事','新想法'];
-    let catIdx = 0;
-    let DEMO_ROUND = 0;
-    const grown = [];        // [{ label, kind, count }]
-
-    // ① 每 2 秒：新增大分类
-    setInterval(() => {
-      if (currentView !== 'starmap' || !nodes.length) return;
-      if (catIdx >= catNames.length) return;
-      const label = catNames[catIdx];
-      const kind = 'demo_cat_' + catIdx;
-      catIdx++;
-
-      // 先把中文名登记好，再建星 —— 否则标签会先读到 demo_cat_N
-      KIND_CN[kind] = label;
-
-      // 第一颗星 = 这个分类的种子
-      const seedAnchor = nodes.find(n => n.k === 'said') || nodes[0];
-      const id = 'GROW-' + kind + '-0';
-      addStarToScene({
-        id, kind,
-        text: '【' + label + '】第 1 条',
-        ts: new Date().toISOString(),
-        date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
-        importance: 4, topic: label,
-      }, [{ source: id, target: seedAnchor.id, cos: 0.5 }]);
-
-      grown.push({ label, kind, count: 1 });
-    }, 1000);
-
-    // ② 每 1 秒：每个已有分类长一颗小星
-    setInterval(() => {
-      if (currentView !== 'starmap' || !nodes.length) return;
-      if (!grown.length) return;
-      /* 每 0.5 秒这一轮：给最近出现的 3 个分类各加一颗。
-         只加最近的，是因为老分类已经长大了不必一直喂，
-         这样新分类长起来的速度跟得上，又能持续施压。 */
-      const tail = grown.slice(-3);
-      for (const g of tail) {
-        g.count++;
-        const id = 'GROW-' + g.kind + '-' + g.count;
-        // 锚定到本分类里已有的星（取最后一颗）
-        const same = nodes.filter(n => n.k === g.kind);
-        const anchor = same[same.length - 1] || nodes[0];
-        addStarToScene({
-          id, kind: g.kind,
-          text: '【' + g.label + '】第 ' + g.count + ' 条',
-          ts: new Date().toISOString(),
-          date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
-          importance: 3.5, topic: g.label,
-        }, [{ source: id, target: anchor.id, cos: 0.8 }]);
-      }
-    }, 500);
-  }
 }
 
 /** 更新「上次更新 X 分钟前」 */
@@ -5046,6 +5002,7 @@ function addStarToScene(node, edges) {
      改成：先找这颗星所属分类的团心，然后在团心周围的球壳里取点，
      并且主动避开已经占了位置的其他星。 */
   let px = 0, py = 0, pz = 0;
+  let shrinkForNew = 1;
 
   // 1) 先看这个 kind 有没有对应的分类团心
   const kindOfNew = node.kind || 'fact';
@@ -5057,16 +5014,9 @@ function addStarToScene(node, edges) {
     const sameIdx = [];
     for (let i = 0; i < nodes.length; i++) if (nodes[i].k === kindOfNew) sameIdx.push(i);
     const cnt = sameIdx.length;
-    // 理想半径（按颗数开方）
-    const wantR = 0.055 * Math.sqrt(Math.max(1, cnt)) + 0.02;
-    // 但不能越过地盘：取到最近邻分类的 0.72
-    let nearestOther = 9;
-    for (const c of clusterInfo) {
-      if (c === catInfo) continue;
-      const d = Math.hypot(c.x - catInfo.x, c.y - catInfo.y, c.z - catInfo.z);
-      if (d < nearestOther) nearestOther = d;
-    }
-    const spreadR = Math.min(wantR, Math.max(0.05, Math.min(nearestOther * 0.72, 0.40)));
+    /* 用和 applyShape 完全同一套半径公式，
+       保证新加进来的星落在同样的范围里（不飘出去）。 */
+    const spreadR = Math.min(0.20, 0.055 + 0.030 * Math.cbrt(cnt));
 
     let best = null, bestD = -1;
     // 尝试 12 个候选点，挑最空的
@@ -5091,6 +5041,8 @@ function addStarToScene(node, edges) {
       if (bestD > spreadR * 0.5) break;
     }
     if (best) { px = best[0]; py = best[1]; pz = best[2]; }
+    // 和 applyShape 一致的缩小系数（团里星多就缩）
+    shrinkForNew = cnt <= 40 ? 1 : Math.max(0.40, Math.sqrt(40 / cnt));
   } else {
     // 没有分类团心（非分区形态 / 全新分类）：退回锚在最强邻居旁边
     const bestE = (edges || []).slice().sort((a, b) => b.cos - a.cos)[0];
@@ -5138,6 +5090,7 @@ function addStarToScene(node, edges) {
     tags: node.topic ? [node.topic] : [],
     degree: (edges || []).length,
     px, py, pz, tx: px, ty: py, tz: pz,
+    shrink: shrinkForNew,       // 团里星多时缩小（和已有星同一套规则）
     freshAt: Date.now(),        // 标记新星，画的时候淡入
   });
   N = nodes.length;
@@ -5169,8 +5122,6 @@ function addStarToScene(node, edges) {
      新星归进已有分类 → 更新那个标签的条数（原来 count 是快照，永远不变）；
      是全新分类 → 现场算一个位置放一颗分类星，不重排已有的。 */
   if (typeof registerNewNodeToCluster === 'function') registerNewNodeToCluster(nodes.length - 1);
-  // 这个团变大了就局部重排一次（只动本团，别的团不碰）
-  if (typeof scheduleClusterRelayout === 'function') scheduleClusterRelayout(nodes.length - 1);
 
   if (typeof updateHud === 'function') updateHud();
   if (typeof toast === 'function') toast(`新记忆：${(node.text || '').slice(0, 20)}…`);
@@ -5280,21 +5231,10 @@ function stepClusterRelayout() {
         }
       }
 
-      /* ③ 写回目标位置（主循环会平滑追过去 → 看到的是动画）。
-         最后再夹一道硬边界：任何情况下都不许超出 targetR*1.15，
-         保证团永远不会长到邻居的地盘里。 */
-      let nx = ux * rNew + px;
-      let ny = uy * rNew + py;
-      let nz = uz * rNew + pz;
-      const nd = Math.hypot(nx, ny, nz);
-      const cap = targetR * 1.15;
-      if (nd > cap && nd > 1e-6) {
-        const s = cap / nd;
-        nx *= s; ny *= s; nz *= s;
-      }
-      A.tx = cx0 + nx;
-      A.ty = cy0 + ny;
-      A.tz = cz0 + nz;
+      // ③ 写回目标位置（主循环会平滑追过去 → 看到的是动画）
+      A.tx = cx0 + ux * rNew + px;
+      A.ty = cy0 + uy * rNew + py;
+      A.tz = cz0 + uz * rNew + pz;
       // 团挤的时候星星跟着缩小（放大看还是分得清）
       A.shrink = starShrink;
     }
@@ -5486,14 +5426,6 @@ async function useSource(id){
   updateHud();
   buildPanel();
 
-  /* 初始布局里的大团也要收进地盘里 —— 否则「他说的」103 颗星会摊到 0.7 半径，
-     直接压到邻居身上（初始布局按高斯散布，没有边界概念）。
-     把所有分类都排进重排队列，启动后几秒内会自己收拢到各自地盘里。 */
-  try {
-    RELAYOUT.queue.clear();
-    RELAYOUT.holdFrames = 90;          // 前 90 帧多跑几轮，让收拢快一点
-    for (const n of nodes) RELAYOUT.queue.add(n.k || 'fact');
-  } catch (e) {}
 
   if (ld){ ld.style.opacity = 0; setTimeout(()=>{ ld.style.display='none'; }, 460); }
 }
