@@ -1985,15 +1985,15 @@ function drawCoreStar(ctx){
   };
 
   /* —— 交替律动 ——
-     beat 在一组刺之间来回：偶数号（0,2,4）此时长，奇数号（1,3,5）此时短，然后对调。
-     flip 每 ~28 秒把"哪一组先长"翻转一次，所以不是永远 0,2,4 长，会换边。 */
-  const N_SPIKE = 6;
-  const beat = 0.5 + 0.5 * Math.sin(T * 0.95);           // 主拍，0..1，~6.6 秒一循环
-  const flipRaw = Math.sin(T * 0.22 + 0.6);
+     4 根刺：两支（0,2）此时长，另两支（1,3）此时短，然后对调。
+     flip 每 ~20 秒把"哪两支先长"翻转一次，所以不是永远 0,2 长，会换边。 */
+  const N_SPIKE = 4;
+  const beat = 0.5 + 0.5 * Math.sin(T * 1.85);           // 主拍，0..1，~3.4 秒一循环
+  const flipRaw = Math.sin(T * 0.31 + 0.6);
   const side = 0.5 + 0.5 * Math.tanh(flipRaw * 2.4);     // ~0 或 ~1 的平滑切换
 
   for (let k = 0; k < N_SPIKE; k++) {
-    const ang = k * (Math.PI * 2 / N_SPIKE) + Math.PI / 6;
+    const ang = k * (Math.PI * 2 / N_SPIKE) + Math.PI / 4;
 
     // 这一根是"偶数派"还是"奇数派"
     const isEven = (k % 2 === 0);
@@ -2002,13 +2002,14 @@ function drawCoreStar(ctx){
     // 本派系的长度相位：占上风时跟随 beat，落下风时取反 → 自然形成此消彼长
     const phase = myWeight > 0.5 ? beat : (1 - beat);
 
-    // 邻近角度加一点点错开，避免 6 根完全同步（不改变交替的主规律）
-    const jitter = 0.06 * Math.sin(T * 1.6 + k * 2.1);
+    // 轻微错开，避免完全同步（不改变交替主规律）
+    const jitter = 0.05 * Math.sin(T * 2.3 + k * 2.1);
     const pulse = Math.max(0, Math.min(1, phase * (0.55 + 0.45 * myWeight) + jitter));
 
-    const len = R * (0.92 + 0.78 * pulse) * scale;
-    const amp = (0.16 + 0.30 * pulse) * (0.60 + 0.40 * bi);
-    drawSpike(ang, len, Math.max(1.4, R * 0.026), amp);
+    // 刺收短：0.34R ~ 0.62R，只探出日面一点点
+    const len = R * (1.02 + 0.34 * pulse) * scale;
+    const amp = (0.15 + 0.26 * pulse) * (0.60 + 0.40 * bi);
+    drawSpike(ang, len, Math.max(1.3, R * 0.023), amp);
   }
 
   ctx.restore();
