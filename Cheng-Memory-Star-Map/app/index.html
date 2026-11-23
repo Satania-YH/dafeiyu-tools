@@ -3658,11 +3658,29 @@ function loop(t){
         c.y += (c.ty - c.y) * k;
         c.z += (c.tz - c.z) * k;
       }
-      // 子星跟着团心走
+      // 子星跟着团心走 + 自动补绑漏掉的星
+      const byGi = new Map();
+      for (const c of clusterInfo) byGi.set(c.gi, c);
+      const byLabelGi = new Map();
+      for (const c of clusterInfo) byLabelGi.set(c.label, c);
+
       for (let i = 0; i < N; i++) {
         const n = nodes[i];
-        if (n.ox === undefined || n.clusterGi == null) continue;
-        const c = clusterInfo.find(x => x.gi === n.clusterGi);
+
+        /* 兜底：ox/clusterGi 缺失的星（历史遗留、或加星顺序导致漏绑）
+           这里按 kind → label → 团心 自动补上，不让它游离。 */
+        if (n.ox === undefined || n.clusterGi == null) {
+          const lbl = KIND_CN[n.k] || n.k;
+          const c = byLabelGi.get(lbl);
+          if (!c) continue;
+          // 用当前相对位置当偏移（保持它现在待的地方，只是从此跟随团心）
+          n.ox = n.px - c.x;
+          n.oy = n.py - c.y;
+          n.oz = n.pz - c.z;
+          n.clusterGi = c.gi;
+        }
+
+        const c = byGi.get(n.clusterGi);
         if (!c) continue;
         n.tx = (c.x + n.ox) * OPTS.spread;
         n.ty = (c.y + n.oy) * OPTS.spread;
@@ -5459,10 +5477,27 @@ function registerNewNodeToCluster(i) {
      用斐波那契：纬度均匀、经度黄金角，任意数量都均匀。 */
   relayoutAllClusters();
 
-  // 新分类的第一颗星放到它自己的团心（用刚算好的目标位置）
-  n.tx = info.tx * OPTS.spread;
-  n.ty = info.ty * OPTS.spread;
-  n.tz = info.tz * OPTS.spread;
+  /* 新分类的第一颗星 = 这个团的"种子"。
+     它是在 registerNewNodeToCluster 之前创建的，那时候还没有团心，
+     所以 ox/clusterGi 都是空的 —— 不补的话它会永远游离在外面
+     （实测就是"个别子星游离在外"的原因）。
+
+     这里把它正式绑到这个新团心：
+       偏移给一个很小的随机值（贴着团心），
+       clusterGi 指向新团，
+       之后主循环会让它跟着团心走。 */
+  const seedR = rad * 0.35;
+  const su = Math.random() * 2 - 1;
+  const sphi = Math.random() * Math.PI * 2;
+  const ss = Math.sqrt(Math.max(0, 1 - su * su));
+  n.ox = Math.cos(sphi) * ss * seedR;
+  n.oy = su * seedR;
+  n.oz = Math.sin(sphi) * ss * seedR;
+  n.clusterGi = gi;
+  n.tx = (info.tx + n.ox) * OPTS.spread;
+  n.ty = (info.ty + n.oy) * OPTS.spread;
+  n.tz = (info.tz + n.oz) * OPTS.spread;
+  n.px = n.tx; n.py = n.ty; n.pz = n.tz;   // 直接落位，不从原点飞过来
 
   if (typeof toast === 'function') toast(`新分类：${label}`);
 }
