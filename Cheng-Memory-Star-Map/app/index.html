@@ -1715,7 +1715,7 @@ function applyShape(){
     const pw    = cs && cs.pow   != null ? cs.pow   : 1.0;
     for (const n of nodes){
       const r = Math.hypot(n.x,n.y,n.z) || 1e-6;
-      const imp = Math.max(0.05, n.imp);
+      const imp = (n.imp == null) ? 0.45 : Math.max(0.05, n.imp);
       const radius = inner + (1-inner)*Math.pow(1-imp, pw);
       n.tx = n.x/r*radius; n.ty = n.y/r*radius; n.tz = n.z/r*radius;
     }
@@ -2727,7 +2727,11 @@ function draw(){
     // 时间滑条：还没到日子的星不画。v 从 0 → 1 就是"长出来"的过程
     const v = tbV(i);
     if (v <= 0.004) continue;
-    const imp = Math.max(0.05, n.imp);
+    /* 没有 importance 的星用 0.45 兜底（不是 0.05）。
+       0.05 会让尺寸小到看不见，而 importance 只有 insight 才有 —— 
+       用 0.05 的结果就是"只有领悟看得见、其他全糊成小灰点"。
+       0.45 相当于"普通大小"，和 insight 的最低档（imp=3 → 0.56）接近。 */
+    const imp = (n.imp == null || !Number.isFinite(n.imp)) ? 0.45 : Math.max(0.05, n.imp);
     // n.use 可能没有（服务端没给这条字段），别让 Math.log 吃 undefined 变 NaN
     const useBoost = 1 + 0.16*Math.log(1 + (Number(n.use) || 0));
     let size = OPTS.sizeBase * Math.pow(imp, OPTS.sizePower) * useBoost * (persp/(REF/2.6)) * 1.70;
@@ -2762,7 +2766,15 @@ function draw(){
     if (isNew) size *= 1 + 0.9 * newPulse;
     alpha = Math.min(1, alpha * (isNew ? (0.7 + 0.3 * (1 - newPulse)) : 1) + newPulse * 0.5);
 
-    const big = !n.disk && OPTS.fx.rays && (n.ball || size > 6.0 || imp > 0.62);
+    /* 星芒判定：只看"这颗星在屏幕上够不够大"，不再依赖 importance。
+       原来还要求 imp > 0.62，但只有 insight 有真 importance，
+       其他类型全是 null → 尺寸永远上不去 → 全图只有 insight 会发光。
+       现在按屏幕尺寸分级：
+         size > 5.2  → 带星芒的亮星 sprite
+         否则        → 无芒的小点 sprite
+       另外让每个团里"最大那几颗星"一定带芒，保证视觉上有层次。 */
+    const wantRay = !n.disk && OPTS.fx.rays;
+    const big = wantRay && (n.ball || size > 5.2 || imp > 0.62 || n.hero === true);
     const spr = big ? (sprites[n.k] || sprites.__miss) : (spritesDim[n.k] || spritesDim.__miss);
     // 外层辉光：节点自己散光，密集处叠成星云
     const hs = size * (3.6 + 1.5*imp);
