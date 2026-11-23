@@ -1069,7 +1069,29 @@ const KIND_CN = {
   voice:'读到的话',        // voice 层
   // —— 兼容旧名（万一别处导出用这套）——
   conclusion:'我的判断', event:'他说的',
+  // —— 可能会新出现的类别，先起好中文名（没有就用 kind 原文，也不难看）——
+  douyin:'抖音', bilibili:'B站', zhihu:'知乎', weibo:'微博', xiaohongshu:'小红书',
+  chat:'聊天', code:'代码', music:'音乐', video:'视频', image:'图片',
+  plan:'计划', todo:'待办', habit:'习惯', mood:'心情', dream:'梦',
 };
+
+/* 新出现的 kind 如果没有预设颜色，就从主题色里现算一个 —— 
+   按名字的哈希取色相，保证同一个 kind 永远同一个颜色，且跟着主题走。 */
+function colorForKind(kindKey) {
+  if (themeRGB.kinds[kindKey]) return themeRGB.kinds[kindKey];
+  // 用名字算一个稳定的色相（0..1）
+  let h = 0;
+  const s = String(kindKey || 'fact');
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  const hue = (h % 360) / 360;
+  // 转 HSL(0.62, 0.72) 再转 RGB，饱和度和亮度跟主题色系保持一致
+  const a = 0.72 * Math.min(0.62, 1 - 0.62);
+  const f = (n) => {
+    const k = (n + hue * 12) % 12;
+    return Math.round(255 * (0.62 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
+  };
+  return [f(0), f(8), f(4)];
+}
 
 /* 别名表：把各种来源的 kind 归一到引擎认识的那一套。
    映射只影响「怎么显示」，不改数据本身——原文的 kind 仍留在 n.kindRaw 里。 */
@@ -1632,7 +1654,7 @@ function groupNodes(){
     out.push({
       key, idx: v.idx,
       label: KIND_CN[k] || k,
-      color: themeRGB.kinds[k] || themeRGB.nebula,
+      color: colorForKind(k),
       byKind: v.byKind,
     });
   });
@@ -1881,10 +1903,23 @@ function makeSprite(rgb, a, rays){
 }
 function initSprites(){
   sprites = {}; spritesDim = {};
+
+  /* 先给主题里定义好的类别造精灵 */
   for (const k in themeRGB.kinds){
     sprites[k]    = makeSprite(themeRGB.kinds[k], 0.98, 1);
     spritesDim[k] = makeSprite(themeRGB.kinds[k], 0.92, 0);
   }
+
+  /* 再给"数据里实际出现、但主题里没定义"的类别补上。
+     不补的话它们会全用 __miss 那个灰精灵 —— 新分类的星就是灰的。
+     颜色由 colorForKind 按名字哈希现算，同一个 kind 永远是同一色。 */
+  for (const n of nodes){
+    if (!n || !n.k || sprites[n.k]) continue;
+    const c = colorForKind(n.k);
+    sprites[n.k]    = makeSprite(c, 0.98, 1);
+    spritesDim[n.k] = makeSprite(c, 0.92, 0);
+  }
+
   sprites.__miss    = makeSprite([120,130,160], 0.6, 0);
   spritesDim.__miss = sprites.__miss;
 }
@@ -5034,6 +5069,8 @@ function addStarToScene(node, edges) {
   if (typeof buildAdj === 'function') buildAdj();
   if (typeof buildFlowList === 'function') buildFlowList();
   if (typeof tbExtendForNew === 'function') tbExtendForNew();   // 滑条槽位跟着扩，别重排
+  // 新节点可能是全新 kind，精灵表要补一次，否则它是灰的
+  if (typeof initSprites === 'function') initSprites();
 
   /* ══ 分类星：只补差量 ══
      新星归进已有分类 → 更新那个标签的条数（原来 count 是快照，永远不变）；
@@ -5087,7 +5124,7 @@ function registerNewNodeToCluster(i) {
   const sz = Math.sqrt(Math.max(1, N));
   const rad = 0.052 + 0.100 * Math.sqrt(1 / sz);
 
-  const color = themeRGB.kinds[kindKey] || themeRGB.nebula;
+  const color = colorForKind(kindKey);
 
   clusterInfo.push({
     x: cxx, y: cyy, z: czz, rad,
