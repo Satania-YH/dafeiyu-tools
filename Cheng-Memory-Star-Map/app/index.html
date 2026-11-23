@@ -1990,37 +1990,58 @@ function drawCoreStar(ctx){
      之后每根刺绕圆心慢慢游走：各自有独立的振荡周期和幅度，
      所以十字会缓慢地舒展开、又慢慢收回来，不是硬邦邦钉死的。 */
   const N_SPIKE = 4;
-  // 页面加载后从 0 开始计时，保证第一帧就是正十字
   if (CORE.t0 == null) CORE.t0 = T;
   const T0 = T - CORE.t0;
 
-  const beat = 0.5 + 0.5 * Math.sin(T * 2.6);            // 主拍，0..1，~2.4 秒一循环
-  const flipRaw = Math.sin(T * 0.44 + 0.6);
-  const side = 0.5 + 0.5 * Math.tanh(flipRaw * 2.4);     // ~0 或 ~1 的平滑切换
-  const globalSpin = T0 * 0.045;                         // 整组慢转，约 2.3 分钟一圈
+  /* 起点仍是正十字，但之后每根刺的转动和伸缩都用多频叠加，
+     不再绕着一个固定基准角摆动 —— 四个频率差互不整除，看起来没有周期。 */
+  if (!CORE.spikes) {
+    // 每根刺一套独立的频率/相位，只初始化一次
+    CORE.spikes = [];
+    for (let k = 0; k < N_SPIKE; k++) {
+      CORE.spikes.push({
+        base: k * (Math.PI * 2 / N_SPIKE),
+        // 角度漂移：三个互不相关的频率
+        wA: [0.19 + k*0.037, 0.071 + k*0.019, 0.043 + k*0.009],
+        phA: [k*1.7, k*3.1 + 0.9, k*5.3 + 2.2],
+        ampA: [0.42, 0.26, 0.18],       // rad，三层加起来约 ±50°
+        // 伸缩：也是三频
+        wL: [2.05 + k*0.41, 3.37 + k*0.53, 0.87 + k*0.13],
+        phL: [k*2.3 + 0.4, k*1.1 + 2.7, k*4.9 + 1.3],
+        ampL: [0.55, 0.28, 0.17],
+      });
+    }
+  }
+
+  const globalSpin = T0 * 0.028;                          // 整组极慢公转
 
   for (let k = 0; k < N_SPIKE; k++) {
-    // 正十字的基准角：0 / 90 / 180 / 270
-    const baseAng = k * (Math.PI * 2 / N_SPIKE);
-    // 每根刺自己游走：周期 45~95 秒，幅度约 ±20°。
-    // 游走量用 sin 减去它在 T0=0 时的值 → 保证 t=0 时游走量为 0，起始就是正十字。
-    const wAng = 0.066 + k * 0.022;
-    const driftAmp = 0.30 + 0.10 * Math.sin(k * 1.9);
-    const drift0 = driftAmp * Math.sin(k * 0.7);
-    const drift = driftAmp * Math.sin(T0 * wAng + k * 0.7) - drift0;
-    const ang = baseAng + globalSpin + drift;
+    const s = CORE.spikes[k];
 
-    // 这一根是"偶数派"还是"奇数派"
-    const isEven = (k % 2 === 0);
-    const myWeight = isEven ? side : (1 - side);
-    const phase = myWeight > 0.5 ? beat : (1 - beat);
+    // 角度：三频叠加，再减掉 T0=0 的值，保证开局是正十字
+    let drift = 0, drift0 = 0;
+    for (let j = 0; j < 3; j++) {
+      drift  += s.ampA[j] * Math.sin(T0 * s.wA[j] + s.phA[j]);
+      drift0 += s.ampA[j] * Math.sin(s.phA[j]);
+    }
+    const ang = s.base + globalSpin + (drift - drift0);
 
-    const jitter = 0.05 * Math.sin(T * 2.3 + k * 2.1);
-    const pulse = Math.max(0, Math.min(1, phase * (0.55 + 0.45 * myWeight) + jitter));
+    // 长度：三频叠加，快速又不规律
+    let wave = 0;
+    for (let j = 0; j < 3; j++) {
+      wave += s.ampL[j] * Math.sin(T * s.wL[j] + s.phL[j]);
+    }
+    const raw = Math.max(0, Math.min(1, 0.5 + 0.5 * wave));
 
-    // 刺再收短：0.98R ~ 1.20R，只探出日面一丝
-    const len = R * (0.98 + 0.22 * pulse) * scale;
-    const amp2 = (0.14 + 0.24 * pulse) * (0.60 + 0.40 * bi);
+    /* 缩成"无"用的是一道软门槛：
+       raw 低于 0.42 时整根刺完全消失（长度、亮度都归零），高于 0.62 时全长。
+       中间那段平滑过渡，所以是"慢慢缩没了/慢慢长出来"，不是忽然闪断。 */
+    const gate = Math.max(0, Math.min(1, (raw - 0.42) / 0.20));
+    if (gate <= 0.001) continue;                     // 这根刺此刻不存在
+    const shaped = gate * gate * (3 - 2 * gate);     // smoothstep，两端过渡更软
+
+    const len = R * (0.72 + 0.52 * shaped) * scale;
+    const amp2 = (0.02 + 0.36 * shaped) * (0.60 + 0.40 * bi);
     drawSpike(ang, len, Math.max(1.2, R * 0.021), amp2);
   }
 
