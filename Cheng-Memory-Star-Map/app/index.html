@@ -5033,20 +5033,62 @@ function addStarToScene(node, edges) {
   if (!node || !node.id) return;
   if (nodes.some(n => n.id === node.id)) return;   // 已经有了
 
-  // 位置：锚在最强邻居旁边
+  /* ── 落点 ──
+     不能锚在"上一颗星"旁边：那样每加一颗就贴着前一颗，几十颗之后会叠成一串
+     （实测某个分类 184 颗星时，最近两颗只差 0.0043，完全重合）。
+
+     改成：先找这颗星所属分类的团心，然后在团心周围的球壳里取点，
+     并且主动避开已经占了位置的其他星。 */
   let px = 0, py = 0, pz = 0;
-  const best = (edges || []).slice().sort((a, b) => b.cos - a.cos)[0];
-  if (best) {
-    const anchorId = best.source === node.id ? best.target : best.source;
-    const anchor = nodes.find(n => n.id === anchorId);
-    if (anchor) {
-      /* 偏移量要够大才看得见。原来 0.06 实际只偏 0.02~0.03，
-         而星星离中心普遍 0.5~0.9，新星等于贴在邻居身上，肉眼分不出。
-         改成 0.16（实际偏 0.05~0.08），能看清是颗新星，又仍在同一团里。 */
-      const sp = 0.16;
-      px = anchor.px + (Math.random() - 0.5) * sp;
-      py = anchor.py + (Math.random() - 0.5) * sp;
-      pz = anchor.pz + (Math.random() - 0.5) * sp;
+
+  // 1) 先看这个 kind 有没有对应的分类团心
+  const kindOfNew = node.kind || 'fact';
+  const catInfo = clusterInfo.find(c => c.label === (KIND_CN[kindOfNew] || kindOfNew));
+
+  if (catInfo) {
+    /* 团心周围撒点。半径随"这个团已经有多少星"增长，
+       这样团是慢慢长大而不是挤成一坨。 */
+    const sameIdx = [];
+    for (let i = 0; i < nodes.length; i++) if (nodes[i].k === kindOfNew) sameIdx.push(i);
+    const cnt = sameIdx.length;
+    // 20 颗以内半径 0.06，之后按平方根长（面积均分的感觉）
+    const spreadR = 0.055 * Math.sqrt(Math.max(1, cnt)) + 0.02;
+
+    let best = null, bestD = -1;
+    // 尝试 12 个候选点，挑最空的
+    for (let trial = 0; trial < 12; trial++) {
+      const u = Math.random() * 2 - 1;
+      const phi = Math.random() * Math.PI * 2;
+      const s = Math.sqrt(Math.max(0, 1 - u * u));
+      const r = spreadR * Math.cbrt(Math.random());     // 球内均匀
+      const cx0 = catInfo.x + Math.cos(phi) * s * r;
+      const cy0 = catInfo.y + u * r;
+      const cz0 = catInfo.z + Math.sin(phi) * s * r;
+
+      // 和本团已有星的最小距离
+      let near = 9;
+      for (const i of sameIdx) {
+        const nn = nodes[i];
+        const d = Math.hypot(cx0 - nn.px, cy0 - nn.py, cz0 - nn.pz);
+        if (d < near) near = d;
+      }
+      if (near > bestD) { bestD = near; best = [cx0, cy0, cz0]; }
+      // 已经足够空就直接用
+      if (bestD > spreadR * 0.5) break;
+    }
+    if (best) { px = best[0]; py = best[1]; pz = best[2]; }
+  } else {
+    // 没有分类团心（非分区形态 / 全新分类）：退回锚在最强邻居旁边
+    const bestE = (edges || []).slice().sort((a, b) => b.cos - a.cos)[0];
+    if (bestE) {
+      const anchorId = bestE.source === node.id ? bestE.target : bestE.source;
+      const anchor = nodes.find(n => n.id === anchorId);
+      if (anchor) {
+        const sp = 0.16;
+        px = anchor.px + (Math.random() - 0.5) * sp;
+        py = anchor.py + (Math.random() - 0.5) * sp;
+        pz = anchor.pz + (Math.random() - 0.5) * sp;
+      }
     }
   }
 
