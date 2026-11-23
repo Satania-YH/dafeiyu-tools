@@ -2046,9 +2046,9 @@ function drawCoreStar(ctx){
     if (gate <= 0.001) continue;                     // 这根刺此刻不存在
     const shaped = gate * gate * (3 - 2 * gate);     // smoothstep，两端过渡更软
 
-    const len = R * (0.72 + 0.52 * shaped) * scale;
-    const amp2 = (0.02 + 0.36 * shaped) * (0.60 + 0.40 * bi);
-    drawSpike(ang, len, Math.max(1.2, R * 0.021), amp2);
+    const len = R * (0.68 + 0.34 * shaped) * scale;
+    const amp2 = (0.02 + 0.32 * shaped) * (0.60 + 0.40 * bi);
+    drawSpike(ang, len, Math.max(1.1, R * 0.019), amp2);
   }
 
   ctx.restore();
