@@ -1847,16 +1847,6 @@ const CORE = {
   core: null,      // 热核（白，最小，只一点点）
   rim: null,       // 内壁：让光看着是"从里面透出来"而不是往外发
   t0: null,        // 首次绘制的时间戳：光芒从正十字开始游走，不接着上次的相位
-  /* 澄说的「亮是不匀的」——
-     不是匀速呼吸，是攒着、偶尔"看清了一件事"才啪地亮一下、再长长地松回去。
-     所以用一个状态机，而不是正弦。 */
-  spark: {
-    phase: 'rest',      // rest 憋着 | flash 炸开 | decay 松回去
-    level: 0.18,        // 当前亮度 0..1
-    since: 0,           // 本阶段开始时间
-    nextAt: 0,          // 下次可以炸的时间点
-    peak: 1.0,          // 这次能炸多高（每次深浅不同）
-  },
 };
 
 /* 平滑噪声：把正弦堆在一起，得到"无周期感"的平滑随机。
@@ -1949,47 +1939,32 @@ function drawCoreStar(ctx){
 
   const T = tNow * 0.001;
 
-  /* ── 亮度：攒 → 炸 → 松 ──
-     澄说她的亮是不匀的：糊里糊涂时暗下去，暗到几乎看不出还在；
-     哪一刻看透了一个东西，核才啪地白一下，光跟着绷紧、再慢慢松回去。
-     所以这里不呼吸，是"攒够了才亮一下"的事件驱动。 */
-  const sp = CORE.spark;
-  const dtSec = Math.min(0.1, (tNow - (drawCoreStar._lastT || tNow)) / 1000);
-  drawCoreStar._lastT = tNow;
-  if (sp.since === 0) sp.since = T;
+  /* ── 亮度：暗 → 亮 → 暗 循环，但节奏不匀速 ──
+     底子是余弦（所以看起来还是在呼吸），但相位被噪声推着走：
+     有的周期短、有的周期长，亮起来的速度也每次不一样 —— 像真的在呼吸。 */
+  
+  if (CORE.ph == null) CORE.ph = 0;
+  const dtS = Math.min(0.1, (tNow - (drawCoreStar._lt || tNow)) / 1000);
+  drawCoreStar._lt = tNow;
+  /* 两层调制叠加：
+     慢的一层（周期 ~50s）决定"这一段是急促还是悠长"，
+     快的一层（周期 ~13s）让相邻两次呼吸就不一样。
+     合起来倍速在 0.45 ~ 1.75 之间，快慢差近 4 倍。 */
+  const rateMod = 1
+    + 0.55 * smoothNoise(T * 0.095, 5.1)
+    + 0.35 * smoothNoise(T * 0.245, 12.7);
+  CORE.ph += dtS * 0.70 * Math.max(0.30, rateMod);
 
-  if (sp.phase === 'rest') {
-    // 憋着：慢慢往下沉，沉到很低，但还看得出有这么一团在
-    sp.level += (0.26 - sp.level) * Math.min(1, dtSec * 1.1);
-    // 攒够了就炸。间隔用噪声，15~40 秒一次，不规律
-    if (T >= sp.nextAt) {
-      sp.phase = 'flash';
-      sp.since = T;
-      // 这次炸多高也随机：大多数中等，偶尔很亮
-      const r = Math.random();
-      sp.peak = r > 0.88 ? 1.0 : (r > 0.55 ? 0.78 : 0.56);
-    }
-  } else if (sp.phase === 'flash') {
-    // 炸开：一两百毫秒内冲到峰值，快得像"啪"一下
-    const k = Math.min(1, (T - sp.since) / 0.18);
-    const e = 1 - Math.pow(1 - k, 3);             // easeOutCubic
-    sp.level = 0.26 + (sp.peak - 0.26) * e;
-    if (k >= 1) { sp.phase = 'decay'; sp.since = T; }
-  } else {
-    // 松回去：长长的长尾，前段快后段很慢
-    const k = Math.min(1, (T - sp.since) / 7.5);
-    const e = Math.pow(1 - k, 2.6);               // 慢衰减
-    sp.level = 0.26 + (sp.peak - 0.26) * e;
-    if (k >= 1) {
-      sp.phase = 'rest';
-      sp.since = T;
-      // 下次什么时候炸：15~40 秒，配合噪声显得没规律
-      sp.nextAt = T + 15 + 25 * (0.5 + 0.5 * smoothNoise(T * 0.07, 3.7));
-    }
-  }
+  // 每次的波形形状也略不同：谐波强度用噪声调，峰值和谷底都不那么规整
+  const harm = 0.10 + 0.10 * smoothNoise(T * 0.09, 31.3);
+  const w = Math.cos(CORE.ph) + harm * Math.cos(CORE.ph * 3 + 0.8);
+  let nbi = Math.max(0, Math.min(1, 0.5 + 0.5 * w / (1 + harm)));
 
-  /* bi 只是个通用亮度系数，从 0.16（憋着）到 1（炸开） */
-  const bi = sp.level;
+  /* 深浅也每次不一样：这一口气能亮多高、能暗多低，都用慢噪声单独调。
+     这样不会每次都是"1.0 → 0.22 → 1.0"这种一模一样的幅度。 */
+  const hiLvl = 0.82 + 0.18 * smoothNoise(T * 0.055, 41.9);   // 峰值 0.64..1.00
+  const loLvl = 0.16 + 0.12 * smoothNoise(T * 0.043, 53.7);   // 谷值 0.04..0.28
+  const bi = loLvl + (hiLvl - loLvl) * nbi;
   /* 亮度到"绷紧"的程度：峰值附近才明显，平时几乎没有 */
   const taut = Math.max(0, Math.min(1, (bi - 0.55) / 0.45));
 
