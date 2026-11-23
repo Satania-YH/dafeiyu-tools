@@ -290,7 +290,29 @@
     margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff;
   }
   #timeline .tl-head .tl-count{ font-size:11.5px; color:#5c6884; }
-  #timeline .tl-sub{ font-size:11.5px; color:#65718c; margin:4px 0 22px; letter-spacing:.05em; }
+  #timeline .tl-sub{ font-size:11.5px; color:#65718c; margin:4px 0 16px; letter-spacing:.05em; }
+
+  /* 分类筛选条 */
+  .tl-filter{
+    display:flex; flex-wrap:wrap; gap:7px; margin:0 0 22px;
+    padding-bottom:16px; border-bottom:1px solid rgba(140,170,255,.08);
+  }
+  .tl-fbtn{
+    font-family:inherit; font-size:11.5px; letter-spacing:.03em;
+    padding:5px 12px; border-radius:99px; cursor:pointer;
+    background:rgba(140,170,255,.05); border:1px solid rgba(140,170,255,.14);
+    color:#8c9cbd; transition:.15s; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:5px;
+  }
+  .tl-fbtn:hover{ background:rgba(140,170,255,.12); color:#cfdcf7; border-color:rgba(140,170,255,.28); }
+  .tl-fbtn.on{
+    background:rgba(255,212,121,.12); border-color:rgba(255,212,121,.42); color:#ffd479;
+  }
+  .tl-fbtn .n{
+    font-size:10px; color:#5c6884; font-variant-numeric:tabular-nums;
+  }
+  .tl-fbtn.on .n{ color:#b08d4e; }
+  .tl-fbtn.empty{ opacity:.32; cursor:default; }
 
   /* 每天一块 */
   .tl-day{ margin-bottom:26px; position:relative; padding-left:22px; }
@@ -735,7 +757,9 @@
       <h1>记 忆 时 间 轴</h1>
       <span class="tl-count" id="tlCount"></span>
     </div>
-    <p class="tl-sub">按天分组 · 每天点开看当天说过的话、写过的东西</p>
+    <p class="tl-sub">按时间倒序 · 每天点开看当天说过的话、写过的东西</p>
+    <!-- 分类筛选：点一下只看这一类，再点一下取消 -->
+    <div class="tl-filter" id="tlFilter"></div>
     <div id="tlBody"><div class="tl-empty">正在读取…</div></div>
    </div>
   </section>
@@ -4586,19 +4610,117 @@ async function loadTimeline() {
   renderTimeline(d.days || []);
 }
 
+/* 时间轴当前筛选的分类（null = 全部） */
+let TL_FILTER = null;
+
+/* 把 ts 换算成本地日（UTC+8）。
+   服务端给的 day.date 有的和 ts 对不上（比如 appointment 的 date 是"计划日"，
+   ts 是"创建时刻"），所以这里一律以 ts 为准重新分组。 */
+function localDateOfTs(ts) {
+  if (!ts) return '未知';
+  const t = Date.parse(ts);
+  if (!Number.isFinite(t)) return '未知';
+  const d = new Date(t + 8 * 3600 * 1000);
+  return d.toISOString().slice(0, 10);
+}
+
+/* 分类的中文名和顺序 —— 全放在这里，筛选条和分组共用 */
+const TL_CATS = [
+  { key: 'all',        label: '全部' },
+  { key: 'appointment',label: '约定' },
+  { key: 'utterance',  label: '说的' },
+  { key: 'note',       label: '便条' },
+  { key: 'diary',      label: '日记' },
+  { key: 'work',       label: '作品' },
+  { key: 'meta',       label: '纪录' },
+  { key: 'stream',     label: '流水' },
+];
+
+function tlCatOf(it) {
+  const k = it.kind || it.layer || 'stream';
+  // diary-revision 归到日记里
+  if (k === 'diary-revision') return 'diary';
+  return k;
+}
+
+/** 把服务端的 days 摊平 → 按 ts 本地日重新分组 → 倒序 */
+function tlRegroup(days) {
+  const all = [];
+  for (const day of days) for (const it of day.items) all.push(it);
+
+  // 先按时间倒序（新的在上）
+  all.sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
+
+  const map = new Map();
+  for (const it of all) {
+    const d = localDateOfTs(it.ts);
+    if (!map.has(d)) map.set(d, []);
+    map.get(d).push(it);
+  }
+  // 日期也倒序
+  const out = [...map.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([date, items]) => ({ date, count: items.length, items }));
+  return { all, out };
+}
+
 function renderTimeline(days) {
   const body = document.getElementById('tlBody');
   if (!body) return;
 
-  if (!days.length) {
+  if (!days || !days.length) {
     body.innerHTML = '<div class="tl-empty">还没有任何记录</div>';
+    return;
+  }
+
+  const { all, out } = tlRegroup(days);
+
+  // ── 筛选条：每个分类显示条数，0 条的淡出但还在 ──
+  const counts = {};
+  for (const it of all) { const c = tlCatOf(it); counts[c] = (counts[c] || 0) + 1; }
+  const fEl = document.getElementById('tlFilter');
+  if (fEl) {
+    fEl.innerHTML = '';
+    for (const c of TL_CATS) {
+      const n = c.key === 'all' ? all.length : (counts[c.key] || 0);
+      const b = document.createElement('button');
+      b.className = 'tl-fbtn' + (TL_FILTER === (c.key === 'all' ? null : c.key) ? ' on' : '')
+        + (n === 0 ? ' empty' : '');
+      b.innerHTML = esc(c.label) + `<span class="n">${n}</span>`;
+      if (n > 0) {
+        b.onclick = () => {
+          const next = (c.key === 'all') ? null : c.key;
+          TL_FILTER = (TL_FILTER === next) ? null : next;
+          renderTimeline(days);
+        };
+      }
+      fEl.appendChild(b);
+    }
+  }
+
+  // ── 按筛选过滤 ──
+  const groups = out
+    .map(g => {
+      const items = TL_FILTER ? g.items.filter(it => tlCatOf(it) === TL_FILTER) : g.items;
+      return { date: g.date, count: items.length, items };
+    })
+    .filter(g => g.items.length > 0);
+
+  const cntEl = document.getElementById('tlCount');
+  if (cntEl) {
+    const total = groups.reduce((a, g) => a + g.count, 0);
+    cntEl.textContent = `${total} 条 · ${groups.length} 天` + (TL_FILTER ? '（已筛选）' : '');
+  }
+
+  if (!groups.length) {
+    body.innerHTML = '<div class="tl-empty">这个分类下没有记录</div>';
     return;
   }
 
   const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   const frag = document.createDocumentFragment();
 
-  days.forEach((day, di) => {
+  groups.forEach((day, di) => {
     const wrap = document.createElement('div');
     wrap.className = 'tl-day' + (di === 0 ? ' open' : '');
     wrap.dataset.date = day.date;
