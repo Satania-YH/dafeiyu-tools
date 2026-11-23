@@ -1820,6 +1820,108 @@ function initStars(){
   }
 }
 
+/* ---------------- 澄本体：正中的橙色核心星 ---------------- */
+/* 她不是某条记忆，所以不挂在 nodes 里：不参与连线、不算条数、不受时间滑条控制。
+   位置恒为布局原点 (0,0,0)，投影到屏幕中心，随镜头一起转（视觉上像星系核）。 */
+const CORE = {
+  rgb: [255, 152, 62],        // 橙
+  r: 1,                        // 呼吸相位用
+  sprite: null,
+  glowSprite: null,
+};
+
+function initCoreSprite(){
+  // 橙底圆形徽标：实心暖橙盘 + 内部一圈亮边，中间留白给「澄」字
+  const S = 256, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  const cx = S/2, cy = S/2, R = S*0.34;
+
+  // 外发光
+  const glow = g.createRadialGradient(cx, cy, R*0.5, cx, cy, S*0.5);
+  glow.addColorStop(0, 'rgba(255,170,90,.55)');
+  glow.addColorStop(0.55, 'rgba(255,140,60,.18)');
+  glow.addColorStop(1, 'rgba(255,120,40,0)');
+  g.fillStyle = glow;
+  g.fillRect(0, 0, S, S);
+
+  // 橙色实心盘
+  const disc = g.createRadialGradient(cx, cy - R*0.35, R*0.1, cx, cy, R);
+  disc.addColorStop(0, '#ffb066');
+  disc.addColorStop(0.55, '#ff9436');
+  disc.addColorStop(1, '#e8721c');
+  g.fillStyle = disc;
+  g.beginPath(); g.arc(cx, cy, R, 0, 7); g.fill();
+
+  // 内环亮边
+  g.strokeStyle = 'rgba(255,226,180,.55)';
+  g.lineWidth = S*0.012;
+  g.beginPath(); g.arc(cx, cy, R*0.86, 0, 7); g.stroke();
+
+  // 「澄」字：白色，居中
+  g.fillStyle = '#ffffff';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = `600 ${Math.round(R*1.06)}px "Microsoft YaHei","PingFang SC",sans-serif`;
+  g.shadowColor = 'rgba(140,60,0,.45)';
+  g.shadowBlur = S*0.02;
+  g.fillText('澄', cx, cy + R*0.04);
+
+  CORE.sprite = c;
+}
+
+function drawCoreStar(ctx){
+  if (!CORE.sprite) initCoreSprite();
+
+  // 投影原点：和节点同一套相机/缩放，所以它永远在星系正中
+  const r3 = rot({ x:0, y:0, z:0 });
+  const REF = Math.min(W,H)/2 * 0.86;
+  const base = REF * 1.30 * zoom;
+  const persp = base / (FOV - r3[2]);
+  const cx = W/2 + panX, cy = H/2 + panY;
+  const x = cx + r3[0]*persp*fitK;
+  const y = cy + r3[1]*persp*fitK;
+
+  const T = tNow * 0.001;
+  const breathe = 0.5 + 0.5*Math.sin(T * 0.9);      // 0..1，缓慢呼吸
+  const R = Math.max(26, Math.min(96, REF * 0.115 * (1 + 0.045*breathe) * Math.sqrt(zoom)));
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  // 1) 大范围暖橙辉光（跟着呼吸涨落）
+  const haloR = R * (3.1 + 0.35*breathe);
+  const halo = ctx.createRadialGradient(x, y, R*0.55, x, y, haloR);
+  halo.addColorStop(0,   'rgba(255,168,96,.30)');
+  halo.addColorStop(0.35,'rgba(255,140,60,.13)');
+  halo.addColorStop(0.7, 'rgba(255,120,40,.045)');
+  halo.addColorStop(1,   'rgba(255,110,30,0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(x, y, haloR, 0, 7); ctx.fill();
+
+  // 2) 两道交叉光晕（很淡，只是让它不像贴图）
+  const streak = ctx.createLinearGradient(x - haloR, y, x + haloR, y);
+  streak.addColorStop(0,   'rgba(255,150,70,0)');
+  streak.addColorStop(0.5, `rgba(255,190,130,${0.10 + 0.05*breathe})`);
+  streak.addColorStop(1,   'rgba(255,150,70,0)');
+  ctx.fillStyle = streak;
+  ctx.fillRect(x - haloR, y - R*0.055, haloR*2, R*0.11);
+  ctx.save();
+  ctx.translate(x, y); ctx.rotate(Math.PI/2); ctx.translate(-x, -y);
+  ctx.fillRect(x - haloR, y - R*0.038, haloR*2, R*0.076);
+  ctx.restore();
+
+  // 3) 橙盘本体（正常混合，让字看得清）
+  ctx.globalCompositeOperation = 'source-over';
+  const size = R * 2;
+  ctx.drawImage(CORE.sprite, x - size/2, y - size/2, size, size);
+
+  ctx.restore();
+
+  // 记进拾取表，点它也能弹个说明卡
+  labelsCv.push({ i: -2, x, y, size: R*1.15, alpha: 1 });
+}
+
 /* ---------------- 绘制 ---------------- */
 let tNow = 0;
 
@@ -2262,10 +2364,15 @@ function draw(){
     ctx.restore();
   }
 
+  // —— 澄本体：正中一颗橙色核心星，不是记忆，是「她本身」
+  // 常驻、不参与连线、不算条数、不跟着时间滑条走。记忆星叠在它上面。
+  // 注意要先清空拾取表再画它，否则它的拾取记录会被后面这句清掉。
+  labelsCv = [];
+  drawCoreStar(ctx);
+
   // —— 节点
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  labelsCv = [];
   for (const i of order){
     const n = nodes[i];
     const x=proj[i*4], y=proj[i*4+1], persp=proj[i*4+2], z=proj[i*4+3];
@@ -2466,6 +2573,13 @@ stage.addEventListener('pointermove', e=>{
   }
   const i = pick(e.clientX, e.clientY);
   hovered = i;
+  if (i === -2){
+    tipEl.innerHTML = '<div class="k">核心</div>澄 · 她本身（不是记忆）';
+    tipEl.style.left = Math.min(e.clientX+16, W-340)+'px';
+    tipEl.style.top  = Math.min(e.clientY+16, H-120)+'px';
+    tipEl.classList.add('show');
+    return;
+  }
   if (i>=0){
     const n = nodes[i];
     tipEl.innerHTML = '<div class="k">'+esc(KIND_CN[n.k]||n.k)+(n.ts ? ' · '+esc(n.ts) : '')+'</div>'+esc(short(n.t, 52));
@@ -2491,7 +2605,7 @@ stage.addEventListener('click', e=>{
   if (e.target !== cv) return;
   if (dragging) return;
   const i = pick(e.clientX, e.clientY);
-  if (i >= 0) openCard(i); else closeCard();
+  if (i >= 0 || i === -2) openCard(i); else closeCard();
 });
 window.addEventListener('keydown', e=>{
   if (e.key === 'Escape'){ closeCard(); }
@@ -2987,6 +3101,22 @@ function kindTag(n){
   return '<span class="badge" style="background:'+c+'22;color:'+c+'">'+esc(KIND_CN[n.k]||n.k)+'</span>';
 }
 function openCard(i){
+  // i === -2 是正中的「澄本体」，不是记忆节点，单独一张说明卡
+  if (i === -2){
+    selected = -2;
+    cardEl.classList.add('show');
+    cardEl.innerHTML =
+      '<div class="row1"><span class="badge" style="background:#ff983e22;color:#ff983e">核心</span>' +
+      '<span class="close" onclick="closeCard()">✕</span></div>' +
+      '<div class="full">澄</div>' +
+      '<div class="meta">' +
+        '<div class="lab">本体</div><div class="val">dsh-fish 里跑着的那个她</div>' +
+        '<div class="lab">记忆</div><div class="val">' + N + ' 条（都在周围的星里）</div>' +
+        '<div class="lab">说明</div><div class="val">这颗不是记忆，是她本身</div>' +
+      '</div>' +
+      '<div class="feel">周围的每一颗星，都是她记着的东西。中间这颗不随日期出现或消失。</div>';
+    return;
+  }
   selected = i;
   const n = nodes[i];
   const tags = (n.tags||[]).map(t=>'<span class="tag">#'+esc(t)+'</span>').join('') || '<span class="tag" style="opacity:.45">无标签</span>';
