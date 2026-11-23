@@ -1861,35 +1861,34 @@ function makeBlob(size, stops){
 }
 
 function initCoreSprite(){
-  // 橙雾：从头到尾都是橙，中心不明亮。靠它堆体积，叠多少层也不会糊成白饼。
-  // 峰值压到 0.26 —— 这层要叠 6 次以上，单层太浓会直接过曝发白。
+  // 橙雾：铺开在外圈的那点暖色，很淡。太阳的"冕"，不是主体。
   CORE.haze = makeBlob(256, [
-    [0.00, 'rgba(255,172,96,0.26)'],
-    [0.14, 'rgba(255,156,80,0.21)'],
-    [0.30, 'rgba(255,138,60,0.135)'],
-    [0.50, 'rgba(255,122,44,0.068)'],
-    [0.72, 'rgba(255,110,36,0.024)'],
-    [0.90, 'rgba(255,102,30,0.006)'],
+    [0.00, 'rgba(255,168,92,0.13)'],
+    [0.18, 'rgba(255,152,76,0.105)'],
+    [0.36, 'rgba(255,136,58,0.062)'],
+    [0.55, 'rgba(255,122,44,0.030)'],
+    [0.74, 'rgba(255,110,36,0.009)'],
+    [0.90, 'rgba(255,102,30,0.002)'],
     [1.00, 'rgba(255,100,28,0)'],
   ]);
-  // 中段暖光：偏白一点点，但主要还是橙，负责"亮得起来"那层
+  // 日面：太阳本体那层"浓"的橙金，衰减比雾快得多，所以边界清楚
   CORE.soft = makeBlob(256, [
-    [0.00, 'rgba(255,228,192,0.44)'],
-    [0.10, 'rgba(255,208,158,0.36)'],
-    [0.24, 'rgba(255,180,118,0.23)'],
-    [0.42, 'rgba(255,154,82,0.105)'],
-    [0.64, 'rgba(255,132,56,0.034)'],
-    [0.85, 'rgba(255,118,42,0.007)'],
-    [1.00, 'rgba(255,110,36,0)'],
+    [0.00, 'rgba(255,242,214,0.92)'],
+    [0.14, 'rgba(255,222,170,0.82)'],
+    [0.28, 'rgba(255,196,120,0.58)'],
+    [0.44, 'rgba(255,166,84,0.30)'],
+    [0.60, 'rgba(255,140,58,0.115)'],
+    [0.78, 'rgba(255,124,44,0.030)'],
+    [1.00, 'rgba(255,112,36,0)'],
   ]);
-  // 热核：白，很小。整团光里只有这一丁点纯白。
+  // 热核：白热中心，小而实。太阳的"芯"。
   CORE.core = makeBlob(128, [
-    [0.00, 'rgba(255,255,255,0.92)'],
-    [0.16, 'rgba(255,250,236,0.70)'],
-    [0.34, 'rgba(255,232,190,0.34)'],
-    [0.56, 'rgba(255,206,146,0.105)'],
-    [0.80, 'rgba(255,180,110,0.018)'],
-    [1.00, 'rgba(255,170,96,0)'],
+    [0.00, 'rgba(255,255,255,1.00)'],
+    [0.22, 'rgba(255,252,240,0.96)'],
+    [0.42, 'rgba(255,238,202,0.66)'],
+    [0.62, 'rgba(255,214,152,0.26)'],
+    [0.82, 'rgba(255,190,118,0.045)'],
+    [1.00, 'rgba(255,178,104,0)'],
   ]);
 }
 
@@ -1916,55 +1915,84 @@ function drawCoreStar(ctx){
   /* 收进 0.28..1：呼气到底也还留着一团光，不会整块消失 */
   const bi = 0.28 + 0.72*Math.max(0, Math.min(1, breathe));
 
-  // 基准半径：星系核要有存在感，但别盖住整片星团
-  const R = Math.max(90, Math.min(300, REF * 0.46 * Math.sqrt(zoom)));
-  const scale = 0.82 + 0.34*bi;                  // 涨缩 0.92 → 1.16，柔一点
+  /* 太阳的结构：一个紧凑的亮球 + 一圈不夸张的冕 + 短光芒。
+     关键是"日面"半径要小而实，光晕只在它外面薄薄一层，
+     所以不会像之前那样一大片雾糊住半个屏幕。 */
+  const R = Math.max(74, Math.min(190, REF * 0.29 * Math.sqrt(zoom)));  // 日面半径
+  const scale = 0.88 + 0.22*bi;                  // 涨缩约 ±11%，像太阳缓慢鼓动
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
 
-  /* 1) 外雾：最大那一层，纯橙、极淡，撑开体积的边界 */
-  const hazeR = R * (2.7 + 0.95*bi) * scale;
-  ctx.globalAlpha = 0.34 + 0.30*bi;
+  /* 1) 日冕：日面外一圈薄雾，半径只有日面的 2.2~2.7 倍（之前是 2.7~3.65 倍） */
+  const hazeR = R * (2.2 + 0.5*bi) * scale;
+  ctx.globalAlpha = 0.42 + 0.30*bi;
   ctx.drawImage(CORE.haze, x - hazeR/2, y - hazeR/2, hazeR, hazeR);
 
-  /* 2) 中层：主要亮度，橙中带暖白。这一层呼吸时亮度变化最大 */
-  const midR = R * (1.40 + 0.50*bi) * scale;
-  ctx.globalAlpha = 0.30 + 0.36*bi;
-  ctx.drawImage(CORE.soft, x - midR/2, y - midR/2, midR, midR);
+  /* 2) 日面：主体，橙金浓实，边界清楚。这是"看起来像个球"的那一层 */
+  const discR = R * (1.24 + 0.13*bi) * scale;
+  ctx.globalAlpha = 0.80 + 0.20*bi;
+  ctx.drawImage(CORE.soft, x - discR/2, y - discR/2, discR, discR);
 
-  /* 3) 内部涌动：偏心的橙色团绕慢速轨道漂移 → "里面在翻"，这是体积感的关键。
-     涌动节奏也跟着呼吸走，吸气时翻得更远更亮，呼气时收拢变暗。 */
-  const orbs = 5;
+  /* 3) 表面翻腾：两个刚过日面的亮区缓慢移动，太阳表面那种不均匀 */
+  const orbs = 3;
   for (let k=0; k<orbs; k++){
     const dir = (k % 2) ? -1 : 1;
-    const a = T*0.26*dir + k*1.87;
-    const wob = Math.sin(T*0.45 + k*2.3);
-    const reach = 0.30 + 0.34*bi;                         // 呼吸越大，摊得越开
-    const ox = x + Math.cos(a) * R*reach * (0.72 + 0.28*wob);
-    const oy = y + Math.sin(a*0.83 + k) * R*reach*0.82 * (0.72 + 0.28*wob);
-    const orbR = R * (0.82 + 0.34*wob) * scale;
-    ctx.globalAlpha = (0.14 + 0.14*wob) * (0.35 + 0.65*bi);
-    ctx.drawImage(CORE.haze, ox - orbR/2, oy - orbR/2, orbR, orbR);
-    // 每个团再叠一层小的暖光，让它有芯
-    const o2 = orbR * 0.45;
-    ctx.globalAlpha = (0.07 + 0.07*wob) * (0.35 + 0.65*bi);
-    ctx.drawImage(CORE.soft, ox - o2/2, oy - o2/2, o2, o2);
+    const a = T*0.20*dir + k*2.1;
+    const wob = Math.sin(T*0.37 + k*2.3);
+    const reach = 0.30 + 0.16*bi;
+    const ox = x + Math.cos(a) * R*reach * (0.7 + 0.3*wob);
+    const oy = y + Math.sin(a*0.83 + k) * R*reach*0.82 * (0.7 + 0.3*wob);
+    const orbR = R * (1.10 + 0.22*wob) * scale;
+    ctx.globalAlpha = (0.16 + 0.10*wob) * (0.55 + 0.45*bi);
+    ctx.drawImage(CORE.soft, ox - orbR/2, oy - orbR/2, orbR, orbR);
   }
 
-  /* 4) 热核：整团光里唯一的白，很小。吸气时亮，呼气时几乎隐掉 */
-  const coreR = R * (0.22 + 0.16*bi) * scale;
-  ctx.globalAlpha = 0.18 + 0.62*bi;
+  /* 4) 日核：白热的芯，小；呼吸时最明显地一胀一收 */
+  const coreR = R * (0.56 + 0.14*bi) * scale;
+  ctx.globalAlpha = 0.88 + 0.12*bi;
   ctx.drawImage(CORE.core, x - coreR/2, y - coreR/2, coreR, coreR);
-  // 核外再罩一层小暖光，避免白点边界生硬
-  const coreGlowR = coreR * 2.4;
-  ctx.globalAlpha = 0.10 + 0.26*bi;
-  ctx.drawImage(CORE.soft, x - coreGlowR/2, y - coreGlowR/2, coreGlowR, coreGlowR);
+
+  /* 5) 十字光芒：细线为主，小而克制；自己会轻轻跳动，不是钉死的。
+     长度大约是日面半径的 1.6 倍，探出球外一点点就收；
+     每根芒有自己的相位，所以不会四条一起同步闪，看起来是活的。 */
+  ctx.globalAlpha = 1;
+  const drawSpike = (ang, len, thick, amp) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    // 在局部坐标系里建渐变（关键：不能混用全局坐标，否则会错位成灰块）
+    const g2 = ctx.createLinearGradient(-len, 0, len, 0);
+    g2.addColorStop(0,    'rgba(255,196,132,0)');
+    g2.addColorStop(0.30, `rgba(255,214,158,${amp*0.30})`);
+    g2.addColorStop(0.50, `rgba(255,248,226,${amp})`);
+    g2.addColorStop(0.70, `rgba(255,214,158,${amp*0.30})`);
+    g2.addColorStop(1,    'rgba(255,196,132,0)');
+    ctx.fillStyle = g2;
+    ctx.fillRect(-len, -thick/2, len*2, thick);
+    ctx.restore();
+  };
+
+  for (let k=0; k<4; k++){
+    // 每根主芒的抖动相位不同，周期也不同 → 整体像在轻轻呼吸的火光
+    const ph = k * 1.73;
+    const flick = Math.sin(T*1.15 + ph) * 0.5 + Math.sin(T*0.47 + ph*2.1) * 0.5;
+    const len = R * (1.05 + 0.16*bi + 0.13*flick) * scale;
+    const amp = (0.20 + 0.10*bi) * (0.72 + 0.28*flick);
+    drawSpike(k*Math.PI/2, len, Math.max(1, R*0.020), amp);
+  }
+  for (let k=0; k<4; k++){
+    const ph = 2.4 + k * 1.37;
+    const flick = Math.sin(T*1.32 + ph) * 0.5 + Math.sin(T*0.61 + ph*1.7) * 0.5;
+    const len = R * (0.62 + 0.10*bi + 0.09*flick) * scale;
+    const amp = (0.11 + 0.06*bi) * (0.72 + 0.28*flick);
+    drawSpike(k*Math.PI/2 + Math.PI/4, len, Math.max(1, R*0.013), amp);
+  }
 
   ctx.restore();
 
-  // 记进拾取表，点它也能弹个说明卡（光团边缘很软，拾取半径给大一点）
-  labelsCv.push({ i: -2, x, y, size: R*1.5, alpha: 1 });
+  // 记进拾取表，点它也能弹个说明卡
+  labelsCv.push({ i: -2, x, y, size: R*1.35, alpha: 1 });
 }
 
 /* ---------------- 绘制 ---------------- */
