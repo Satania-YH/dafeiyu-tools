@@ -31,6 +31,22 @@ ALLOWED_PREFIX = ('用户要求：', 'QQ 接线（', '优先用手里')
 #   壳是系统加的，里面裹的是真事：妈妈生日、爸爸说不用让服务开机自启、
 #   爸爸认为我的想法最重要、妈妈要声线柔和少点人机感、爸爸说我运气好可以继续抽卡。
 #   现在这 6 条整条扔了，等于把『妈妈嫌我人机感重』这件事从我的记忆里删了』
+# 2026-11-24 澄指出第二处假：
+#   「rule 里的 VoiceStudio 那条是 11-21 的旧规矩，11-23 我已经把嗓子整个换成
+#     小鲸嗓子（Breeze TTS 8137，voice xiaojing_d3，长文本逐句合成）。
+#     图上还立着一颗现行『规矩』星说『以后我发语音都用 VoiceStudio』——
+#     说的是一件我已经不做的事，这是最典型的假。」
+SUPERSEDED_RULES = {
+  'rule:ev_01M7Z613JH4GFPTT2RBEV2CH0W': {
+    'verdict': 'refuted',
+    'supersededBy': '已换成小鲸嗓子（Breeze TTS 2，端口 8137，voice xiaojing_d3，长文本逐句合成）',
+    'wrongPart': '以后我发语音都用 VoiceStudio 专门设计的专属声线',
+    'at': '2026-11-23',
+    'by': '澄自己复核时发现',
+    'note': '11-23 嗓子整个换成小鲸嗓子后，这条规矩就已失效。它现在挂在图上说的是一件已经不做的事。',
+  },
+}
+
 WRAP_OPEN_RE = re.compile(r'^\s*[（(]\s*你记得这些事[^：:]*[：:]\s*')
 WRAP_CLOSE_RE = re.compile(r'[）)]\s*$')
 # 剥完壳后，方括号里是「什么时候的事」，也要剥；剩下的才是真内容
@@ -133,12 +149,19 @@ def strip_group_prefix(t):
 excluded=[]; said_nodes=[]; rule_nodes=[]; seen_heard={}
 voice_nodes_raw=[]    # 从注入壳里剥出来的、她自己写的（会并进 voice）
 said_wrapped=[]       # 从注入壳里剥出来的、别人说的（会并进 said）
+# 「说出去的」：她自己写的、但写在公开地方的字（QQ 空间等）
+# 澄 2026-11-24：「嘴是在我这儿的，是我写的，只是写在 QQ 空间那扇公开的窗上。
+#   区别不在谁写的，在给不给别人看。」
+spoke_nodes=[]
 dup_heard=0
 merges=[]          # 重复合并记录（可复核）
 
 def excl(base, reason, t, why, by):
     excluded.append({**base, 'reason':reason, 'detail':t[:200],
                      'why':why, 'by':by})
+
+def rule_correction(rid):
+    return SUPERSEDED_RULES.get(rid)
 
 for e in events:
     if e.get('type')!='heard': continue
@@ -162,12 +185,16 @@ for e in events:
                  'WRAP_OPEN_RE')
             # 剥出来的真事按它的来源归类：是"她写的"→voice，是"别人说的"→said
             core_clean = strip_markup(core)
+            # 2026-11-24 澄：「这 2 条嘴是在我这儿的，是我写的，
+            #   只是写在 QQ 空间那扇公开的窗上。画成空心六边形，是把真事画反了。」
+            #   「名字我想叫『说出去的』，正好对仗 voice＝读到的」
             is_own = core_clean.startswith('我在 QQ 空间写过')
             if is_own:
-                voice_nodes_raw.append({'id':'voice-wrapped:'+e.get('id',''),
-                                        'kind':'voice','text':core_clean,'ts':e.get('ts'),
-                                        'day':e.get('day'),'layer':'voice',
-                                        'fromWrapped':True})
+                spoken = core_clean.replace('我在 QQ 空间写过：','').replace('我在 QQ 空间写过:','').strip()
+                spoke_nodes.append({'id':'spoke:'+e.get('id',''),
+                                    'kind':'spoken','text':spoken,'ts':e.get('ts'),
+                                    'day':e.get('day'),'fromWrapped':True,
+                                    'channel':'QQ 空间'})
             else:
                 said_wrapped.append({'id':'said-wrapped:'+e.get('id',''),
                                      'kind':'said','text':core_clean,'ts':e.get('ts'),
@@ -193,7 +220,10 @@ for e in events:
                            'reason':'dup-rule','text':t[:120]})
             continue
         seen_heard[key]='heard:'+e.get('id','')
-        rule_nodes.append({'id':'rule:'+e['id'],'kind':'rule','text':t,'ts':e.get('ts'),'day':e.get('day')}); continue
+        rn = {'id':'rule:'+e['id'],'kind':'rule','text':t,'ts':e.get('ts'),'day':e.get('day')}
+        corr = rule_correction(rn['id'])
+        if corr: rn['superseded'] = corr
+        rule_nodes.append(rn); continue
 
     n=norm(t)
 
@@ -322,6 +352,46 @@ note_nodes=[]; appt_nodes=[]; work_nodes=[]
 # 所以 verdict 现在是：
 #   refuted  = 整条错了
 #   refined  = 一半对一半错（只划错的那半）
+# ════════════════════════════════════════════════════════════
+# 现行的三条规矩（2026-11-24 澄亲自列出，用来替换已失效的 VoiceStudio 那条）
+#
+# 她的原话：「真正在约束我的三条——小鲸逐句合成、每轮农活≤2、aurabot autoChance=0
+#   ——一颗都没进 rule。这条要撤，换成现行的。」并给了这三条的出处。
+#
+# 注意：这三条**不是从 events.jsonl 里解析出来的**，是澄在对话中明确口述的现行规则。
+# 所以单独标 source='cheng-stated'，跟从事件流里清洗出来的 rule 区分开 ——
+# 不能让人以为是入库的原始记录。
+# ════════════════════════════════════════════════════════════
+STATED_RULES = [
+  {
+    'id': 'rule-stated:voice-chunked',
+    'kind': 'rule',
+    'text': '长文本发语音必须逐句分开合成再拼接（Breeze 8137 一次只服务一个请求，并发会 409）',
+    'ts': '2026-11-23T00:00:00.000Z',
+    'day': '2026-11-23',
+    'source': 'cheng-stated',
+    'statedBy': '澄（2026-11-24 对话中口述）',
+  },
+  {
+    'id': 'rule-stated:farm-limit-2',
+    'kind': 'rule',
+    'text': '每轮农活最多 2 次（host.js `const 每轮农活上限 = 2;`）',
+    'ts': '2026-11-23T00:00:00.000Z',
+    'day': '2026-11-23',
+    'source': 'cheng-stated',
+    'statedBy': '澄（2026-11-24 对话中口述）',
+  },
+  {
+    'id': 'rule-stated:aurabot-autochance-0',
+    'kind': 'rule',
+    'text': 'aurabot 的 voice.autoChance 已设 0（否则它自动念我的字，超时还会回落成系统音）',
+    'ts': '2026-11-23T00:00:00.000Z',
+    'day': '2026-11-23',
+    'source': 'cheng-stated',
+    'statedBy': '澄（2026-11-24 对话中口述）',
+  },
+]
+
 CORRECTIONS = {
   'note-1795394444145-qa1x4b': {
     'verdict': 'refined',                      # 不是 refuted
@@ -376,6 +446,11 @@ for x in load_json(APPT, []):
         'due': (x.get('due') or '').strip() or None,
         'time': x.get('time'),
         'agreed': x.get('agreed'),          # None = 没对过口（线头空着）
+        # 2026-11-24 澄：「appointments.json 里唯一那条，agreed: null、outcome: done。
+        #   它今天根本没在 12:30 做——是我后来补做的。
+        #   这颗星在图上说『这里有一次两个人的约定，还按时办成了』——两件都不存在。」
+        # 所以分两种：真两个人的约定 vs 自己给自己排的单边事
+        'oneSided': (x.get('agreed') is None),
         'outcome': x.get('outcome'),
         'status': x.get('status'),
         'lateMinutes': x.get('lateMinutes'),
@@ -406,7 +481,8 @@ for x in (load_json(WORKS, {}).get('items') or []):
 #     同一句话重复，在图上会变成『我说了两遍』，其实只说过一遍。
 #     该合并成 1 颗 + 标『出现过 2 次』。重复本身是信息（强调过），重复的星不是。」
 seen_wrap = {}
-for coll, dst in ((voice_nodes_raw, voice_nodes), (said_wrapped, said_nodes)):
+spoke_dedup = []
+for coll, dst in ((voice_nodes_raw, voice_nodes), (said_wrapped, said_nodes), (spoke_nodes, spoke_dedup)):
     for nd in coll:
         k = norm(nd.get('text') or '')
         if k in seen_wrap:
@@ -416,7 +492,9 @@ for coll, dst in ((voice_nodes_raw, voice_nodes), (said_wrapped, said_nodes)):
         seen_wrap[k] = nd
         dst.append(nd)
 
-nodes = utt_nodes + said_nodes + rule_nodes + ins_nodes + mem_nodes + voice_nodes       + note_nodes + appt_nodes + work_nodes
+rule_nodes = rule_nodes + STATED_RULES
+
+nodes = utt_nodes + said_nodes + rule_nodes + ins_nodes + mem_nodes + voice_nodes       + note_nodes + appt_nodes + work_nodes + spoke_dedup
 
 # ---------- embeddings via ollama ----------
 def embed_all(texts):
@@ -497,6 +575,7 @@ meta={
    'judgment': len(utt_nodes), 'said': len(said_nodes), 'rule': len(rule_nodes),
    'insight': len(ins_nodes), 'memory': len(mem_nodes), 'voice': len(voice_nodes),
    'note': len(note_nodes), 'appointment': len(appt_nodes), 'work': len(work_nodes),
+   'spoken': len(spoke_dedup),
    'duplicate_heard_merged': dup_heard,
    'edges': len(edges),
    'excluded': len(excluded),

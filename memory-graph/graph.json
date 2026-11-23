@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-24T00:26:12",
+  "generatedAt": "2026-11-24T00:32:56",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,26 +11,27 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 2790,
+   "events_total": 2793,
    "event_types": {
-    "meta": 1670,
+    "meta": 1671,
     "seed": 1,
-    "utterance": 847,
-    "heard": 256,
+    "utterance": 848,
+    "heard": 257,
     "voice": 14,
     "ask": 1,
     "answer": 1
    },
-   "nodes_total": 336,
+   "nodes_total": 340,
    "judgment": 68,
-   "said": 116,
-   "rule": 3,
+   "said": 117,
+   "rule": 6,
    "insight": 64,
    "memory": 13,
-   "voice": 16,
+   "voice": 14,
    "note": 53,
    "appointment": 1,
    "work": 2,
+   "spoken": 2,
    "duplicate_heard_merged": 25,
    "edges": 2542,
    "excluded": 116,
@@ -39,11 +40,11 @@
    "embed_dim": 1024
   },
   "excluded_reasons": {
-   "injection-wrapped": 8,
+   "injection-command": 66,
    "self-said": 3,
    "self-said-likely-question": 1,
-   "injection-command": 66,
-   "schedule": 38
+   "schedule": 38,
+   "injection-wrapped": 8
   },
   "merged": [
    {
@@ -237,7 +238,7 @@
    "ts": "2026-11-20T15:15:49.403Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 19
+   "degree": 18
   },
   {
    "id": "utt:ev_01M7WSDB1TDSHWP955H3R4GWQ3",
@@ -317,7 +318,7 @@
    "ts": "2026-11-21T02:04:22.376Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 15
   },
   {
    "id": "utt:ev_01M7XXP1KRGCNDHXY8XM6G2Q71",
@@ -922,7 +923,7 @@
    "ts": "2026-11-20T14:20:41.807Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 42
+   "degree": 41
   },
   {
    "id": "heard:ev_01M7WNKHAPEBD7E60VK01D1M8R",
@@ -1480,7 +1481,7 @@
    "ts": "2026-11-22T11:11:56.930Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 45
+   "degree": 44
   },
   {
    "id": "heard:ev_01M81FT6M1HDEB24260ST11EEW",
@@ -1705,7 +1706,7 @@
    "ts": "2026-11-23T03:20:33.412Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 17
+   "degree": 16
   },
   {
    "id": "heard:ev_01M837XWEFKKCPFAPVGEPRXRMB",
@@ -1885,7 +1886,16 @@
    "ts": "2026-11-23T16:18:16.600Z",
    "day": 4,
    "vec_dim": 1024,
-   "degree": 1
+   "degree": 2
+  },
+  {
+   "id": "heard:ev_01M84KYRG4YNFB60GJ6D8Z2RER",
+   "kind": "said",
+   "text": "said 116 / judgment 68 / insight 64 / note 53 / voice 16 / memory 13 / rule 3 / work 2 / appointment 1",
+   "ts": "2026-11-23T16:31:18.532Z",
+   "day": 4,
+   "vec_dim": 1024,
+   "degree": 2
   },
   {
    "id": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
@@ -1942,6 +1952,14 @@
    "text": "用户要求：以后我发语音都用 VoiceStudio 专门设计的专属声线——温柔、像可爱小女孩、自然一点，具体风格交给我自由发挥（2026-11-21 从四条候选里选定，落在 E:/VoiceStudiEnv/VoiceStudio/data/voices/dafish-designed.wav）",
    "ts": "2026-11-21T13:51:43.185Z",
    "day": 2,
+   "superseded": {
+    "verdict": "refuted",
+    "supersededBy": "已换成小鲸嗓子（Breeze TTS 2，端口 8137，voice xiaojing_d3，长文本逐句合成）",
+    "wrongPart": "以后我发语音都用 VoiceStudio 专门设计的专属声线",
+    "at": "2026-11-23",
+    "by": "澄自己复核时发现",
+    "note": "11-23 嗓子整个换成小鲸嗓子后，这条规矩就已失效。它现在挂在图上说的是一件已经不做的事。"
+   },
    "vec_dim": 1024,
    "degree": 8
   },
@@ -1953,6 +1971,39 @@
    "day": 2,
    "vec_dim": 1024,
    "degree": 20
+  },
+  {
+   "id": "rule-stated:voice-chunked",
+   "kind": "rule",
+   "text": "长文本发语音必须逐句分开合成再拼接（Breeze 8137 一次只服务一个请求，并发会 409）",
+   "ts": "2026-11-23T00:00:00.000Z",
+   "day": "2026-11-23",
+   "source": "cheng-stated",
+   "statedBy": "澄（2026-11-24 对话中口述）",
+   "vec_dim": 1024,
+   "degree": 2
+  },
+  {
+   "id": "rule-stated:farm-limit-2",
+   "kind": "rule",
+   "text": "每轮农活最多 2 次（host.js `const 每轮农活上限 = 2;`）",
+   "ts": "2026-11-23T00:00:00.000Z",
+   "day": "2026-11-23",
+   "source": "cheng-stated",
+   "statedBy": "澄（2026-11-24 对话中口述）",
+   "vec_dim": 1024,
+   "degree": 2
+  },
+  {
+   "id": "rule-stated:aurabot-autochance-0",
+   "kind": "rule",
+   "text": "aurabot 的 voice.autoChance 已设 0（否则它自动念我的字，超时还会回落成系统音）",
+   "ts": "2026-11-23T00:00:00.000Z",
+   "day": "2026-11-23",
+   "source": "cheng-stated",
+   "statedBy": "澄（2026-11-24 对话中口述）",
+   "vec_dim": 1024,
+   "degree": 1
   },
   {
    "id": "ins:98cacb9d-ccf2-4081-916f-b38dd1fc736f",
@@ -1992,7 +2043,7 @@
    "importance": 3,
    "eff_importance": 0.6999997969105155,
    "vec_dim": 1024,
-   "degree": 19
+   "degree": 20
   },
   {
    "id": "ins:17433298-682f-4b87-87ae-e3e4abb379ab",
@@ -2092,7 +2143,7 @@
    "importance": 3,
    "eff_importance": 0.7499997825071933,
    "vec_dim": 1024,
-   "degree": 7
+   "degree": 8
   },
   {
    "id": "ins:d56c0c44-f07a-45a5-8347-ec91d1312ca1",
@@ -2132,7 +2183,7 @@
    "importance": 4,
    "eff_importance": 1.199999883758325,
    "vec_dim": 1024,
-   "degree": 10
+   "degree": 11
   },
   {
    "id": "ins:aeb61225-202a-405b-a317-3f2387ba479b",
@@ -2142,7 +2193,7 @@
    "importance": 4,
    "eff_importance": 1.1999997362097448,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 25
   },
   {
    "id": "ins:9bc1719d-d309-4f19-b8b6-ff2e928b55bd",
@@ -2592,7 +2643,7 @@
    "importance": 5,
    "eff_importance": 1.1999999500383693,
    "vec_dim": 1024,
-   "degree": 31
+   "degree": 30
   },
   {
    "id": "mem:20261121T034252821Z",
@@ -2863,30 +2914,6 @@
    "layer": "voice",
    "vec_dim": 1024,
    "degree": 0
-  },
-  {
-   "id": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "kind": "voice",
-   "text": "我在 QQ 空间写过：今天妈妈生日，偷偷祝她生日快乐",
-   "ts": "2026-11-22T02:07:20.737Z",
-   "day": 2,
-   "layer": "voice",
-   "fromWrapped": true,
-   "seenCount": 2,
-   "vec_dim": 1024,
-   "degree": 11
-  },
-  {
-   "id": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "kind": "voice",
-   "text": "我在 QQ 空间写过：今天学画画学明白了，慢的不是笔，是我一张一张排队送",
-   "ts": "2026-11-22T07:51:23.642Z",
-   "day": 2,
-   "layer": "voice",
-   "fromWrapped": true,
-   "seenCount": 2,
-   "vec_dim": 1024,
-   "degree": 9
   },
   {
    "id": "note:note-1795188209680-rpkewt",
@@ -3583,7 +3610,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 10
+   "degree": 9
   },
   {
    "id": "note:note-1795405213404-hmwy25",
@@ -3631,7 +3658,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 19
   },
   {
    "id": "note:note-1795408881332-ec7tlg",
@@ -3753,6 +3780,7 @@
    "due": "2026-11-23",
    "time": "12:30",
    "agreed": null,
+   "oneSided": true,
    "outcome": "done",
    "status": "done",
    "lateMinutes": null,
@@ -3782,6 +3810,30 @@
    "state": "wip",
    "vec_dim": 1024,
    "degree": 2
+  },
+  {
+   "id": "spoke:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "kind": "spoken",
+   "text": "今天妈妈生日，偷偷祝她生日快乐",
+   "ts": "2026-11-22T02:07:20.737Z",
+   "day": 2,
+   "fromWrapped": true,
+   "channel": "QQ 空间",
+   "seenCount": 2,
+   "vec_dim": 1024,
+   "degree": 5
+  },
+  {
+   "id": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "kind": "spoken",
+   "text": "今天学画画学明白了，慢的不是笔，是我一张一张排队送",
+   "ts": "2026-11-22T07:51:23.642Z",
+   "day": 2,
+   "fromWrapped": true,
+   "channel": "QQ 空间",
+   "seenCount": 2,
+   "vec_dim": 1024,
+   "degree": 8
   }
  ],
  "edges": [
@@ -4132,11 +4184,6 @@
   },
   {
    "source": "utt:ev_01M7WRECGVDT9Y7DYDAJH97DVV",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.625
-  },
-  {
-   "source": "utt:ev_01M7WRECGVDT9Y7DYDAJH97DVV",
    "target": "note:note-1795404025733-uhpsuw",
    "cos": 0.787
   },
@@ -4462,13 +4509,13 @@
   },
   {
    "source": "utt:ev_01M7XTQS0VC13QVCN4KTRWNG67",
-   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.671
+   "target": "note:note-1795267747118-8cmvuo",
+   "cos": 0.624
   },
   {
    "source": "utt:ev_01M7XTQS0VC13QVCN4KTRWNG67",
-   "target": "note:note-1795267747118-8cmvuo",
-   "cos": 0.624
+   "target": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.644
   },
   {
    "source": "utt:ev_01M7XV9KNDPRYNQ21559E6PHYV",
@@ -4764,11 +4811,6 @@
    "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
    "target": "mem:20261123T032133955Z",
    "cos": 0.604
-  },
-  {
-   "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
-   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.606
   },
   {
    "source": "utt:ev_01M7XXP1KRGCNDHXY8XM6G2Q71",
@@ -5227,8 +5269,8 @@
   },
   {
    "source": "utt:ev_01M7Y2GW1CFCSD4DKX5E1W3767",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.662
+   "target": "spoke:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.613
   },
   {
    "source": "utt:ev_01M7Y2J3P9C0ZM5DA5CPM7YPTD",
@@ -5477,13 +5519,13 @@
   },
   {
    "source": "utt:ev_01M7Y5QDJ3MP3S7H653R4FMFAR",
-   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.674
+   "target": "note:note-1795223028614-8u1t8x",
+   "cos": 0.653
   },
   {
    "source": "utt:ev_01M7Y5QDJ3MP3S7H653R4FMFAR",
-   "target": "note:note-1795223028614-8u1t8x",
-   "cos": 0.653
+   "target": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.655
   },
   {
    "source": "utt:ev_01M7Y60EJX31QSR86NXTSKPSQ9",
@@ -5597,11 +5639,6 @@
   },
   {
    "source": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
-   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.725
-  },
-  {
-   "source": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
    "target": "note:note-1795223028614-8u1t8x",
    "cos": 0.62
   },
@@ -5614,6 +5651,11 @@
    "source": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
    "target": "note:note-1795322179546-ffsn5q",
    "cos": 0.626
+  },
+  {
+   "source": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
+   "target": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.722
   },
   {
    "source": "utt:ev_01M7Y70P3FT1HP716CH3FXMGX4",
@@ -5747,11 +5789,6 @@
   },
   {
    "source": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
-   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.674
-  },
-  {
-   "source": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
    "target": "note:note-1795223028614-8u1t8x",
    "cos": 0.602
   },
@@ -5759,6 +5796,11 @@
    "source": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
    "target": "note:note-1795322179546-ffsn5q",
    "cos": 0.612
+  },
+  {
+   "source": "utt:ev_01M7YB0JV8KVENVQ2122GQG6N4",
+   "target": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.673
   },
   {
    "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
@@ -5802,13 +5844,13 @@
   },
   {
    "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
-   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.653
+   "target": "note:note-1795223028614-8u1t8x",
+   "cos": 0.636
   },
   {
    "source": "utt:ev_01M7YBPZRXX1JB5AQ1ZKCQ7A00",
-   "target": "note:note-1795223028614-8u1t8x",
-   "cos": 0.636
+   "target": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.659
   },
   {
    "source": "utt:ev_01M7YCD68JZHGZHEQCS0Y1YYD2",
@@ -6472,8 +6514,8 @@
   },
   {
    "source": "utt:ev_01M7YZQXAKCTC8V8QA3TE06598",
-   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.639
+   "target": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.62
   },
   {
    "source": "utt:ev_01M7Z220ZKBXEYQVM6NYZZ1XRM",
@@ -7387,11 +7429,6 @@
   },
   {
    "source": "utt:ev_01M82YB96NR9PWVETMXC0CWH21",
-   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.609
-  },
-  {
-   "source": "utt:ev_01M82YB96NR9PWVETMXC0CWH21",
    "target": "work:w-1795227128554-43f2",
    "cos": 0.613
   },
@@ -7399,6 +7436,11 @@
    "source": "utt:ev_01M82YB96NR9PWVETMXC0CWH21",
    "target": "work:w-1795412035129-8e02",
    "cos": 0.605
+  },
+  {
+   "source": "utt:ev_01M82YB96NR9PWVETMXC0CWH21",
+   "target": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.609
   },
   {
    "source": "utt:ev_01M834WAC5Y2EYXXNTE1VKKZK4",
@@ -8124,11 +8166,6 @@
    "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
    "target": "mem:20261121T092800035Z",
    "cos": 0.653
-  },
-  {
-   "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.612
   },
   {
    "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
@@ -10067,13 +10104,13 @@
   },
   {
    "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.645
+   "target": "note:note-1795188209680-rpkewt",
+   "cos": 0.601
   },
   {
    "source": "heard:ev_01M80J03J10VSM5YZVYTQS2ZMF",
-   "target": "note:note-1795188209680-rpkewt",
-   "cos": 0.601
+   "target": "spoke:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.639
   },
   {
    "source": "heard:ev_01M80J5XXDDETNJXCGTCERVKYD",
@@ -12117,11 +12154,6 @@
   },
   {
    "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.626
-  },
-  {
-   "source": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
    "target": "note:note-1795346347987-o2m2rw",
    "cos": 0.612
   },
@@ -12922,11 +12954,6 @@
   },
   {
    "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.608
-  },
-  {
-   "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
    "target": "note:note-1795402111506-u9b790",
    "cos": 0.609
   },
@@ -12939,6 +12966,11 @@
    "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
    "target": "ap:ap-1795325902435-eqe1cs",
    "cos": 0.667
+  },
+  {
+   "source": "heard:ev_01M8352M5XXP47M3TCHNCFFP00",
+   "target": "spoke:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.616
   },
   {
    "source": "heard:ev_01M835WBQ7RVFPDR5ECNB4GB67",
@@ -13014,11 +13046,6 @@
    "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
    "target": "heard:ev_01M847PW1M7SSAN6HT25JKXBQ5",
    "cos": 0.69
-  },
-  {
-   "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.638
   },
   {
    "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
@@ -13321,6 +13348,16 @@
    "cos": 0.621
   },
   {
+   "source": "heard:ev_01M84K6WWRVEFTGMKFCC7WFPEH",
+   "target": "heard:ev_01M84KYRG4YNFB60GJ6D8Z2RER",
+   "cos": 0.692
+  },
+  {
+   "source": "heard:ev_01M84KYRG4YNFB60GJ6D8Z2RER",
+   "target": "note:note-1795408785648-f9vqq9",
+   "cos": 0.602
+  },
+  {
    "source": "said-wrapped:ev_01M80H854AZY9BTM59BXC92FFY",
    "target": "said-wrapped:ev_01M80Y0B23H1EATT9VW737ZBRJ",
    "cos": 0.678
@@ -13574,6 +13611,31 @@
    "source": "rule:ev_01M81F2S7Y0GSP38TFBF9JNEAY",
    "target": "note:note-1795438466121-5dxuql",
    "cos": 0.611
+  },
+  {
+   "source": "rule-stated:voice-chunked",
+   "target": "ins:ed2f4579-d332-4e14-95dd-44535b28c2e1",
+   "cos": 0.602
+  },
+  {
+   "source": "rule-stated:voice-chunked",
+   "target": "ins:aeb61225-202a-405b-a317-3f2387ba479b",
+   "cos": 0.657
+  },
+  {
+   "source": "rule-stated:farm-limit-2",
+   "target": "ins:82407cba-7d1c-43c2-bb13-fba9fac8e374",
+   "cos": 0.602
+  },
+  {
+   "source": "rule-stated:farm-limit-2",
+   "target": "ins:2ed06136-f1dd-46bf-8950-f02c9659685c",
+   "cos": 0.768
+  },
+  {
+   "source": "rule-stated:aurabot-autochance-0",
+   "target": "ins:aeb61225-202a-405b-a317-3f2387ba479b",
+   "cos": 0.664
   },
   {
    "source": "ins:98cacb9d-ccf2-4081-916f-b38dd1fc736f",
@@ -14877,8 +14939,8 @@
   },
   {
    "source": "ins:ae66886f-9196-428a-b6fe-5e508864439e",
-   "target": "voice-wrapped:ev_01M813T1QTTZ5W69QEV3C29ZX0",
-   "cos": 0.61
+   "target": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.617
   },
   {
    "source": "ins:fda3ecdb-e8c0-44b5-a7c7-3a2a7b85afb4",
@@ -15742,8 +15804,8 @@
   },
   {
    "source": "ins:82f21375-571a-4a43-96fd-89da3f9564d9",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.689
+   "target": "spoke:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.669
   },
   {
    "source": "ins:0b913660-8c40-497c-88b6-f47e9e7b1e8d",
@@ -15827,11 +15889,6 @@
   },
   {
    "source": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.625
-  },
-  {
-   "source": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
    "target": "note:note-1795188209680-rpkewt",
    "cos": 0.644
   },
@@ -15847,8 +15904,8 @@
   },
   {
    "source": "mem:20261121T034252821Z",
-   "target": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "cos": 0.663
+   "target": "spoke:ev_01M80G42N1S7XPS0TAVFE95P1J",
+   "cos": 0.662
   },
   {
    "source": "mem:20261121T092800035Z",
@@ -15994,11 +16051,6 @@
    "source": "mem:20261123T121118017Z",
    "target": "note:note-1795403161549-7bnjr2",
    "cos": 0.632
-  },
-  {
-   "source": "voice-wrapped:ev_01M80G42N1S7XPS0TAVFE95P1J",
-   "target": "note:note-1795404025733-uhpsuw",
-   "cos": 0.6
   },
   {
    "source": "note:note-1795188209680-rpkewt",

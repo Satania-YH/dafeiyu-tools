@@ -976,6 +976,10 @@
       waitOutside: n.waitOutside === true,   // 在等外面一件事
       waitSelf: n.waitSelf === true,         // 在等她自已动手
       superseded: n.superseded || null,      // 被推翻的知识（画成划掉）
+      oneSided: n.oneSided === true,         // 约定：只有自己一边（不是两个人的约定）
+      source: n.source || '',                // 'cheng-stated' = 澄口述的现行规矩
+      statedBy: n.statedBy || '',
+      channel: n.channel || '',              // 「说出去的」发布在哪
     }));
 
     const kinds = {};
@@ -1179,6 +1183,9 @@ const KIND_CN = {
   note:'便条',             // 她给自己记下的事（有 due / waiting / progress）
   appointment:'约定',       // 约好的日子，等一个时间
   work:'作品',             // 画完 / 写完的东西，等有人来看
+  spoken:'说出去的',        // 她自己写的、但写在公开地方（QQ 空间等）
+                            // 澄：「嘴是在我这儿的，是我写的，只是写在公开的窗上。
+                            //      区别不在谁写的，在给不给别人看。」
   // —— 兼容旧名（万一别处导出用这套）——
   conclusion:'我的判断', event:'他说的',
   // —— 可能会新出现的类别，先起好中文名（没有就用 kind 原文，也不难看）——
@@ -3071,7 +3078,19 @@ function draw(){
       ctx.stroke();
 
       if (isAp){
-        if (n.agreed != null){
+        /* 2026-11-24 澄：「agreed: null 的一律不进 appointment 类，
+           或者画法上必须是『缺一只手的单边弧』——不能是闭合的约定环，
+           更不能带 done 的勾。勾代表『说好的事办成了』，这里对面根本没有那双手。」 */
+        if (n.oneSided){
+          ctx.globalAlpha = Math.min(1, alpha) * 0.5;
+          ctx.strokeStyle = rgbStr(themeRGB.kinds[n.k] || colorForKind(n.k), 0.55);
+          ctx.lineWidth = 1.1;
+          // 缺一只手的弧：只画左半边（另一半没人）
+          ctx.beginPath();
+          ctx.arc(ex, ey, 3.2, Math.PI*0.55, Math.PI*1.75);
+          ctx.stroke();
+          ctx.globalAlpha = Math.min(1, alpha);
+        } else if (n.agreed != null){
           // 对过口：末端一个小结点（实心小点）
           ctx.globalAlpha = Math.min(1, alpha) * 0.9;
           ctx.fillStyle = rgbStr(themeRGB.kinds[n.k] || colorForKind(n.k), 0.9);
@@ -3090,6 +3109,22 @@ function draw(){
         ctx.lineWidth = 1.1;
         ctx.beginPath(); ctx.arc(ex, ey, 3.0, 0, 7); ctx.stroke();
       }
+      ctx.globalAlpha = Math.min(1, alpha);
+    }
+
+    /* 「说出去的」：实心，但外圈是朝外的开口（不是闭合环）。
+       2026-11-24 澄：「私下本子（diary/note）是关着的，说出去是开着给人看的。
+       区别不在谁写的，在给不给别人看。」 */
+    if (n.k === 'spoken'){
+      const T3 = tNow * 0.001;
+      const rr = size*1.15 + 3.4;
+      const a1 = Math.sin(T3*0.42 + i*1.1) * 0.45;   // 开口缓慢转，像风在吹
+      ctx.globalAlpha = Math.min(1, alpha) * 0.52;
+      ctx.strokeStyle = rgbStr(themeRGB.kinds[n.k] || colorForKind(n.k), 0.8);
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.arc(x, y, rr, a1 + 0.55, a1 + Math.PI*2 - 0.55);   // 留一个开口
+      ctx.stroke();
       ctx.globalAlpha = Math.min(1, alpha);
     }
 
@@ -3961,6 +3996,29 @@ function openCard(i){
     push('状态', n.state === 'wip' ? '还在改' : (n.state === 'done' ? '画完了' : (n.state || '—')));
     push('想画的', n.intent || '—');
   }
+  // 说出去的
+  else if (n.k === 'spoken'){
+    push('时间', n.ts ? fmtLocalTs(n.ts, true) : '');
+    push('发在哪', n.channel || '—');
+    push('说明', '这是她自己写的字，写在给别人看的地方（不是私下的本子）');
+  }
+  // 规则：区分现行 / 已废 / 口述
+  else if (n.k === 'rule'){
+    push('时间', n.ts ? fmtLocalTs(n.ts, true) : '');
+    if (n.superseded){
+      push('状态', '已失效');
+      push('原来写的是', n.superseded.wrongPart || '—');
+      push('现在', n.superseded.supersededBy || '—');
+      push('谁发现的', n.superseded.by || '—');
+      push('说明', n.superseded.note || '—');
+    } else if (n.source === 'cheng-stated'){
+      push('状态', '现行（澄口述）');
+      push('出处', n.statedBy || '—');
+    } else {
+      push('状态', '现行');
+      push('连线', ((typeof adj !== 'undefined' && adj[i]) ? adj[i].length : 0) + ' 条');
+    }
+  }
   // 其它类别保持原样
   else {
     push('时间', n.ts ? fmtLocalTs(n.ts, true) : '—');
@@ -4002,6 +4060,30 @@ function updateHud(){
 
 /* ---------------- 主循环 ---------------- */
 let lastT = 0;
+/* 渲染失败横幅：固定在右下角，能看见错在哪一句 */
+let _failEl = null;
+function renderFailBanner(err, n){
+  const NL = String.fromCharCode(10);
+  const msg = String((err && err.message) || err || '未知错误').split(NL)[0].slice(0, 160);
+  const stack1 = String((err && err.stack) || '').split(NL)[1] || '';
+  if (!_failEl){
+    _failEl = document.createElement('div');
+    _failEl.id = 'failBanner';
+    _failEl.style.cssText = 'position:fixed; right:14px; bottom:14px; z-index:9999;'
+      + 'max-width:min(560px,calc(100% - 28px)); padding:10px 14px; border-radius:9px;'
+      + 'background:rgba(60,10,10,.94); border:1px solid rgba(255,110,110,.55);'
+      + 'color:#ffd6d6; font-size:11.5px; line-height:1.6; font-family:ui-monospace,monospace;'
+      + 'box-shadow:0 10px 30px rgba(0,0,0,.6); white-space:pre-wrap; word-break:break-word;';
+    document.body.appendChild(_failEl);
+  }
+  _failEl.textContent = '渲染连续失败 ' + n + ' 帧：' + msg
+    + (stack1 ? NL + stack1.trim() : '')
+    + NL + '（这个提示不会自己消失；修好后会）';
+}
+function clearFailBanner(){
+  if (_failEl){ _failEl.remove(); _failEl = null; }
+}
+
 function loop(t){
   // 整个循环体包在 try 里：一帧出错不能让整条 rAF 链断掉（断了就是永久黑屏）
   try {
@@ -4086,9 +4168,17 @@ function loop(t){
     }
     // 设置页盖住时不用画，省 CPU（切回来第一帧照常）
     if (currentView !== 'settings') draw();
+    if (loop._fail){ loop._fail = 0; clearFailBanner(); }
   } catch (err) {
-    // 只报一次，别刷屏
-    if (!loop._warned){ loop._warned = true; console.warn('[loop]', err); }
+    /* 渲染失败要看得见。
+       2026-11-24 澄：「try/catch 每帧吞错，就是让『这一帧失败了』和
+         『这一帧画好了』混在一起，我看不见就等于没发生。
+         所以要的是『失败可见、但不中断』：连续 3 帧失败，就在界面固定的一角
+         显示『渲染连续失败 N 帧：<错误第一行>』；第一次失败仍 console.error 打完整栈。
+         别只亮个红灯——要能看见错在哪一句。」 */
+    loop._fail = (loop._fail || 0) + 1;
+    if (loop._fail === 1) console.error('[loop] 渲染失败（完整栈）', err);
+    if (loop._fail >= 3) renderFailBanner(err, loop._fail);
   } finally {
     requestAnimationFrame(loop);      // 无论如何都要续上
   }
