@@ -2721,7 +2721,10 @@ function draw(){
     if (n.bh) size *= 0.34;
     if (n.ball) size *= 1.65;
     if (n.disk) size *= 0.78;
-    size = Math.max(2.7, Math.min(72, size));
+    /* 团太挤时星星会按 shrink 缩小（由局部重排算出）。
+       缩得再多也留 2px，放大之后还是看得见是个点。 */
+    if (n.shrink != null && n.shrink < 1) size *= n.shrink;
+    size = Math.max(2.0, Math.min(72, size));
     if (!Number.isFinite(size)) continue;
     size *= 0.42 + 0.58*v;                 // 长出过程：先小后大
     if (!Number.isFinite(size) || size < 0.4) continue;
@@ -5054,8 +5057,16 @@ function addStarToScene(node, edges) {
     const sameIdx = [];
     for (let i = 0; i < nodes.length; i++) if (nodes[i].k === kindOfNew) sameIdx.push(i);
     const cnt = sameIdx.length;
-    // 20 颗以内半径 0.06，之后按平方根长（面积均分的感觉）
-    const spreadR = 0.055 * Math.sqrt(Math.max(1, cnt)) + 0.02;
+    // 理想半径（按颗数开方）
+    const wantR = 0.055 * Math.sqrt(Math.max(1, cnt)) + 0.02;
+    // 但不能越过地盘：取到最近邻分类的 0.72
+    let nearestOther = 9;
+    for (const c of clusterInfo) {
+      if (c === catInfo) continue;
+      const d = Math.hypot(c.x - catInfo.x, c.y - catInfo.y, c.z - catInfo.z);
+      if (d < nearestOther) nearestOther = d;
+    }
+    const spreadR = Math.min(wantR, Math.max(0.05, Math.min(nearestOther * 0.72, 0.40)));
 
     let best = null, bestD = -1;
     // 尝试 12 个候选点，挑最空的
@@ -5178,7 +5189,7 @@ function addStarToScene(node, edges) {
 
 const RELAYOUT = {
   queue: new Set(),      // 待重排的 kind
-  budget: 0,             // 这一帧还能跑多少步
+  holdFrames: 0,         // 剩余"加速帧"数：>0 时每帧跑更多团，让初始收拢快一点
 };
 
 /* 排队：某个 kind 的团变大了，标记它需要松弛 */
@@ -5193,7 +5204,9 @@ function stepClusterRelayout() {
   if (!RELAYOUT.queue.size) return;
   if (baseShape() !== 'cluster') { RELAYOUT.queue.clear(); return; }
 
-  const STEP_PER_FRAME = 2;      // 每帧最多跑几个团（每个团内部再算一轮）
+  // 加速期每帧多跑几个团（启动时把整张图收拢进各方地盘）
+  if (RELAYOUT.holdFrames > 0) RELAYOUT.holdFrames--;
+  const STEP_PER_FRAME = RELAYOUT.holdFrames > 0 ? 10 : 2;
   let done = 0;
   for (const kind of [...RELAYOUT.queue]) {
     if (done++ >= STEP_PER_FRAME) break;
@@ -5207,9 +5220,25 @@ function stepClusterRelayout() {
     for (let k = 0; k < N; k++) if (nodes[k].k === kind) idx.push(k);
     if (idx.length < 2) { RELAYOUT.queue.delete(kind); continue; }
 
-    /* 目标半径：按颗数开方增长（面积均分）。
-       20 颗以内给 0.06，之后 sqrt 长。 */
-    const targetR = 0.055 * Math.sqrt(idx.length) + 0.02;
+    /* ── 目标半径：有上限，不越界 ──
+       团的地盘由「离最近邻分类的一半距离」决定，
+       再乘 0.72 留出空隙。这样团永远不会长到别的分类里面去。
+       星多了怎么办？→ 星本身变小（见下面 starShrink），
+       而不是把团撑大。放大之后还是能看清每颗。 */
+    let nearestOther = 9;
+    for (const c of clusterInfo) {
+      if (c === cat) continue;
+      const d = Math.hypot(c.x - cat.x, c.y - cat.y, c.z - cat.z);
+      if (d < nearestOther) nearestOther = d;
+    }
+    const maxR = Math.max(0.05, Math.min(nearestOther * 0.72, 0.40));
+
+    // 想要的半径（按颗数开方，代表"这样才不重叠的理想大小"）
+    const wantR = 0.055 * Math.sqrt(idx.length) + 0.02;
+    // 实际只用 min(想要的, 地盘上限)
+    const targetR = Math.min(wantR, maxR);
+    // 挤不下的比例 → 用来缩小星星
+    const starShrink = Math.max(0.35, Math.min(1, targetR / Math.max(0.01, wantR)));
 
     // 对每个成员：沿"从团心向外"的方向，把它推向目标半径上
     // 再叠一点点互相排斥，避免同半径处扎堆
@@ -5228,8 +5257,11 @@ function stepClusterRelayout() {
       }
       const ux = dx / r, uy = dy / r, uz = dz / r;
 
-      // ① 径向：推向目标半径（软，一次只走 35%）
-      const rNew = r + (targetR - r) * 0.35;
+      /* ① 径向：推向目标半径。
+         超出边界时用硬一点的速度收（0.75），否则收缩会拖很久；
+         在范围内就慢慢调（0.25），避免抖动。 */
+      const tooFar = r > targetR * 1.05;
+      const rNew = r + (targetR - r) * (tooFar ? 0.75 : 0.25);
 
       // ② 切向排斥：和本团其他星太近就互相推开一点
       let px = 0, py = 0, pz = 0;
@@ -5248,10 +5280,23 @@ function stepClusterRelayout() {
         }
       }
 
-      // ③ 写回目标位置（主循环会平滑追过去 → 看到的是动画）
-      A.tx = cx0 + ux * rNew + px;
-      A.ty = cy0 + uy * rNew + py;
-      A.tz = cz0 + uz * rNew + pz;
+      /* ③ 写回目标位置（主循环会平滑追过去 → 看到的是动画）。
+         最后再夹一道硬边界：任何情况下都不许超出 targetR*1.15，
+         保证团永远不会长到邻居的地盘里。 */
+      let nx = ux * rNew + px;
+      let ny = uy * rNew + py;
+      let nz = uz * rNew + pz;
+      const nd = Math.hypot(nx, ny, nz);
+      const cap = targetR * 1.15;
+      if (nd > cap && nd > 1e-6) {
+        const s = cap / nd;
+        nx *= s; ny *= s; nz *= s;
+      }
+      A.tx = cx0 + nx;
+      A.ty = cy0 + ny;
+      A.tz = cz0 + nz;
+      // 团挤的时候星星跟着缩小（放大看还是分得清）
+      A.shrink = starShrink;
     }
 
     /* 松弛完一轮就出队。如果之后还加星，会重新入队。 */
@@ -5440,6 +5485,16 @@ async function useSource(id){
   tbBuild();                 // 先把天数与截止位定下来，再画
   updateHud();
   buildPanel();
+
+  /* 初始布局里的大团也要收进地盘里 —— 否则「他说的」103 颗星会摊到 0.7 半径，
+     直接压到邻居身上（初始布局按高斯散布，没有边界概念）。
+     把所有分类都排进重排队列，启动后几秒内会自己收拢到各自地盘里。 */
+  try {
+    RELAYOUT.queue.clear();
+    RELAYOUT.holdFrames = 90;          // 前 90 帧多跑几轮，让收拢快一点
+    for (const n of nodes) RELAYOUT.queue.add(n.k || 'fact');
+  } catch (e) {}
+
   if (ld){ ld.style.opacity = 0; setTimeout(()=>{ ld.style.display='none'; }, 460); }
 }
 
