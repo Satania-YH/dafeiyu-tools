@@ -49,6 +49,54 @@ META_WORDS = ('injection','self-said','schedule','graph.json','nodes','edges',
 # 带编号的条目（"1. xxx" / "① xxx"），配合元词判断
 NUM_ITEM_RE = re.compile(r'^\s*(\d+[.、)]|[①②③④⑤⑥⑦⑧⑨])')
 
+# ════════════════════════════════════════════════════════════
+# 「他说的」这一类名在说谎 —— 澄 2026-11-24 的原话：
+#   「它叫『他说的』，但 114 条里装着：妈妈的话、系统工具清单、代码片段、
+#     Alma 的分析、还有一堆『爸爸（鱼鱼）认为…』的第三人称事实。
+#     这不叫『他说的』，这叫『这条通道收到的所有文字』。」
+#   「修法：said 只留大肥鱼(781689870) 的第一人称原话；
+#     妈妈说的话 → 标 speaker=妈妈；『爸爸（鱼鱼）认为…』这种第三人称事实
+#     → 归 insight/memory；系统文本、代码、乱码 → 剔。」
+#
+# 她给的特征（我按这个加判据）：
+#   · 以英文/代码开头（MNEMON / if ( / $cfg / { ）→ 系统或代码，剔
+#   · 以「爸爸（鱼鱼）」「妈妈希望」「爸爸（鱼鱼）认为」开头 → 关于他们的事实
+#   · 含 **、__、【…全】、「还想确认一个边界」「数据获取」→ 报告
+#   · 含替换字符 � → 乱码，剔
+# ════════════════════════════════════════════════════════════
+# 注意：不能只看"英文字母开头"——「ego里面怎么有3个后台操作了」是真人说的中文，
+# 「ego」只是产品名。所以判据要更严：
+#   · 全大写常量（MNEMON / ALL_TYPES）
+#   · 明确的代码结构（if ( / function / const / ${ / {）
+#   · 整句以 ASCII 为主（中文字符占比很低）
+#   · URL
+CODE_START_RE = re.compile(r'^\s*(MNEMON|[A-Z_]{4,}\s*[=(:]|if\s*\(|function\s|const\s|\$[A-Za-z_]|\{\s*$|\[\{|https?://)')
+CJK_RE = re.compile('[一-龥]')
+
+def is_mostly_ascii(t):
+    """整句以 ASCII 为主（中文字符不到 20%）—— 代码/英文文本的特征。"""
+    if not t: return False
+    cjk = len(CJK_RE.findall(t))
+    return cjk / max(1, len(t)) < 0.20
+THIRD_PERSON_RE = re.compile(r'^\s*(爸爸|妈妈)\s*([（(][^）)]*[）)])?\s*(说|认为|希望|觉得|想要|提过|让|的)')
+SPEAKER_RE = re.compile(r'^\s*(妈妈|爸爸)\s*[（(]')
+REPORT_MD_RE = re.compile(r'(\*\*|__|【[^】]{2,16}全】|还想确认|数据获取|口径)')
+MOJIBAKE_RE = re.compile('�')
+
+def classify_not_said(t):
+    """不是「大肥鱼说的第一人称原话」的，返回 (类别, 原因) 或 None。"""
+    if MOJIBAKE_RE.search(t):
+        return ('mojibake', '含替换字符，是编码坏掉的文本')
+    if CODE_START_RE.match(t):
+        return ('system-text', '以英文/代码/URL 开头，是系统文本或代码片段')
+    if is_mostly_ascii(t) and len(t) > 20:
+        return ('system-text', '整句几乎是 ASCII（中文占比极低），是系统文本或代码')
+    if THIRD_PERSON_RE.match(t):
+        return ('third-person', '第三人称转述（「爸爸（鱼鱼）认为…」），是关于他们的事实，不是他说的')
+    if REPORT_MD_RE.search(t):
+        return ('system-report', '含 Markdown 强调或报告用词，是分析汇报')
+    return None
+
 def looks_like_report(t):
     """这句像不像系统/助手给她的汇报，而不是真人说的话。"""
     if STATS_LINE_RE.match(t.strip()):
@@ -158,7 +206,7 @@ for e in events:
 
 # 群聊格式：「鱼鱼(781869870)：正文」/「鱼鱼：正文」/「鱼鱼 [群名]：正文」
 # 昵称部分要剥掉，正文留下 —— 这是人说的真话，不是可疑内容。
-GROUP_PREFIX_RE = re.compile(r'^\s*[一-龥A-Za-z0-9_\-]{1,20}\s*[\(（]\s*\d{5,20}\s*[\)）]\s*[:：]\s*')
+GROUP_PREFIX_RE = re.compile(r'^\s*[一-龥A-Za-z0-9_\-]{1,20}\s*[\(（]\s*\d{5,20}\s*[\)）]\s*(@[^：:]{0,12})?\s*[:：]\s*')
 GROUP_PREFIX_RE2 = re.compile(r'^\s*[一-龥A-Za-z0-9_\-]{1,20}\s*[:：]\s*')
 
 # 疑问语气判据（2026-11-24 按澄的意见收窄）
@@ -183,12 +231,18 @@ FIRST_PERSON_RE = re.compile(r'^我(翻|查|记|看|确认|试|算|改|写|测|�
 
 def strip_group_prefix(t):
     """剥掉「鱼鱼(781869870)：」这类群聊昵称前缀，返回(正文, 是否剥过)。"""
-    m = GROUP_PREFIX_RE.match(t)
+    # 先剥掉可能有的序号 / 渠道前缀（"[1] "、"[私聊] "、"【群聊】" 这种）
+    lead = re.match(r'^\s*(\[\d+\]\s*|\[(私聊|群聊|群|私信)\]\s*|【(私聊|群聊)】\s*)+', t)
+    base = t[lead.end():] if lead else t
+    m = GROUP_PREFIX_RE.match(base)
     if m:
-        return t[m.end():].strip(), True
+        return base[m.end():].strip(), True
+    if lead:
+        return base.strip(), True
     return t, False
 
 excluded=[]; said_nodes=[]; rule_nodes=[]; seen_heard={}
+ins_extra=[]          # 第三人称转述（关于爸爸/妈妈的事实），并进 insight
 voice_nodes_raw=[]    # 从注入壳里剥出来的、她自己写的（会并进 voice）
 said_wrapped=[]       # 从注入壳里剥出来的、别人说的（会并进 said）
 # 「说出去的」：她自己写的、但写在公开地方的字（QQ 空间等）
@@ -238,30 +292,31 @@ for e in events:
                                     'day':e.get('day'),'fromWrapped':True,
                                     'channel':'QQ 空间'})
             else:
-                said_wrapped.append({'id':'said-wrapped:'+e.get('id',''),
-                                     'kind':'said','text':core_clean,'ts':e.get('ts'),
-                                     'day':e.get('day'),'fromWrapped':True})
+                # 剥出来的也可能不是「大肥鱼第一人称原话」。
+                # 2026-11-24 澄：「『爸爸（鱼鱼）认为…』这种第三人称事实
+                #   → 归 insight/memory」——所以剥完还要再过一遍分类，
+                # 不能直接当 said。（第一版漏了这步，12 条挂错的星。）
+                cls2 = classify_not_said(core_clean)
+                if cls2 and cls2[0] == 'third-person':
+                    ins_extra.append({'id':'tp:'+e.get('id',''), 'kind':'insight',
+                                      'text':core_clean, 'ts':e.get('ts'), 'day':e.get('day'),
+                                      'category':'about-them','fromThirdPerson':True})
+                elif cls2:
+                    # 系统文本/乱码/报告：不进图
+                    pass
+                else:
+                    said_wrapped.append({'id':'said-wrapped:'+e.get('id',''),
+                                         'kind':'said','text':core_clean,'ts':e.get('ts'),
+                                         'day':e.get('day'),'fromWrapped':True})
             continue
 
-    # 汇报/统计 → 不是「他说的」（澄点出的第四处假）
-    rep = looks_like_report(t)
-    if rep:
-        excl(base,'system-report',t,
-             '这句是系统/助手给她的汇报，不是真人说的话：%s' % rep,
-             'looks_like_report')
-        continue
+    # 分类前先剥掉群聊昵称前缀，否则「鱼鱼(781869870)：」会被当成英文/代码开头误杀
+    t_noprefix, _had = strip_group_prefix(t)
+    if _had and t_noprefix:
+        t = t_noprefix
 
-    if INJECTION_RE.match(t):
-        m=INJECTION_RE.match(t)
-        excl(base,'injection-command',t,'开头是系统注入指令「%s」，纯指令不是话'%m.group(0),'INJECTION_RE'); continue
-
-    # 群聊昵称：剥掉而不是判可疑
-    t2, had_prefix = strip_group_prefix(t)
-    if had_prefix and t2:
-        t = t2
-        base['raw'] = (raw or '')[:300]
-        base['strippedPrefix'] = True
-
+    # 白名单前缀（用户要求：/ QQ 接线（ / 优先用手里）是明确的开场白，直接放行
+    # —— 不能让它被 "整句近似 ASCII" 之类判据误杀（「QQ 接线（2026-11-20 起）」就是这种）
     if t.startswith(ALLOWED_PREFIX):
         key=norm(t)
         if key in seen_heard:
@@ -274,6 +329,30 @@ for e in events:
         corr = rule_correction(rn['id'])
         if corr: rn['superseded'] = corr
         rule_nodes.append(rn); continue
+
+    # 不是「大肥鱼第一人称原话」的，先分流
+    cls = classify_not_said(t)
+    if cls:
+        kind_, why_ = cls
+        if kind_ == 'third-person':
+            # 关于他们的事实 → 有独立价值，放进 insight
+            ins_extra.append({'id':'tp:'+e.get('id',''), 'kind':'insight', 'text':t,
+                              'ts':e.get('ts'), 'day':e.get('day'), 'category':'about-them',
+                              'fromThirdPerson':True})
+        excl(base, kind_, t, why_, 'classify_not_said')
+        continue
+
+    # 汇报/统计 → 不是「他说的」（澄点出的第四处假）
+    rep = looks_like_report(t)
+    if rep:
+        excl(base,'system-report',t,
+             '这句是系统/助手给她的汇报，不是真人说的话：%s' % rep,
+             'looks_like_report')
+        continue
+
+    if INJECTION_RE.match(t):
+        m=INJECTION_RE.match(t)
+        excl(base,'injection-command',t,'开头是系统注入指令「%s」，纯指令不是话'%m.group(0),'INJECTION_RE'); continue
 
     n=norm(t)
 
@@ -564,6 +643,7 @@ for coll, dst in ((voice_nodes_raw, voice_nodes), (said_wrapped, said_nodes), (s
         dst.append(nd)
 
 rule_nodes = rule_nodes + STATED_RULES
+ins_nodes  = ins_nodes + ins_extra
 
 nodes = utt_nodes + said_nodes + rule_nodes + ins_nodes + mem_nodes + voice_nodes       + note_nodes + appt_nodes + work_nodes + spoke_dedup
 

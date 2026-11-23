@@ -446,6 +446,9 @@
   .ex-tag.injection-command{ background:rgba(255,110,110,.13); color:#ff8a8a; }
   .ex-tag.injection-wrapped{ background:rgba(120,200,255,.14); color:#7cc8ff; }
   .ex-tag.system-report{ background:rgba(255,200,120,.13); color:#ffcc80; }
+  .ex-tag.system-text{ background:rgba(140,180,255,.13); color:#8cb4ff; }
+  .ex-tag.third-person{ background:rgba(180,255,180,.12); color:#9ee89e; }
+  .ex-tag.mojibake{ background:rgba(200,200,200,.10); color:#a0a0a0; }
   .ex-tag.self-said-likely-question{ background:rgba(120,220,180,.14); color:#7fe0b4; }
   .ex-tag.markup{ background:rgba(150,150,150,.12); color:#9a9a9a; }
   .ex-item .ex-time{ font-size:10.5px; color:#4e5a75; }
@@ -5345,6 +5348,9 @@ const EX_REASON_CN = {
   'injection-command': '系统指令·不是话',
   'injection-wrapped': '注入壳·已剥出真事',
   'system-report': '系统的汇报·不是他说的',
+  'system-text': '系统文本/代码',
+  'third-person': '第三人称·关于他们的事',
+  'mojibake': '乱码',
   'schedule': '定时提醒·不是话',
   'self-said': '她说的·记成听到',
   'self-said-likely-question': '疑似问她·存疑',
@@ -5352,7 +5358,8 @@ const EX_REASON_CN = {
   'group-format': '群聊格式剥不净',
   'unknown': '其它',
 };
-const EX_REASON_ORDER = ['injection-command','injection-wrapped','injection','system-report','schedule',
+const EX_REASON_ORDER = ['injection-command','injection-wrapped','injection','system-report',
+  'system-text','third-person','mojibake','schedule',
   'self-said','self-said-likely-question','markup','group-format','unknown'];
 
 let EX_DATA = null;

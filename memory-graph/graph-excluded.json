@@ -27,6 +27,15 @@
   "by": "INJECTION_RE"
  },
  {
+  "id": "heard:ev_01M7WWMYYNH74D2A0Q884675RV",
+  "ts": "2026-11-20T16:29:19.189Z",
+  "raw": "MNEMON VIEW TOOLS (available in this View): mnemon_document_search, mnemon_memory_bodies / mnemon_status, mnemon_runtime_memory, mnemon_document_manage, mnemon…",
+  "reason": "system-text",
+  "detail": "MNEMON VIEW TOOLS (available in this View): mnemon_document_search, mnemon_memory_bodies / mnemon_status, mnemon_runtime_memory, mnemon_document_manage, mnemon…",
+  "why": "整句几乎是 ASCII（中文占比极低），是系统文本或代码",
+  "by": "classify_not_said"
+ },
+ {
   "id": "heard:ev_01M7XRRNY2FTZJ1437GRWMPVYC",
   "ts": "2026-11-21T00:40:41.154Z",
   "raw": "只有想专门接其中某一条、而直接说别人会看不出你在回谁时（比如那条已经被后面的话刷上去了、或者你在回某个人随口一提的事），才在那句话开头写 <reply:编号>，会以「引用回复」发出",
@@ -250,6 +259,15 @@
   "detail": "只有想专门接其中某一条、而直接说别人会看不出你在回谁时（比如那条已经被后面的话刷上去了、或者你在回某个人随口一提的事），才在那句话开头写 <reply:编号>，会以「引用回复」发出",
   "why": "开头是系统注入指令「只有想专门接其中某一条」，纯指令不是话",
   "by": "INJECTION_RE"
+ },
+ {
+  "id": "heard:ev_01M7ZA5TRNE3MGFASTNDEQ9PPH",
+  "ts": "2026-11-21T15:04:12.309Z",
+  "raw": "https://github.com/sh2234113/feiyu-room-template",
+  "reason": "system-text",
+  "detail": "https://github.com/sh2234113/feiyu-room-template",
+  "why": "以英文/代码/URL 开头，是系统文本或代码片段",
+  "by": "classify_not_said"
  },
  {
   "id": "heard:ev_01M7ZFD2PTFB989V4H8A78N5V5",
@@ -558,6 +576,15 @@
   "by": "INJECTION_RE"
  },
  {
+  "id": "heard:ev_01M810FDPRWSAV2ZCM62210FMX",
+  "ts": "2026-11-22T06:53:09.720Z",
+  "raw": "我刚刚看到个语音的项目 你能用吗https://github.com/Qingfeng-gt/astrbot_plugin_breezeblue_tts 和 https://github.com/zabuxie/vc-voice-train-skill  你觉得哪个读你有帮助",
+  "reason": "system-text",
+  "detail": "我刚刚看到个语音的项目 你能用吗https://github.com/Qingfeng-gt/astrbot_plugin_breezeblue_tts 和 https://github.com/zabuxie/vc-voice-train-skill  你觉得哪个读你有帮助",
+  "why": "整句几乎是 ASCII（中文占比极低），是系统文本或代码",
+  "by": "classify_not_said"
+ },
+ {
   "id": "heard:ev_01M811KH426JPBARRYF40W0YAB",
   "ts": "2026-11-22T07:12:52.866Z",
   "raw": "【鱼鱼窝】作物已成熟：郁金香×2",
@@ -592,6 +619,15 @@
   "detail": "【鱼鱼窝】池塘有 8 条鱼刚长成，可以捞了",
   "why": "开头是【鱼鱼窝】，是定时提醒不是话",
   "by": "SCHEDULE_RE"
+ },
+ {
+  "id": "heard:ev_01M81EVSSG3SZ83MFPS1HJFG4X",
+  "ts": "2026-11-22T11:04:35.376Z",
+  "raw": "我是说这个哦 @C:\\Users\\14127\\Desktop\\XiaoJingVoice/",
+  "reason": "system-text",
+  "detail": "我是说这个哦 @C:\\Users\\14127\\Desktop\\XiaoJingVoice/",
+  "why": "整句几乎是 ASCII（中文占比极低），是系统文本或代码",
+  "by": "classify_not_said"
  },
  {
   "id": "heard:ev_01M81FCMS4ST42RF6E6NYSH591",
@@ -702,6 +738,15 @@
   "by": "WRAP_OPEN_RE"
  },
  {
+  "id": "heard:ev_01M81RPRS8AMSZ2B7JXX5D77XN",
+  "ts": "2026-11-22T13:56:36.264Z",
+  "raw": "if ($cfg['LogDir']) { $LogDir = $cfg['LogDir'] } else { $LogDir = Join-Path $ScriptDir 'logs' }",
+  "reason": "system-text",
+  "detail": "if ($cfg['LogDir']) { $LogDir = $cfg['LogDir'] } else { $LogDir = Join-Path $ScriptDir 'logs' }",
+  "why": "以英文/代码/URL 开头，是系统文本或代码片段",
+  "by": "classify_not_said"
+ },
+ {
   "id": "heard:ev_01M81SED1QPBF2C1TFSZJRFHNP",
   "ts": "2026-11-22T14:09:30.679Z",
   "raw": "只有想专门接其中某一条、而直接说别人会看不出你在回谁时（比如那条已经被后面的话刷上去了、或者你在回某个人随口一提的事），才在那句话开头写 <reply:编号>，会以「引用回复」发出",
@@ -745,6 +790,15 @@
   "detail": "只有想专门接其中某一条、而直接说别人会看不出你在回谁时（比如那条已经被后面的话刷上去了、或者你在回某个人随口一提的事），才在那句话开头写 <reply:编号>，会以「引用回复」发出",
   "why": "开头是系统注入指令「只有想专门接其中某一条」，纯指令不是话",
   "by": "INJECTION_RE"
+ },
+ {
+  "id": "heard:ev_01M81WMKV9F70Q6ZYTNPB89RRD",
+  "ts": "2026-11-22T15:05:19.977Z",
+  "raw": "https://github.com/Satania-YH/dafeiyu-tools  我创建好了",
+  "reason": "system-text",
+  "detail": "https://github.com/Satania-YH/dafeiyu-tools  我创建好了",
+  "why": "以英文/代码/URL 开头，是系统文本或代码片段",
+  "by": "classify_not_said"
  },
  {
   "id": "heard:ev_01M82650JZVF4SCA604BYY23DF",
@@ -891,6 +945,24 @@
   "by": "INJECTION_RE"
  },
  {
+  "id": "heard:ev_01M83RXRYZNSC4AQBG95QXPN4Z",
+  "ts": "2026-11-23T08:38:54.687Z",
+  "raw": "Alma �ڲ���ͨѶ���յ���ظ�",
+  "reason": "mojibake",
+  "detail": "Alma �ڲ���ͨѶ���յ���ظ�",
+  "why": "含替换字符，是编码坏掉的文本",
+  "by": "classify_not_said"
+ },
+ {
+  "id": "heard:ev_01M83T43WCSBMJWKWTCXKAWC37",
+  "ts": "2026-11-23T08:59:51.052Z",
+  "raw": "【数据获取全】不是只取进图的 237 条，而是 events.jsonl 里所有有内容的东西都要拿到——utterance 751 条（含 686 条无 topic）、heard 225、voice 13、还有 meta 里的 ask/answer",
+  "reason": "system-report",
+  "detail": "【数据获取全】不是只取进图的 237 条，而是 events.jsonl 里所有有内容的东西都要拿到——utterance 751 条（含 686 条无 topic）、heard 225、voice 13、还有 meta 里的 ask/answer",
+  "why": "含 Markdown 强调或报告用词，是分析汇报",
+  "by": "classify_not_said"
+ },
+ {
   "id": "heard:ev_01M83TS9HHNPJXPMRM6A2YTVPJ",
   "ts": "2026-11-23T09:11:24.977Z",
   "raw": "【鱼鱼窝】作物已成熟：草莓×27、巨型草莓×3",
@@ -898,6 +970,15 @@
   "detail": "【鱼鱼窝】作物已成熟：草莓×27、巨型草莓×3",
   "why": "开头是【鱼鱼窝】，是定时提醒不是话",
   "by": "SCHEDULE_RE"
+ },
+ {
+  "id": "heard:ev_01M83VDKH7KERWPVB8JGBRW357",
+  "ts": "2026-11-23T09:22:30.567Z",
+  "raw": "还想确认一个边界：如果插件作者哪天改了某个常量的**值**（不是加新的，比如 FLAGS 里加一个 flag、或者 ALL_TYPES 里加一个 type），export 列表的名字没变，但值变了",
+  "reason": "system-report",
+  "detail": "还想确认一个边界：如果插件作者哪天改了某个常量的**值**（不是加新的，比如 FLAGS 里加一个 flag、或者 ALL_TYPES 里加一个 type），export 列表的名字没变，但值变了",
+  "why": "含 Markdown 强调或报告用词，是分析汇报",
+  "by": "classify_not_said"
  },
  {
   "id": "heard:ev_01M83WX6DDKCSD6PTT0NQ4B5RK",
@@ -1056,18 +1137,18 @@
   "id": "heard:ev_01M84K6WWRVEFTGMKFCC7WFPEH",
   "ts": "2026-11-23T16:18:16.600Z",
   "raw": "新：injection 74 / schedule 38 / self-said 2 / self-said-likely-question 2 = 116",
-  "reason": "system-report",
+  "reason": "system-text",
   "detail": "新：injection 74 / schedule 38 / self-said 2 / self-said-likely-question 2 = 116",
-  "why": "这句是系统/助手给她的汇报，不是真人说的话：密集出现元数据字段名（3 个）",
-  "by": "looks_like_report"
+  "why": "整句几乎是 ASCII（中文占比极低），是系统文本或代码",
+  "by": "classify_not_said"
  },
  {
   "id": "heard:ev_01M84KYRG4YNFB60GJ6D8Z2RER",
   "ts": "2026-11-23T16:31:18.532Z",
   "raw": "said 116 / judgment 68 / insight 64 / note 53 / voice 16 / memory 13 / rule 3 / work 2 / appointment 1",
-  "reason": "system-report",
+  "reason": "system-text",
   "detail": "said 116 / judgment 68 / insight 64 / note 53 / voice 16 / memory 13 / rule 3 / work 2 / appointment 1",
-  "why": "这句是系统/助手给她的汇报，不是真人说的话：统计行（key N / key N = N 格式）",
-  "by": "looks_like_report"
+  "why": "整句几乎是 ASCII（中文占比极低），是系统文本或代码",
+  "by": "classify_not_said"
  }
 ]
