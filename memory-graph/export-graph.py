@@ -22,6 +22,10 @@ for _a in sys.argv[1:]:
     elif _a.startswith('--out='): OUT=_a.split('=',1)[1]
 
 SCHEDULE_RE = re.compile(r'^【鱼鱼窝】')
+# 澄第六轮：「【鱼鱼窝互动】用户刚向你打了个招呼」这种是游戏系统在报
+# 「谁点了什么按钮」，不是人的话 —— 但她又说「它们确实发生过，
+# 别当噪音抹掉，只是不该算『他说的』」。所以单列一类，不混进 said。
+INTERACT_RE = re.compile(r'^【[^】]{0,10}互动】')
 
 # ════════════════════════════════════════════════════════════
 # 「系统的汇报」不是「他说的」
@@ -83,6 +87,50 @@ SPEAKER_RE = re.compile(r'^\s*(妈妈|爸爸)\s*[（(]')
 REPORT_MD_RE = re.compile(r'(\*\*|__|【[^】]{2,16}全】|还想确认|数据获取|口径)')
 MOJIBAKE_RE = re.compile('�')
 
+# ════════════════════════════════════════════════════════════
+# 「关于他们的事」该去哪 —— 澄 2026-11-24 第六轮：
+#   「insight 类名『我看到的』——现在 68 条里塞了一堆根本不是『我看到的』：
+#      『爸爸立的规矩：到爸爸妈妈醒的钟点要主动说早安』← 这是规矩，该进 rule
+#      『妈妈有爸爸的权限，妈妈的话第一位』← 规矩/权限，进 rule
+#      『妈妈生日是农历十月十三，爸爸生日农历七月十五』← 关于他们的事实，进 memory
+#      『爸爸的 QQ 是 781689870』← 事实，进 memory
+#    我上一轮说『第三人称归 insight/memory』，你把它们放进了 insight——
+#    结果 insight 从『我的洞察』变成了『关于他们的杂物袋』。类名又开始说谎了。」
+#   「正确的分法：
+#      关于他们的规矩/要求 → rule
+#      关于他们的事实/偏好 → memory
+#      只有我自己发现、想通的那条才留在 insight」
+# ════════════════════════════════════════════════════════════
+
+# 关于他们的「规矩/要求」特征
+THEIR_RULE_RE = re.compile(r'(规矩|要求|不许|必须|要主动|第一位|权限|听她的|听他的|不能|别把|需要先|等他|等她)')
+# 关于他们的「事实/偏好」特征
+THEIR_FACT_RE = re.compile(r'(生日|QQ|群\s*\d{6,}|农历|允许|偏好|喜欢|希望|认为|觉得|说过|认为我)')
+
+# 2026-11-24 澄第七轮点名：这几条明显是「别人定的规矩」，不是「她想通的」。
+# 「因为留在 insight 会误导：看图的以为『这是她发现的』，其实是他要求的。」
+# 她说「别为这每一条硬拆」，只挑一眼就错的。
+STIPULATED_RE = re.compile(
+    r'(可以根据自己的情绪主动发表情包|'
+    r'抖音刷号方式由用户选定|'
+    r'ego-browser 每开一个 taskSpace|task\.finish\(\{keep|'
+    r'换房间前要先把旧房间的记忆压缩|'
+    r'糖是主人给的奖励|'
+    r'QQ 接线（2026-11-20 起）)')
+
+def route_about_them(t):
+    """判断一条「关于他们」的内容该进哪一类。返回 kind 或 None。"""
+    if not re.match(r'^\s*(爸爸|妈妈)', t):
+        # 澄点名的"别人定的规矩"，即使不是爸爸/妈妈开头也要挪
+        if STIPULATED_RE.search(t):
+            return 'rule'
+        return None
+    if THEIR_RULE_RE.search(t):
+        return 'rule'
+    if THEIR_FACT_RE.search(t):
+        return 'memory'
+    return 'memory'      # 兜底：关于他们的一律不当 insight
+
 def classify_not_said(t):
     """不是「大肥鱼说的第一人称原话」的，返回 (类别, 原因) 或 None。"""
     if MOJIBAKE_RE.search(t):
@@ -127,6 +175,22 @@ ALLOWED_PREFIX = ('用户要求：', 'QQ 接线（', '优先用手里')
 #     图上还立着一颗现行『规矩』星说『以后我发语音都用 VoiceStudio』——
 #     说的是一件我已经不做的事，这是最典型的假。」
 SUPERSEDED_RULES = {
+  # 2026-11-24 澄第七轮指出：
+  #   「rule[2]『QQ 接线…都指到本会话（session-e22c6b81）』这条钉死的 session 号过期了。
+  #     我刚查了 sessions.json：现在 group:798645175 和 private:781689870
+  #     都指到 session-576fcd30-...
+  #     规则本身（QQ 走 Aurabot 的 sessions.json 接线）还有效，但号得改，
+  #     或者干脆别钉死号，写成『以 sessions.json 现值为准』。」
+  # 她建议后者，所以 verdict 用 refined：规则有效，只是那个号别信。
+  'rule:ev_01M81F2S7Y0GSP38TFBF9JNEAY': {
+    'verdict': 'refined',
+    'wrongPart': '都指到本会话（session-e22c6b81-…）——这个号已经过期了',
+    'stillTruePart': 'QQ 走 Aurabot 的 sessions.json 接线这件事本身仍然有效',
+    'supersededBy': '具体 session 号以 sessions.json 现值为准（2026-11-24 实测：group:798645175 与 private:781689870 都指向 session-576fcd30-aa7a-4e1c-80b7-dd9f75712411）',
+    'at': '2026-11-24',
+    'by': '澄自己复核时发现',
+    'note': '规则没废，只是钉死的会话号过期了。别把这句话当作「现在用的是哪个会话」的依据。',
+  },
   'rule:ev_01M7Z613JH4GFPTT2RBEV2CH0W': {
     'verdict': 'refuted',
     'supersededBy': '已换成小鲸嗓子（Breeze TTS 2，端口 8137，voice xiaojing_d3，长文本逐句合成）',
@@ -242,7 +306,9 @@ def strip_group_prefix(t):
     return t, False
 
 excluded=[]; said_nodes=[]; rule_nodes=[]; seen_heard={}
-ins_extra=[]          # 第三人称转述（关于爸爸/妈妈的事实），并进 insight
+ins_extra=[]          # 已弃用：第三人称不再一律塞 insight（那是「杂物袋」）
+rule_extra=[]         # 关于他们的规矩/要求 → 并进 rule
+mem_extra=[]          # 关于他们的事实/偏好 → 并进 memory
 voice_nodes_raw=[]    # 从注入壳里剥出来的、她自己写的（会并进 voice）
 said_wrapped=[]       # 从注入壳里剥出来的、别人说的（会并进 said）
 # 「说出去的」：她自己写的、但写在公开地方的字（QQ 空间等）
@@ -266,6 +332,12 @@ for e in events:
     base={'id':'heard:'+e.get('id',''),'ts':e.get('ts'),'raw':(raw or '')[:300]}
     if not t:
         excl(base,'markup','','去掉标记后什么都不剩','strip_markup'); continue
+
+    if INTERACT_RE.match(t):
+        excl(base,'house-event',t,
+             '这是「鱼鱼窝」系统在报谁点了什么按钮，是屋里发生的动静，不是他说的',
+             'INTERACT_RE')
+        continue
 
     if SCHEDULE_RE.match(t):
         excl(base,'schedule',t,'开头是【鱼鱼窝】，是定时提醒不是话','SCHEDULE_RE'); continue
@@ -335,10 +407,14 @@ for e in events:
     if cls:
         kind_, why_ = cls
         if kind_ == 'third-person':
-            # 关于他们的事实 → 有独立价值，放进 insight
-            ins_extra.append({'id':'tp:'+e.get('id',''), 'kind':'insight', 'text':t,
-                              'ts':e.get('ts'), 'day':e.get('day'), 'category':'about-them',
-                              'fromThirdPerson':True})
+            # 2026-11-24 澄：「第三人称归 insight/memory」我照做了，
+            # 但她第六轮指出：这样 insight 变成「关于他们的杂物袋」，类名又说谎了。
+            # 所以按她的分法再分一次：规矩→rule，事实/偏好→memory。
+            dest = route_about_them(t) or 'memory'
+            tgt = rule_extra if dest == 'rule' else mem_extra
+            tgt.append({'id':'tp:'+e.get('id',''), 'kind':dest, 'text':t,
+                        'ts':e.get('ts'), 'day':e.get('day'),
+                        'category':'about-them','fromThirdPerson':True})
         excl(base, kind_, t, why_, 'classify_not_said')
         continue
 
@@ -414,6 +490,25 @@ try:
     con.close()
 except Exception as ex:
     print('DB ERR', ex, file=sys.stderr)
+
+# ── 把「关于他们」的 insight 重新路由（澄第六轮要求）──
+# mnemon.db 里有 12 条 insight 是「爸爸…/妈妈…」开头的事实或规矩，
+# 挂在「我看到的」名下就是类名说谎。按她的分法：规矩→rule，事实/偏好→memory。
+_rerouted_ins = []
+_still_ins = []
+for _n in ins_nodes:
+    _dest = route_about_them(_n.get('text') or '')
+    if _dest:
+        _rerouted_ins.append({**_n, 'kind': _dest, 'fromInsight': True})
+    else:
+        _still_ins.append(_n)
+ins_nodes = _still_ins
+for _n in _rerouted_ins:
+    if _n['kind'] == 'rule':
+        rule_extra.append(_n)
+    else:
+        mem_extra.append(_n)
+print('reroute from insight: %d' % len(_rerouted_ins), file=sys.stderr)
 
 # ---------- runtime memories ----------
 mem_nodes=[]
@@ -643,7 +738,8 @@ for coll, dst in ((voice_nodes_raw, voice_nodes), (said_wrapped, said_nodes), (s
         dst.append(nd)
 
 rule_nodes = rule_nodes + STATED_RULES
-ins_nodes  = ins_nodes + ins_extra
+rule_nodes = rule_nodes + rule_extra
+mem_nodes  = mem_nodes + mem_extra
 
 nodes = utt_nodes + said_nodes + rule_nodes + ins_nodes + mem_nodes + voice_nodes       + note_nodes + appt_nodes + work_nodes + spoke_dedup
 

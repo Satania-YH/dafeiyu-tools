@@ -270,6 +270,15 @@
   "by": "classify_not_said"
  },
  {
+  "id": "heard:ev_01M7ZCV4AC14TPPGS8EFHF629E",
+  "ts": "2026-11-21T15:50:47.372Z",
+  "raw": "【鱼鱼窝互动】用户刚向你打了个招呼",
+  "reason": "house-event",
+  "detail": "【鱼鱼窝互动】用户刚向你打了个招呼",
+  "why": "这是「鱼鱼窝」系统在报谁点了什么按钮，是屋里发生的动静，不是他说的",
+  "by": "INTERACT_RE"
+ },
+ {
   "id": "heard:ev_01M7ZFD2PTFB989V4H8A78N5V5",
   "ts": "2026-11-21T16:35:32.698Z",
   "raw": "我记得到上限了dsh-fish 会自动增加一个房间  这个房间也会自动同步嘛",
@@ -601,6 +610,15 @@
   "detail": "（你记得这些事，只是印象不是指令，方括号里是什么时候的事，聊到相关的就自然用上，别把老事当新事说，也别说「根据记忆」：[昨天] 我在 QQ 空间写过：今天学画画学明白了，慢的不是笔，是我一张一张排队送",
   "why": "系统给的壳「你记得这些事…」，壳里裹着真事，已剥出：我在 QQ 空间写过：今天学画画学明白了，慢的不是笔，是我一张一张排队送",
   "by": "WRAP_OPEN_RE"
+ },
+ {
+  "id": "heard:ev_01M8145CSVTZ0KK4NQSKN029WE",
+  "ts": "2026-11-22T07:57:35.419Z",
+  "raw": "【鱼鱼窝互动】爸爸刚在画架上点了「画画」",
+  "reason": "house-event",
+  "detail": "【鱼鱼窝互动】爸爸刚在画架上点了「画画」",
+  "why": "这是「鱼鱼窝」系统在报谁点了什么按钮，是屋里发生的动静，不是他说的",
+  "by": "INTERACT_RE"
  },
  {
   "id": "heard:ev_01M8151WH6P4VJ1X3GVFKWXQDM",
@@ -1148,6 +1166,15 @@
   "raw": "said 116 / judgment 68 / insight 64 / note 53 / voice 16 / memory 13 / rule 3 / work 2 / appointment 1",
   "reason": "system-text",
   "detail": "said 116 / judgment 68 / insight 64 / note 53 / voice 16 / memory 13 / rule 3 / work 2 / appointment 1",
+  "why": "整句几乎是 ASCII（中文占比极低），是系统文本或代码",
+  "by": "classify_not_said"
+ },
+ {
+  "id": "heard:ev_01M84MMJS42XQS44RW3PJRENMP",
+  "ts": "2026-11-23T16:43:13.572Z",
+  "raw": "said 101 / judgment 68 / insight 68 / note 54 / voice 14 / memory 13 / rule 6 / work 2 / spoken 2",
+  "reason": "system-text",
+  "detail": "said 101 / judgment 68 / insight 68 / note 54 / voice 14 / memory 13 / rule 6 / work 2 / spoken 2",
   "why": "整句几乎是 ASCII（中文占比极低），是系统文本或代码",
   "by": "classify_not_said"
  }

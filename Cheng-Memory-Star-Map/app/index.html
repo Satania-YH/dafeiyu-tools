@@ -449,6 +449,7 @@
   .ex-tag.system-text{ background:rgba(140,180,255,.13); color:#8cb4ff; }
   .ex-tag.third-person{ background:rgba(180,255,180,.12); color:#9ee89e; }
   .ex-tag.mojibake{ background:rgba(200,200,200,.10); color:#a0a0a0; }
+  .ex-tag.house-event{ background:rgba(160,220,255,.12); color:#a0dcff; }
   .ex-tag.self-said-likely-question{ background:rgba(120,220,180,.14); color:#7fe0b4; }
   .ex-tag.markup{ background:rgba(150,150,150,.12); color:#9a9a9a; }
   .ex-item .ex-time{ font-size:10.5px; color:#4e5a75; }
@@ -5351,6 +5352,7 @@ const EX_REASON_CN = {
   'system-text': '系统文本/代码',
   'third-person': '第三人称·关于他们的事',
   'mojibake': '乱码',
+  'house-event': '屋里的动静·系统提示',
   'schedule': '定时提醒·不是话',
   'self-said': '她说的·记成听到',
   'self-said-likely-question': '疑似问她·存疑',
@@ -5359,7 +5361,7 @@ const EX_REASON_CN = {
   'unknown': '其它',
 };
 const EX_REASON_ORDER = ['injection-command','injection-wrapped','injection','system-report',
-  'system-text','third-person','mojibake','schedule',
+  'system-text','third-person','mojibake','house-event','schedule',
   'self-said','self-said-likely-question','markup','group-format','unknown'];
 
 let EX_DATA = null;
