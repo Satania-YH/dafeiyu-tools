@@ -5021,6 +5021,54 @@ function initLive() {
 
   live.connect();
 
+  /* ══════ 临时验证：1s 一个新分类，0.5s 一颗子星 ══════
+     跑完看最终效果，看完删掉这段即可（搜 __DEMO_FINAL）。 */
+
+  if (window.__DEMO_FINAL !== false) {
+    const names = ['抖音','B站','知乎','微博','小红书','播客','游戏','小说','相册',
+                   '代码库','歌单','电影','漫画','读书','咖啡','跑步','旅行','猫'];
+    let ci = 0;
+    const grown = [];
+
+    // ① 每秒一个新分类
+    setInterval(() => {
+      if (currentView !== 'starmap' || !nodes.length) return;
+      if (ci >= names.length) return;
+      const label = names[ci];
+      const kind = 'fc_' + ci;
+      ci++;
+      KIND_CN[kind] = label;
+
+      const seed = nodes.find(n => n.k === 'said') || nodes[0];
+      const id = 'FC-' + kind + '-0';
+      addStarToScene({
+        id, kind, text: '【' + label + '】第 1 条',
+        ts: new Date().toISOString(),
+        date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
+        importance: 4, topic: label,
+      }, [{ source: id, target: seed.id, cos: 0.5 }]);
+
+      grown.push({ label, kind, count: 1 });
+    }, 1000);
+
+    // ② 每 0.5 秒给最近的 3 个分类各加一颗子星
+    setInterval(() => {
+      if (currentView !== 'starmap' || !nodes.length || !grown.length) return;
+      for (const g of grown.slice(-3)) {
+        g.count++;
+        const id = 'FC-' + g.kind + '-' + g.count;
+        const same = nodes.filter(n => n.k === g.kind);
+        const anchor = same[same.length - 1] || nodes[0];
+        addStarToScene({
+          id, kind: g.kind, text: '【' + g.label + '】第 ' + g.count + ' 条',
+          ts: new Date().toISOString(),
+          date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
+          importance: 4, topic: g.label,
+        }, [{ source: id, target: anchor.id, cos: 0.8 }]);
+      }
+    }, 500);
+  }
+
 }
 
 /** 更新「上次更新 X 分钟前」 */
