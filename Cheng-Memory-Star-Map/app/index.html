@@ -5,39 +5,225 @@
 <title>记忆星图</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  :root{ color-scheme:dark; --accent:#8fb8ff; --line:rgba(140,170,255,.14); }
+  :root{
+    color-scheme:dark; --accent:#8fb8ff; --line:rgba(140,170,255,.14);
+    --top-h:52px;        /* 顶部标题栏高度 */
+    --rail-w:186px;      /* 左侧导航宽度（展开时） */
+    --drawer-w:296px;    /* 设置抽屉宽度 */
+  }
   *{ box-sizing:border-box; }
   html,body{ margin:0; height:100%; overflow:hidden; background:#04050b; }
   body{
     font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
     color:#e8ecf6; -webkit-font-smoothing:antialiased; user-select:none;
   }
-  #app{ position:relative; height:100%; overflow:hidden; }
+  #app{ position:relative; height:100%; overflow:hidden; padding-top:var(--top-h); }
 
-  /* ---------------- 左侧面板：浮动，不挤压画布 ---------------- */
-  #panel{
-    position:absolute; left:0; top:0; bottom:0; width:296px; overflow-y:auto; overflow-x:hidden;
-    background:linear-gradient(180deg,rgba(11,15,27,.97),rgba(7,9,17,.97));
-    backdrop-filter:blur(14px);
-    border-right:1px solid var(--line); padding:16px 16px 26px; z-index:30;
-    box-shadow:0 0 46px rgba(0,0,0,.6);
-    transform:translateX(0);
-    transition:transform .30s cubic-bezier(.4,0,.2,1), box-shadow .30s;
+  /* ---------------- 顶部标题栏 ---------------- */
+  #topbar{
+    position:absolute; left:0; right:0; top:0; height:var(--top-h); z-index:60;
+    display:flex; align-items:center; gap:12px; padding:0 16px;
+    background:linear-gradient(180deg,rgba(10,14,25,.98),rgba(7,10,19,.94));
+    border-bottom:1px solid var(--line);
+    backdrop-filter:blur(16px);
   }
-  #panel.collapsed{ transform:translateX(-297px); box-shadow:none; }
-  #panel::-webkit-scrollbar{ width:6px; }
-  #panel::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.18); border-radius:3px; }
+  #topbar .logo{
+    width:26px; height:26px; border-radius:50%; flex:none;
+    background:radial-gradient(circle at 35% 30%, #ffd08a, #f0821e 62%, #a8480a);
+    box-shadow:0 0 14px rgba(240,130,30,.42);
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; color:#fff; text-shadow:0 1px 2px rgba(120,50,0,.55);
+  }
+  #topbar .title{
+    font-size:14.5px; font-weight:600; letter-spacing:.10em; color:#e8eeff;
+    white-space:nowrap;
+  }
+  #topbar .sub{
+    font-size:10.5px; color:#5c6884; letter-spacing:.05em;
+    padding-left:11px; border-left:1px solid var(--line); white-space:nowrap;
+  }
+  #topbar .right{ margin-left:auto; display:flex; align-items:center; gap:8px; }
+
+  /* ---------------- 左侧导航栏 ---------------- */
+  #rail{
+    position:absolute; left:0; top:var(--top-h); bottom:0; width:var(--rail-w); z-index:50;
+    background:linear-gradient(180deg,rgba(10,14,25,.97),rgba(6,9,16,.97));
+    border-right:1px solid var(--line);
+    display:flex; flex-direction:column; padding:12px 10px 14px;
+    transition:width .26s cubic-bezier(.4,0,.2,1), transform .26s cubic-bezier(.4,0,.2,1);
+    overflow:hidden;
+  }
+  #rail.collapsed{ width:52px; }
+  #rail.collapsed .nav-label{ display:none; }
+  #rail.collapsed .nav-item{ justify-content:center; padding-left:0; padding-right:0; }
+
+  #rail .rail-head{
+    display:flex; align-items:center; gap:8px; padding:2px 4px 12px; margin-bottom:6px;
+    border-bottom:1px solid var(--line); flex:none;
+  }
+  #rail .rail-head .rail-title{
+    font-size:10px; letter-spacing:.16em; color:#6d7b9a; text-transform:uppercase;
+    white-space:nowrap; overflow:hidden;
+  }
+  #rail .rail-toggle{
+    margin-left:auto; flex:none; width:24px; height:24px; border-radius:7px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid rgba(140,170,255,.14); background:rgba(255,255,255,.03);
+    color:#7d8bad; font-size:12px; transition:.15s; font-family:inherit;
+  }
+  #rail .rail-toggle:hover{ background:rgba(140,170,255,.13); color:#cfe0ff; border-color:rgba(140,170,255,.34); }
+
+  .nav-item{
+    display:flex; align-items:center; gap:10px; width:100%; padding:9px 11px; margin-bottom:4px;
+    border:1px solid transparent; border-radius:9px; cursor:pointer; font-family:inherit;
+    background:transparent; color:#93a1c0; font-size:12.5px; text-align:left;
+    transition:.15s; position:relative; overflow:hidden; white-space:nowrap;
+  }
+  .nav-item:hover{ background:rgba(140,170,255,.07); color:#cfdcf7; }
+  .nav-item.on{
+    background:rgba(120,160,255,.13); border-color:rgba(140,170,255,.34); color:#eaf2ff;
+  }
+  .nav-item.on::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--accent);
+  }
+  .nav-item .ico{ font-size:14px; flex:none; width:18px; text-align:center; line-height:1; }
+  .nav-item .nav-label{ overflow:hidden; text-overflow:ellipsis; }
+
+  /* ---------------- 记忆时间轴：铺满中间整块区域 ---------------- */
+  #timeline{
+    position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
+    overflow-y:auto; overflow-x:hidden; z-index:45;
+    background:linear-gradient(180deg,rgba(9,13,23,.99),rgba(5,7,13,.99));
+    padding:22px 30px 40px;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .22s, visibility .22s, left .26s cubic-bezier(.4,0,.2,1);
+  }
+  #timeline.shown{ opacity:1; visibility:visible; pointer-events:auto; }
+  #rail.collapsed ~ #timeline{ left:52px; }
+  #timeline::-webkit-scrollbar{ width:8px; }
+  #timeline::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.18); border-radius:4px; }
+
+  #timeline .tl-page{ max-width:980px; margin:0 auto; }
+
+  #timeline .tl-head{
+    display:flex; align-items:baseline; gap:12px; margin-bottom:6px;
+  }
+  #timeline .tl-head h1{
+    margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff;
+  }
+  #timeline .tl-head .tl-count{ font-size:11.5px; color:#5c6884; }
+  #timeline .tl-sub{ font-size:11.5px; color:#65718c; margin:4px 0 22px; letter-spacing:.05em; }
+
+  /* 每天一块 */
+  .tl-day{ margin-bottom:26px; position:relative; padding-left:22px; }
+  .tl-day::before{
+    content:''; position:absolute; left:5px; top:6px; bottom:0; width:1px;
+    background:linear-gradient(180deg, rgba(140,170,255,.30), rgba(140,170,255,.06));
+  }
+  .tl-day:last-child::before{ background:linear-gradient(180deg, rgba(140,170,255,.30), transparent); }
+  .tl-day::after{
+    content:''; position:absolute; left:2px; top:5px; width:7px; height:7px; border-radius:50%;
+    background:var(--accent); box-shadow:0 0 8px rgba(143,184,255,.6);
+  }
+
+  .tl-day-hd{
+    display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom:10px;
+    padding:4px 0; user-select:none;
+  }
+  .tl-day-hd:hover .tl-date{ color:#cfdcf7; }
+  .tl-date{ font-size:13px; font-weight:600; color:#b9c6e2; letter-spacing:.04em; }
+  .tl-weekday{ font-size:11px; color:#5c6884; }
+  .tl-day-hd .tl-n{
+    font-size:10.5px; color:#7f8db0; padding:2px 7px; border-radius:999px;
+    background:rgba(140,170,255,.10); border:1px solid rgba(140,170,255,.16);
+  }
+  .tl-day-hd .tl-arrow{
+    margin-left:auto; font-size:10px; color:#5c6884; transition:transform .18s;
+  }
+  .tl-day.open .tl-day-hd .tl-arrow{ transform:rotate(90deg); }
+
+  .tl-items{ display:none; }
+  .tl-day.open .tl-items{ display:block; }
+
+  /* 一条 */
+  .tl-item{
+    display:flex; gap:12px; padding:8px 10px; margin-bottom:4px; border-radius:8px;
+    border-left:2px solid transparent; cursor:default;
+    transition:background .15s, border-color .15s;
+  }
+  .tl-item:hover{ background:rgba(140,170,255,.05); border-left-color:rgba(140,170,255,.3); }
+  .tl-item.fresh{ animation: tl-fresh 5s ease-out; }
+  @keyframes tl-fresh{
+    0%{ background:rgba(143,184,255,.22); }
+    100%{ background:transparent; }
+  }
+
+  .tl-time{
+    flex:none; width:44px; font-size:10.5px; color:#5c6884;
+    font-family:"Consolas",monospace; padding-top:2px;
+  }
+  .tl-body{ flex:1; min-width:0; }
+  .tl-meta{ display:flex; gap:7px; align-items:center; margin-bottom:3px; flex-wrap:wrap; }
+  .tl-kind{
+    font-size:9.5px; padding:1.5px 6px; border-radius:4px; letter-spacing:.04em;
+    background:rgba(140,170,255,.12); color:#9fb4e8;
+  }
+  .tl-kind.k-stream{ background:rgba(120,140,180,.10); color:#8b9ab8; }
+  .tl-kind.k-diary{ background:rgba(255,212,121,.14); color:#ffd479; }
+  .tl-kind.k-note{ background:rgba(111,232,200,.13); color:#6fe8c8; }
+  .tl-kind.k-work{ background:rgba(255,158,203,.13); color:#ff9ecb; }
+  .tl-kind.k-appointment{ background:rgba(255,179,122,.13); color:#ffb37a; }
+  .tl-kind.k-meta{ background:rgba(160,160,190,.12); color:#a0a0be; }
+  .tl-topic{ font-size:10px; color:#8fa0c4; }
+  .tl-badge{
+    font-size:9px; padding:1px 5px; border-radius:3px;
+    background:rgba(255,255,255,.06); color:#7f8db0;
+  }
+  .tl-text{
+    font-size:12.5px; line-height:1.65; color:#c5d0e8; word-break:break-word;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .tl-item.open .tl-text{ -webkit-line-clamp:unset; }
+  .tl-more{
+    font-size:10.5px; color:#6d8fc4; cursor:pointer; margin-top:4px; display:inline-block;
+  }
+  .tl-more:hover{ color:#a8c8ff; }
+
+  /* 空态 */
+  .tl-empty{
+    text-align:center; padding:60px 20px; color:#4d5871; font-size:12.5px; line-height:1.9;
+  }
+
+  /* ---------------- 通用设置：铺满中间整块区域 ---------------- */
+  #panel{
+    position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
+    overflow-y:auto; overflow-x:hidden; z-index:45;
+    background:linear-gradient(180deg,rgba(9,13,23,.99),rgba(5,7,13,.99));
+    padding:22px 30px 40px;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .22s, visibility .22s, left .26s cubic-bezier(.4,0,.2,1);
+  }
+  #panel.shown{ opacity:1; visibility:visible; pointer-events:auto; }
+  #rail.collapsed ~ #panel{ left:52px; }
+  #panel::-webkit-scrollbar{ width:8px; }
+  #panel::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.18); border-radius:4px; }
   #panel::-webkit-scrollbar-track{ background:transparent; }
 
+  /* 设置页内容：限制最大宽度并居中，宽屏下不会拉得稀稀拉拉 */
+  #panel .page{ max-width:1080px; margin:0 auto; }
+  /* 宽屏下两栏排布 */
+  #panel .cols{ display:grid; grid-template-columns:1fr 1fr; gap:0 40px; align-items:start; }
+  @media (max-width: 900px){ #panel .cols{ grid-template-columns:1fr; gap:0; } }
+
   .brand{ display:flex; align-items:baseline; gap:8px; margin-bottom:2px; }
-  .brand h1{ margin:0; font-size:15px; font-weight:600; letter-spacing:.16em; color:#e2eaff; }
-  .brand .v{ font-size:10px; color:#5c6884; letter-spacing:.04em; }
+  .brand h1{ margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff; }
+
   .brand .fold{
     margin-left:auto; cursor:pointer; color:#6d7b9a; font-size:13px; padding:2px 6px;
     border-radius:6px; transition:.15s;
   }
   .brand .fold:hover{ background:rgba(140,170,255,.1); color:#cfe0ff; }
-  .tagline{ font-size:10.5px; color:#65718c; margin:0 0 16px; letter-spacing:.05em; }
+  .tagline{ font-size:11.5px; color:#65718c; margin:4px 0 22px; letter-spacing:.05em; }
 
   .sec{ margin-bottom:17px; }
   .sec > .h{
@@ -141,32 +327,22 @@
   .src:hover .del{ opacity:1; }
   .src .del:hover{ color:#ff8f9e; }
   .src.restore{ text-align:center; font-size:10.5px; color:#8fb8ff; }
-  .author{ margin-top:14px; padding-top:12px; border-top:1px solid var(--line); font-size:9.5px; color:#5b6785; line-height:1.75; }
-  .author .a1{ color:#9fb0d4; font-weight:600; letter-spacing:.4px; }
-  .author a{ color:#7fa6e8; text-decoration:none; }
-  .author a:hover{ color:#b8d0ff; text-decoration:underline; }
-  .author .a3{ margin-top:4px; color:#4a5468; }
 
-  /* ---------------- 舞台：铺满整窗 ---------------- */
-  #stage{ position:absolute; inset:0; cursor:grab; overflow:hidden; transition:opacity .35s; }
+
+  /* ---------------- 舞台：标题栏和导航之外的全剩下 ---------------- */
+  #stage{
+    position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
+    cursor:grab; overflow:hidden;
+    transition:opacity .22s, visibility .22s, left .26s cubic-bezier(.4,0,.2,1);
+  }
+  #rail.collapsed ~ #stage{ left:52px; }
+  /* 设置视图：星图整块让位，不占空间也不渲染 */
+  #stage.asleep{ opacity:0; visibility:hidden; pointer-events:none; }
   #stage.dragging{ cursor:grabbing; }
   canvas{ display:block; width:100%; height:100%; }
 
-  /* 「》」把手：面板收起时贴左边，展开时贴在面板右侧 */
-  #unfold{
-    position:absolute; top:50%; left:0; transform:translateY(-50%); z-index:40;
-    cursor:pointer; width:20px; height:74px; border-radius:0 10px 10px 0;
-    border:1px solid var(--line); border-left:none; background:rgba(12,17,30,.92);
-    color:#8fa0c4; display:flex; align-items:center; justify-content:center;
-    font-size:13px; letter-spacing:1px; backdrop-filter:blur(8px);
-    transition:left .30s cubic-bezier(.4,0,.2,1), color .2s, border-color .2s, background .2s;
-  }
-  #unfold.open{ left:297px; }
-  #unfold:hover{ color:#e6efff; border-color:rgba(140,170,255,.45); background:rgba(22,30,52,.95); }
-
   .hud{ position:absolute; pointer-events:none; z-index:5; }
-  .stats{ left:20px; bottom:16px; font-size:10.5px; color:#7f8cab; line-height:1.8; transition:left .30s cubic-bezier(.4,0,.2,1); }
-  body.panel-open .stats{ left:322px; }
+  .stats{ left:20px; bottom:16px; font-size:10.5px; color:#7f8cab; line-height:1.8; }
   .stats b{ color:#bcd0ff; font-weight:600; }
   .hint{ right:20px; bottom:16px; font-size:10.5px; color:#5e6a85; text-align:right; line-height:1.7; }
 
@@ -243,7 +419,15 @@
 .seedrow button{ padding:4px 9px; font-size:11px; }
 #toast{ position:fixed; right:22px; bottom:22px; z-index:60; padding:9px 14px; border-radius:10px; background:rgba(10,16,28,.94); border:1px solid rgba(120,180,255,.30); color:#cfe4ff; font-size:12px; opacity:0; transform:translateY(8px); transition:all .22s; pointer-events:none; max-width:60vw; }
 #toast.on{ opacity:1; transform:none; }
-.hud.spin{ position:absolute; right:22px; top:20px; pointer-events:auto; z-index:6; padding:7px 15px; border-radius:999px; background:rgba(10,16,28,.74); border:1px solid rgba(120,180,255,.20); color:#7f93b3; font-size:12px; letter-spacing:.6px; cursor:pointer; backdrop-filter:blur(10px); transition:all .22s; font-family:inherit; }
+  /* 顶栏里的按钮：不再绝对定位，走 flex */
+  #topbar .hud.spin, #topbar .hud.code{
+    position:static; pointer-events:auto; padding:6px 13px; border-radius:999px;
+    background:rgba(255,255,255,.035); border:1px solid rgba(120,180,255,.18);
+    color:#7f93b3; font-size:11.5px; letter-spacing:.5px; cursor:pointer;
+    transition:all .18s; font-family:inherit; white-space:nowrap;
+  }
+  #topbar .hud.code{ font-family:"Consolas",monospace; }
+  .hud.spin{ position:absolute; right:22px; top:20px; pointer-events:auto; z-index:6; padding:7px 15px; border-radius:999px; background:rgba(10,16,28,.74); border:1px solid rgba(120,180,255,.20); color:#7f93b3; font-size:12px; letter-spacing:.6px; cursor:pointer; backdrop-filter:blur(10px); transition:all .22s; font-family:inherit; }
 .hud.spin:hover{ border-color:rgba(140,190,255,.45); color:#bcd6f5; }
 .hud.spin.on{ color:#c9e2ff; border-color:rgba(140,190,255,.55); box-shadow:0 0 20px rgba(110,170,255,.26), inset 0 0 12px rgba(110,170,255,.10); }
 .cell{ position:relative; display:inline-block; }
@@ -253,7 +437,7 @@
 .hud.code{ position:absolute; right:22px; top:64px; pointer-events:auto; z-index:6; padding:7px 15px; border-radius:999px; background:rgba(10,16,28,.74); border:1px solid rgba(120,180,255,.20); color:#7f93b3; font-size:12px; letter-spacing:.6px; cursor:pointer; backdrop-filter:blur(10px); transition:all .22s; font-family:"Consolas",monospace; }
 .hud.code:hover{ border-color:rgba(140,190,255,.45); color:#bcd6f5; }
 .hud.code.on{ color:#c9e2ff; border-color:rgba(140,190,255,.55); box-shadow:0 0 20px rgba(110,170,255,.26); }
-#codeBox{ position:absolute; right:22px; top:106px; width:342px; max-height:62vh; display:flex; flex-direction:column; background:rgba(8,12,22,.94); border:1px solid rgba(120,180,255,.20); border-radius:13px; backdrop-filter:blur(16px); box-shadow:0 14px 44px rgba(0,0,0,.55); opacity:0; transform:translateY(-8px); pointer-events:none; transition:all .22s; z-index:35; }
+#codeBox{ position:absolute; right:22px; top:14px; width:342px; max-height:62vh; display:flex; flex-direction:column; background:rgba(8,12,22,.94); border:1px solid rgba(120,180,255,.20); border-radius:13px; backdrop-filter:blur(16px); box-shadow:0 14px 44px rgba(0,0,0,.55); opacity:0; transform:translateY(-8px); pointer-events:none; transition:all .22s; z-index:35; }
 #codeBox.on{ opacity:1; transform:none; pointer-events:auto; }
 #codeBox .hd{ display:flex; align-items:center; justify-content:space-between; padding:10px 13px; border-bottom:1px solid rgba(120,180,255,.12); font-size:12px; color:#a9c2e4; letter-spacing:.5px; }
 #codeBox .hd .hdr{ display:flex; align-items:center; gap:9px; }
@@ -268,74 +452,119 @@
 </head>
 <body>
 <div id="app">
+
+  <!-- ══════ 顶部标题栏 ══════ -->
+  <header id="topbar">
+    <div class="logo">澄</div>
+    <div class="title">澄的记忆</div>
+    <div class="sub">只读 · 本机 · 不联网</div>
+    <div class="right">
+      <span id="liveHint" style="font-size:10.5px;color:#5c6884;letter-spacing:.04em;white-space:nowrap"></span>
+      <button class="hud spin" id="spinBtn" title="自动旋转 开/关">⟳ 自转</button>
+      <button class="hud code" id="codeBtn" title="看当前形态的种子代码">查看种子代码</button>
+    </div>
+  </header>
+
+  <!-- ══════ 左侧导航 ══════ -->
+  <nav id="rail">
+    <div class="rail-head">
+      <span class="rail-title">导航</span>
+      <button class="rail-toggle" id="railToggle" title="收起 / 展开导航">《</button>
+    </div>
+    <button class="nav-item on" data-view="starmap">
+      <span class="ico">✦</span><span class="nav-label">记忆星图</span>
+    </button>
+    <button class="nav-item" data-view="timeline">
+      <span class="ico">☰</span><span class="nav-label">记忆时间轴</span>
+    </button>
+    <button class="nav-item" data-view="settings">
+      <span class="ico">⚙</span><span class="nav-label">通用设置</span>
+    </button>
+  </nav>
+
+  <!-- ══════ 设置抽屉：只在「通用设置」时出现 ══════ -->
   <aside id="panel">
+   <div class="page">
     <div class="brand">
-      <h1>记 忆 星 图</h1>
-      <span class="v" id="ver">desktop</span>
+      <h1>通 用 设 置</h1>
     </div>
-    <p class="tagline">只读 · 本机 · 不联网</p>
+    <p class="tagline">调好之后点左侧「记忆星图」回去看</p>
 
-    <div class="sec">
-      <div class="h">数据源</div>
-      <div id="sources"></div>
-      <div class="srcact">
-        <button id="addSrc">＋ 添加文件</button>
-        <button id="openSrcDir">📂 打开目录</button>
+    <div class="cols">
+     <div class="col">
+
+      <div class="sec">
+        <div class="h">数据源</div>
+        <div id="sources"></div>
+        <div class="srcact">
+          <button id="addSrc">＋ 添加文件</button>
+          <button id="openSrcDir">📂 打开目录</button>
+        </div>
+        <p class="srchint">只读 · 这里只决定显示哪些源，不会改动记忆文件</p>
       </div>
-      <p class="srchint">只读 · 这里只决定显示哪些源，不会改动记忆文件</p>
-    </div>
 
-    <div class="sec">
-      <div class="h">形态</div>
-      <div class="seg" id="shapes">
-        <button data-v="nebula">星云</button>
-        <button data-v="sphere">球壳</button>
-        <button data-v="galaxy">星系</button>
-        <button data-v="river">长河</button>
+      <div class="sec">
+        <div class="h">形态</div>
+        <div class="seg" id="shapes">
+          <button data-v="nebula">星云</button>
+          <button data-v="sphere">球壳</button>
+          <button data-v="galaxy">星系</button>
+          <button data-v="river">长河</button>
+        </div>
+        <button class="add" id="addShape">+ 自定义形态</button>
       </div>
-      <button class="add" id="addShape">+ 自定义形态</button>
-    </div>
 
-    <div class="sec">
-      <div class="h">主题</div>
-      <div class="swatches" id="themes"></div>
-      <button class="add" id="addTheme">+ 自定义主题</button>
-    </div>
-
-    <div class="sec">
-      <div class="h">特效</div>
-      <div id="fx"></div>
-      <button class="add" id="addFx">+ 自定义特效</button>
-    </div>
-
-    <div class="sec">
-      <div class="h">调节</div>
-      <div id="sliders"></div>
-    </div>
-
-    <div class="sec">
-      <div class="h">配置</div>
-      <div class="act">
-        <button id="btnRandom" class="primary">🎲 随机一套</button>
-        <button id="btnSave">💾 存为收藏</button>
+      <div class="sec">
+        <div class="h">主题</div>
+        <div class="swatches" id="themes"></div>
+        <button class="add" id="addTheme">+ 自定义主题</button>
       </div>
-      <div class="presets" id="presets"></div>
+
+     </div>
+     <div class="col">
+
+      <div class="sec">
+        <div class="h">特效</div>
+        <div id="fx"></div>
+        <button class="add" id="addFx">+ 自定义特效</button>
+      </div>
+
+      <div class="sec">
+        <div class="h">调节</div>
+        <div id="sliders"></div>
+      </div>
+
+      <div class="sec">
+        <div class="h">配置</div>
+        <div class="act">
+          <button id="btnRandom" class="primary">🎲 随机一套</button>
+          <button id="btnSave">💾 存为收藏</button>
+        </div>
+        <div class="presets" id="presets"></div>
+      </div>
+
+     </div>
     </div>
 
-    <div class="author">
-      <div class="a1">作者 · 苏小俊SAMA</div>
-      <div class="a2">B站 <a href="https://space.bilibili.com/16666966" data-url="https://space.bilibili.com/16666966">space.bilibili.com/16666966</a></div>
-      <div class="a2">个人主页 <a href="https://space.bilibili.com/16666966" data-url="https://space.bilibili.com/16666966">space.bilibili.com/16666966</a></div>
-      <div class="a3">本工具仅供个人非商业使用；转载请注明作者与出处。</div>
-    </div>
     <div class="foot" id="foot"></div>
+   </div>
   </aside>
+
+  <!-- ══════ 记忆时间轴：铺满中间 ══════ -->
+  <section id="timeline">
+   <div class="tl-page">
+    <div class="tl-head">
+      <h1>记 忆 时 间 轴</h1>
+      <span class="tl-count" id="tlCount"></span>
+    </div>
+    <p class="tl-sub">按天分组 · 每天点开看当天说过的话、写过的东西</p>
+    <div id="tlBody"><div class="tl-empty">正在读取…</div></div>
+   </div>
+  </section>
 
   <main id="stage">
     <canvas id="cv"></canvas>
     <div class="hud stats" id="stats"></div>
-    <button class="hud spin" id="spinBtn" title="自动旋转 开/关">⟳ 自转</button>
-    <button class="hud code" id="codeBtn" title="看当前形态的种子代码">查看种子代码</button>
     <div id="codeBox">
       <div class="hd"><span>当前形态 · 种子代码</span><span class="hdr"><button class="mini" id="codeCopyTop">一键复制</button><span class="x" id="codeClose">✕</span></span></div>
       <pre id="codeText"></pre>
@@ -358,7 +587,7 @@
     </div>
   </div>
 
-  <div id="unfold" class="open" title="展开 / 收起面板">》</div>
+  <div id="unfold" class="open" title="展开 / 收起设置" style="display:none">》</div>
 </div>
 <div class="tip" id="tip"></div>
 
@@ -371,24 +600,157 @@
 
   const api = (path) => fetch(path).then(r => r.json());
 
+  /**
+   * 把 /api/graph 的格式转成前端认识的老格式。
+   *
+   * 新服务给的是：
+   *   { nodes:[{id,kind,text,ts,date,topic,degree}], edges:[{source,target,cos}] }
+   * 前端要的是：
+   *   { nodes:[{id,k,t,ts,imp,conf,scope,tags,...}], vecB64, dim, linkMode, stats }
+   */
+  function adaptGraph(g) {
+    const nodes = (g.nodes || []).map(n => ({
+      id: n.id,
+      k: n.kind,                    // 前端用 n.k
+      kindRaw: n.kind,
+      t: n.text,                    // 前端用 n.t
+      ts: n.ts || '',
+      date: n.date || '',
+      // 不编 importance：只有 insight/memory 有真的
+      imp: n.importance != null ? n.importance : null,
+      conf: null,
+      scope: n.topic || '',
+      tags: n.topic ? [n.topic] : [],
+      degree: n.degree || 0,
+    }));
+
+    const kinds = {};
+    for (const n of nodes) kinds[n.k] = (kinds[n.k] || 0) + 1;
+
+    return {
+      ok: true,
+      title: '澄的记忆',
+      note: '只读 · 本机 · 不联网',
+      nodes,
+      // 边直接给前端（前端会按 linkMode 决定用不用）
+      precomputedEdges: (g.edges || []).map(e => ({ source: e.source, target: e.target, cos: e.cos })),
+      linkMode: 'edges',            // 新标记：边是服务端算好的
+      linkThreshold: g.linkThreshold ?? 0.6,
+      stats: {
+        total: nodes.length,
+        kinds,
+        withVector: nodes.length,
+        missingVector: 0,
+        edges: (g.edges || []).length,
+      },
+    };
+  }
+
   window.starmap = {
     isDesktop: false,
 
+    /** 数据源列表 —— 新服务只有一个「澄的记忆」 */
     listSources: async () => {
-      const d = await api('/api/sources');
-      // 原样透传：前端要用 title / subtitle / stats.total
-      return { ok: true, sources: d.sources || [] };
+      const h = await api('/api/health');
+      return {
+        ok: true,
+        sources: [{
+          id: 'cheng',
+          name: '澄的记忆',
+          title: '澄的记忆',
+          subtitle: `${h.nodes || 0} 个节点 · ${h.edges || 0} 条连线`,
+          note: '只读 · 本机 · 不联网',
+          stats: { total: h.nodes || 0, edges: h.edges || 0 },
+        }],
+      };
     },
 
-    load: async (id) => {
-      const d = await api('/api/source?id=' + encodeURIComponent(id));
-      if (!d.ok) throw new Error(d.error || '加载失败');
-      return d;
+    /** 载入图 */
+    load: async () => {
+      const g = await api('/api/graph');
+      if (!g.ok) throw new Error(g.error || '加载失败');
+      return adaptGraph(g);
     },
 
-    addSourceFiles: null,     // 网页版不支持选文件，前端会提示
+    /** 时间轴（按天分组） */
+    timeline: async (days) => api('/api/timeline' + (days ? `?days=${days}` : '')),
+
+    /** 内容层 */
+    content: async () => api('/api/content'),
+
+    /** 状态 */
+    status: async () => api('/api/status'),
+
+    /** 手动重载 */
+    reload: async () => {
+      const r = await fetch('/api/reload', { method: 'POST' });
+      return r.json();
+    },
+
+    addSourceFiles: null,
     openSourceDir: null,
     openExternal: (u) => window.open(u, '_blank', 'noopener'),
+  };
+
+  /* ── SSE 实时推送 ── */
+  window.starmapLive = {
+    es: null,
+    handlers: {},
+    lastEventAt: 0,
+
+    on(name, fn) {
+      (this.handlers[name] = this.handlers[name] || []).push(fn);
+      return this;
+    },
+
+    _emit(name, data) {
+      for (const fn of (this.handlers[name] || [])) {
+        try { fn(data); } catch (e) { console.warn('[live]', name, e); }
+      }
+    },
+
+    connect() {
+      if (this.es) this.close();
+      const es = new EventSource('/api/stream');
+      this.es = es;
+
+      es.addEventListener('hello', (e) => {
+        this.lastEventAt = Date.now();
+        this._emit('hello', JSON.parse(e.data));
+      });
+      es.addEventListener('node', (e) => {
+        this.lastEventAt = Date.now();
+        this._emit('node', JSON.parse(e.data));
+      });
+      es.addEventListener('timeline', (e) => {
+        this.lastEventAt = Date.now();
+        this._emit('timeline', JSON.parse(e.data));
+      });
+      es.addEventListener('dedup', (e) => this._emit('dedup', JSON.parse(e.data)));
+      es.addEventListener('reload', (e) => this._emit('reload', JSON.parse(e.data)));
+      es.addEventListener('error', (e) => {
+        if (e.data) this._emit('serverError', JSON.parse(e.data));
+      });
+
+      es.onerror = () => {
+        this._emit('disconnected', {});
+        // EventSource 自带重连，但我们要在重连后补差异
+        setTimeout(() => this._emit('reconnecting', {}), 1000);
+      };
+
+      es.onopen = () => this._emit('connected', {});
+      return this;
+    },
+
+    close() {
+      if (this.es) { this.es.close(); this.es = null; }
+    },
+
+    /** 距上次事件多少秒 */
+    idleSec() {
+      if (!this.lastEventAt) return -1;
+      return Math.floor((Date.now() - this.lastEventAt) / 1000);
+    },
   };
 })();
 </script>
@@ -443,29 +805,94 @@ else if (CAP.cores >= 12){ OPTS.starfield = Math.max(OPTS.starfield, 360); }
 if (!OPTS.seed) OPTS.seed = CAP.hash % 100000;
 
 /* ---------------- 主题与类型 ---------------- */
-const KIND_CN = { episode:'事件', fact:'事实', self:'自我', person:'人物', thread:'线索', rule:'规则', msg:'对话' };
+
+/* 显示名。前 7 个是渲染引擎内置的；后 4 个是澄的记忆系统（dsh-fish）实际用的 kind。 */
+const KIND_CN = {
+  // —— 引擎内置 ——
+  episode:'事件', fact:'事实', self:'自我', person:'人物', thread:'线索', rule:'规则', msg:'对话',
+  // —— 澄的记忆（dsh-fish 导出的 kind）——
+  judgment:'我的判断',     // 带 topic 的 utterance
+  said:'他说的',           // 听到的真话
+  promise:'约定',          // 规矩 / 约束
+  insight:'领悟',          // Mnemon 提炼的洞见
+  memory:'常驻记忆',       // 常驻规则 / 偏好
+  work:'作品',             // 画完自己写的 line
+  voice:'读到的话',        // voice 层
+  // —— 兼容旧名（万一别处导出用这套）——
+  conclusion:'我的判断', event:'他说的',
+};
+
+/* 别名表：把各种来源的 kind 归一到引擎认识的那一套。
+   映射只影响「怎么显示」，不改数据本身——原文的 kind 仍留在 n.kindRaw 里。 */
+const KIND_ALIAS = {
+  // dsh-fish 导出
+  conclusion: 'conclusion',
+  event:      'event',
+  promise:    'promise',
+  insight:    'insight',
+  // 常见同义写法，防止别处导出的数据漏进来时变成杂色
+  heard:      'event',
+  said:       'event',
+  belief:     'conclusion',
+  judgment:   'conclusion',
+  judgement:  'conclusion',
+  verdict:    'conclusion',
+  rule:       'promise',
+  rules:      'promise',
+  constraint: 'promise',
+  memory:     'insight',
+  memories:   'insight',
+  note:       'insight',
+  diary:      'episode',
+  work:       'episode',
+  appointment:'episode',
+  // 引擎内置的直接透传
+  episode:'episode', fact:'fact', self:'self', person:'person',
+  thread:'thread', msg:'msg',
+};
+
+/* 一条记忆的 kind 归一化 */
+function normKind(k, n){
+  const raw = String(k == null ? '' : k).trim();
+  const low = raw.toLowerCase();
+  // 1) 有向量 + 有 scope 的 insight 层，即使 kind 写的是 fact 也按 insight 显示
+  if (low === 'fact' && n && !n.ts) return 'insight';
+  // 2) 别名表
+  if (KIND_ALIAS[low]) return KIND_ALIAS[low];
+  // 3) 认不出来：按有没有时间戳猜（有 ts 更可能是事件）
+  if (n && n.ts) return 'episode';
+  return 'fact';
+}
 
 const LINK_DEFAULTS = { vector: 0.72, text: 0.20 };
 
 const THEMES = {
   dusk: {
     name:'暮色', bg:['#0a1024','#04050b'], nebula:'#4a6edc', nebulaA:.10,
-    kinds:{ episode:'#8fb8ff', fact:'#5fe0c8', self:'#ffd479', person:'#ff9ecb', thread:'#b48cff', rule:'#ffb37a', msg:'#9fb8e8' },
+    kinds:{ episode:'#8fb8ff', fact:'#5fe0c8', self:'#ffd479', person:'#ff9ecb', thread:'#b48cff', rule:'#ffb37a', msg:'#9fb8e8',
+           judgment:'#ffd479', said:'#7fd8f0', promise:'#ffa96b', insight:'#c4a8ff', memory:'#5fe0c8', work:'#ff9ecb', voice:'#7a8499',
+           conclusion:'#ffd479', event:'#7fd8f0' },
     link:'#5a78c8', star:'#9fb4e8'
   },
   ice: {
     name:'冰蓝', bg:['#05101c','#02060c'], nebula:'#4fa8d8', nebulaA:.10,
-    kinds:{ episode:'#a8d8ff', fact:'#7ff0e0', self:'#fff0a8', person:'#c8b8ff', thread:'#8fd0ff', rule:'#a8ffe8', msg:'#a9c8ea' },
+    kinds:{ episode:'#a8d8ff', fact:'#7ff0e0', self:'#fff0a8', person:'#c8b8ff', thread:'#8fd0ff', rule:'#a8ffe8', msg:'#a9c8ea',
+           judgment:'#fff0a8', said:'#8fe4ff', promise:'#ffb3a0', insight:'#c0b0ff', memory:'#7ff0e0', work:'#c8b8ff', voice:'#8899aa',
+           conclusion:'#fff0a8', event:'#8fe4ff' },
     link:'#4f9fd0', star:'#b8d8f0'
   },
   neon: {
     name:'霓虹', bg:['#12052a','#04020a'], nebula:'#dc50c8', nebulaA:.09,
-    kinds:{ episode:'#7fd0ff', fact:'#5fffd0', self:'#ffe066', person:'#ff6fbf', thread:'#c07fff', rule:'#ff9a6f', msg:'#a0d0ff' },
+    kinds:{ episode:'#7fd0ff', fact:'#5fffd0', self:'#ffe066', person:'#ff6fbf', thread:'#c07fff', rule:'#ff9a6f', msg:'#a0d0ff',
+           judgment:'#ffe066', said:'#6fe8ff', promise:'#ff8f6f', insight:'#d090ff', memory:'#5fffd0', work:'#ff6fbf', voice:'#7788a0',
+           conclusion:'#ffe066', event:'#6fe8ff' },
     link:'#b060d0', star:'#e0a8f0'
   },
   violet: {
     name:'紫夜', bg:['#0b0620','#030208'], nebula:'#8b5cf6', nebulaA:.11,
-    kinds:{ episode:'#9db4ff', fact:'#6fe8c8', self:'#ffd98a', person:'#ff9ad5', thread:'#c9a0ff', rule:'#ffb08a', msg:'#a8baff' },
+    kinds:{ episode:'#9db4ff', fact:'#6fe8c8', self:'#ffd98a', person:'#ff9ad5', thread:'#c9a0ff', rule:'#ffb08a', msg:'#a8baff',
+           judgment:'#ffd98a', said:'#7fd8f0', promise:'#ffb08a', insight:'#d0a8ff', memory:'#6fe8c8', work:'#ff9ad5', voice:'#7d88a8',
+           conclusion:'#ffd98a', event:'#7fd8f0' },
     link:'#7a6ad8', star:'#c0b0f0'
   }
 };
@@ -496,6 +923,8 @@ const tipEl = document.getElementById('tip');
 const cardEl = document.getElementById('card');
 const panel = document.getElementById('panel');
 const statsEl = document.getElementById('stats');
+
+let currentView = 'starmap';   // 'starmap' | 'settings' —— 决定抽屉是否占位
 
 let DATA = null;           // 当前数据源
 let nodes = [], edges = [], adj = [];
@@ -629,6 +1058,20 @@ function buildPairsText(){
 }
 
 function buildEdges(){
+  // 服务端已经算好边了（新服务）：直接用，不在前端重算 1600+ 次余弦
+  if (DATA.linkMode === 'edges' && Array.isArray(DATA.precomputedEdges)) {
+    const idIdx = new Map();
+    nodes.forEach((n, i) => idIdx.set(n.id, i));
+    const out = [];
+    for (const e of DATA.precomputedEdges) {
+      const a = idIdx.get(e.source);
+      const b = idIdx.get(e.target);
+      if (a == null || b == null || a === b) continue;
+      out.push({ a, b, w: Number(e.cos) || 0, cos: Number(e.cos) || 0 });
+    }
+    return out;
+  }
+
   const pairs = DATA.linkMode === 'vector' ? buildPairsVector() : buildPairsText();
   const thr = OPTS.linkThreshold, K = Math.max(1, OPTS.linkTopK|0);
   const per = new Map();
@@ -884,20 +1327,25 @@ function openSeedLoader(){
 function groupNodes(){
   const mode = OPTS.groupBy || 'kind';
   const m = new Map();
+  // 分组键 = [键, 是否按 kind 兜底]。没有 scope/tag 的节点不让它们全挤成一坨，
+  // 而是按 kind 各自归到「他说的 / 我的判断 / 约定…」里去，这样星团才有意义。
   nodes.forEach((n,i)=>{
-    let k;
-    if (mode === 'scope') k = n.scope || '未分区';
-    else if (mode === 'tag') k = (n.tags && n.tags[0]) || '无标签';
-    else k = n.k || 'fact';
-    if (!m.has(k)) m.set(k, []);
-    m.get(k).push(i);
+    let k, byKind = false;
+    if (mode === 'scope' && n.scope) k = n.scope;
+    else if (mode === 'tag' && n.tags && n.tags[0]) k = n.tags[0];
+    else { k = n.k || 'fact'; byKind = true; }
+    const key = byKind ? '#'+k : k;          // # 前缀区分「按类型兜底」的团
+    if (!m.has(key)) m.set(key, { idx:[], byKind });
+    m.get(key).idx.push(i);
   });
   const out = [];
-  m.forEach((idx, k) => {
+  m.forEach((v, key) => {
+    const k = v.byKind ? key.slice(1) : key;
     out.push({
-      key:k, idx,
+      key, idx: v.idx,
       label: KIND_CN[k] || k,
-      color: themeRGB.kinds[k] || themeRGB.nebula
+      color: themeRGB.kinds[k] || themeRGB.nebula,
+      byKind: v.byKind,
     });
   });
   out.sort((a,b)=> b.idx.length - a.idx.length);
@@ -1402,9 +1850,8 @@ function draw(){
   g.addColorStop(1, rgbStr(themeRGB.bg[1]));
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-  // 面板是浮动的：展开时星图中心右移半个面板宽，避免被盖住左边
-  const panelW = panelOpen ? 297 : 0;
-  const cx = (W + panelW)/2 + panX, cy = H/2 + panY;
+  // 星图和设置页是同一块区域互换，不存在互相遮挡，中心就是正中
+  const cx = W/2 + panX, cy = H/2 + panY;
   const REF = Math.min(W,H)/2 * 0.86;
   const base = REF * 1.30 * zoom;
 
@@ -1725,7 +2172,7 @@ stage.addEventListener('pointermove', e=>{
   hovered = i;
   if (i>=0){
     const n = nodes[i];
-    tipEl.innerHTML = '<div class="k">'+esc(KIND_CN[n.k]||n.k)+' · '+esc(n.ts)+'</div>'+esc(short(n.t, 52));
+    tipEl.innerHTML = '<div class="k">'+esc(KIND_CN[n.k]||n.k)+(n.ts ? ' · '+esc(n.ts) : '')+'</div>'+esc(short(n.t, 52));
     tipEl.style.left = Math.min(e.clientX+16, W-340)+'px';
     tipEl.style.top  = Math.min(e.clientY+16, H-120)+'px';
     tipEl.classList.add('show');
@@ -1826,7 +2273,8 @@ function loop(t){
   if (++spriteTick % 6 === 0) initSprites();
 
   if (!dragging && OPTS.autoRotate && baseShape() !== 'cluster') yaw += OPTS.autoRotate*0.001*dt;
-  draw();
+  // 设置页盖住时不用画，省 CPU（切回来第一帧照常）
+  if (currentView !== 'settings') draw();
   requestAnimationFrame(loop);
 }
 
@@ -2457,7 +2905,7 @@ function buildEvolve(sp){
     coreIdx.forEach((idx,k)=>{ groups[giCore].items.push({ i: idx, r: k*0.045, a0: k*2.1, h: 0, ratio: 1 }); });
     const taken = new Set(coreIdx);
 
-    const src = groupNodes().filter(gp => gp.key !== 'self');
+    const src = groupNodes().filter(gp => (gp.byKind ? gp.key.slice(1) : gp.key) !== 'self');
     const psubs = subs || ['rings','filament','cloud','orbit'];
     const cntGroups = Math.max(2, src.length);
     src.forEach((gp, ci)=>{
@@ -2818,21 +3266,362 @@ function newFxEditor(){
 }
 if (document.getElementById('addFx')) document.getElementById('addFx').onclick = ()=> newFxEditor();
 
-/* ---------------- 面板折叠：「》」把手点一次开、再点一次收 ---------------- */
-let panelOpen = true;
-function setPanel(open){
-  panelOpen = open;
-  panel.classList.toggle('collapsed', !open);
-  const u = document.getElementById('unfold');
-  u.classList.toggle('open', open);
-  u.textContent = open ? '《' : '》';
-  document.body.classList.toggle('panel-open', open);
-  u.title = open ? '收起面板' : '展开面板';
-}
-document.getElementById('unfold').onclick = ()=> setPanel(!panelOpen);
-window.__togglePanel = ()=> setPanel(!panelOpen);
+/* ---------------- 左侧导航 + 设置抽屉 ---------------- */
+const rail = document.getElementById('rail');
 
-setPanel(true);
+/* 导航栏收起 / 展开 */
+function setRail(open){
+  rail.classList.toggle('collapsed', !open);
+  const t = document.getElementById('railToggle');
+  t.textContent = open ? '《' : '》';
+  t.title = open ? '收起导航' : '展开导航';
+  try { localStorage.setItem('rail-open', open ? '1' : '0'); } catch {}
+  // 画布尺寸跟着变，通知渲染层重算
+  if (typeof resize === 'function') requestAnimationFrame(resize);
+}
+document.getElementById('railToggle').onclick = ()=> setRail(rail.classList.contains('collapsed'));
+
+/* 视图切换：starmap / timeline / settings —— 同一块区域，三选一 */
+const tlEl = document.getElementById('timeline');
+
+function setView(v){
+  currentView = v;
+  const isSettings = (v === 'settings');
+  const isTimeline = (v === 'timeline');
+  const isStarmap = (v === 'starmap');
+
+  document.querySelectorAll('.nav-item').forEach(b => {
+    b.classList.toggle('on', b.dataset.view === v);
+  });
+
+  // 三块互相替换，只有一块可见
+  panel.classList.toggle('shown', isSettings);
+  if (tlEl) tlEl.classList.toggle('shown', isTimeline);
+  stage.classList.toggle('asleep', !isStarmap);
+
+  if (isSettings) panel.scrollTop = 0;
+  if (isTimeline) { if (tlEl) tlEl.scrollTop = 0; ensureTimeline(); }
+
+  // 切回星图时重算画布尺寸（导航宽度可能变过）
+  requestAnimationFrame(()=>{ if (isStarmap && typeof resize === 'function') resize(); });
+  try { localStorage.setItem('view', v); } catch {}
+}
+document.querySelectorAll('.nav-item').forEach(b => {
+  b.onclick = ()=> setView(b.dataset.view);
+});
+
+/* 老代码兼容：__togglePanel 现在等于「切到设置 / 切回星图」 */
+window.__togglePanel = ()=> setView(currentView === 'settings' ? 'starmap' : 'settings');
+window.__setView = setView;
+
+/* ══════════ 记忆时间轴 ══════════ */
+
+const KIND_LABEL = {
+  utterance: '说的', stream: '流水', heard: '听到', voice: '读到',
+  meta: '记录', diary: '日记', 'diary-revision': '补记',
+  note: '便条', work: '作品', appointment: '约定',
+  ask: '请求', answer: '答复', seed: '开端',
+};
+
+let TL_DATA = null;          // 缓存
+let TL_LOADED = false;
+
+function ensureTimeline(force) {
+  if (TL_LOADED && !force) return;
+  TL_LOADED = true;
+  loadTimeline();
+}
+
+async function loadTimeline() {
+  const body = document.getElementById('tlBody');
+  const cnt = document.getElementById('tlCount');
+  if (!body) return;
+  if (!TL_DATA) body.innerHTML = '<div class="tl-empty">正在读取…</div>';
+
+  let d = null;
+  try {
+    d = await window.starmap.timeline();
+  } catch (e) {
+    body.innerHTML = '<div class="tl-empty">读取失败：' + esc(e.message) + '</div>';
+    return;
+  }
+  if (!d || !d.ok) {
+    body.innerHTML = '<div class="tl-empty">读不到时间轴数据</div>';
+    return;
+  }
+
+  TL_DATA = d;
+  if (cnt) cnt.textContent = `${d.total || 0} 条 · ${(d.days || []).length} 天`;
+  renderTimeline(d.days || []);
+}
+
+function renderTimeline(days) {
+  const body = document.getElementById('tlBody');
+  if (!body) return;
+
+  if (!days.length) {
+    body.innerHTML = '<div class="tl-empty">还没有任何记录</div>';
+    return;
+  }
+
+  const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  const frag = document.createDocumentFragment();
+
+  days.forEach((day, di) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'tl-day' + (di === 0 ? ' open' : '');
+    wrap.dataset.date = day.date;
+
+    const wd = (() => {
+      const t = Date.parse(day.date + 'T00:00:00+08:00');
+      return Number.isFinite(t) ? WEEK[new Date(t).getDay()] : '';
+    })();
+
+    const hd = document.createElement('div');
+    hd.className = 'tl-day-hd';
+    hd.innerHTML =
+      `<span class="tl-date">${esc(day.date)}</span>` +
+      `<span class="tl-weekday">${wd}</span>` +
+      `<span class="tl-n">${day.count} 条</span>` +
+      `<span class="tl-arrow">▶</span>`;
+    hd.onclick = () => wrap.classList.toggle('open');
+
+    const items = document.createElement('div');
+    items.className = 'tl-items';
+
+    // 每天最多先渲染 60 条，多的按钮展开
+    const LIMIT = 60;
+    const show = day.items.slice(0, LIMIT);
+    for (const it of show) items.appendChild(renderTlItem(it));
+
+    if (day.items.length > LIMIT) {
+      const more = document.createElement('div');
+      more.className = 'tl-more';
+      more.textContent = `还有 ${day.items.length - LIMIT} 条，点开看全部`;
+      more.onclick = () => {
+        for (const it of day.items.slice(LIMIT)) items.insertBefore(renderTlItem(it), more);
+        more.remove();
+      };
+      items.appendChild(more);
+    }
+
+    wrap.appendChild(hd);
+    wrap.appendChild(items);
+    frag.appendChild(wrap);
+  });
+
+  body.innerHTML = '';
+  body.appendChild(frag);
+}
+
+function renderTlItem(it) {
+  const el = document.createElement('div');
+  el.className = 'tl-item';
+  el.dataset.id = it.id;
+
+  const time = (it.ts || '').slice(11, 16) || '--:--';
+  const kindCls = 'k-' + String(it.kind || it.layer || 'stream').replace(/[^a-z-]/gi, '');
+
+  // 动作标记（不是脏东西，是事实）
+  const badges = [];
+  if (it.voice) badges.push('语音');
+  if (it.stickers && it.stickers.length) badges.push('表情×' + it.stickers.length);
+  if (it.mentions && it.mentions.length) badges.push('@' + it.mentions.length);
+  if (it.bubbles && it.bubbles.length) badges.push(it.bubbles.length + ' 条');
+  if (it.flags && it.flags.silent) badges.push('未开口');
+  if (it.revision) badges.push('改口');
+
+  const text = it.text || (it.flags && it.flags.silent ? '（这一轮没有说话）' : '');
+
+  // meta 的子类（sched / digest / watched…）用中文标签
+  const META_LABEL = {
+    sched: '日程', digest: '摘要', watched: '看过', browsed: '浏览',
+    'browse-review': '回看', letter: '信', judged: '判断', diary: '日记',
+  };
+  const kindText = it.metaKind
+    ? (META_LABEL[it.metaKind] || it.metaKind)
+    : (KIND_LABEL[it.kind] || it.kind || '');
+
+  el.innerHTML =
+    `<div class="tl-time">${esc(time)}</div>` +
+    `<div class="tl-body">` +
+      `<div class="tl-meta">` +
+        `<span class="tl-kind ${kindCls}">${esc(kindText)}</span>` +
+        (it.topic ? `<span class="tl-topic">#${esc(it.topic)}</span>` : '') +
+        badges.map(b => `<span class="tl-badge">${esc(b)}</span>`).join('') +
+      `</div>` +
+      `<div class="tl-text">${esc(text)}</div>` +
+    `</div>`;
+
+  // 长文本点开看全文
+  if (text.length > 120) {
+    el.style.cursor = 'pointer';
+    el.onclick = (e) => {
+      if (e.target.classList.contains('tl-more')) return;
+      el.classList.toggle('open');
+    };
+  }
+  return el;
+}
+
+/* ══════════ 实时推送 ══════════ */
+
+let lastUpdateAt = 0;
+
+function initLive() {
+  if (!window.starmapLive) return;
+  const live = window.starmapLive;
+
+  live.on('hello', (d) => {
+    lastUpdateAt = Date.now();
+    updateLiveHint();
+  });
+
+  // 新星进图
+  live.on('node', (d) => {
+    lastUpdateAt = Date.now();
+    if (!d || !d.node) return;
+    addStarToScene(d.node, d.edges || []);
+    updateLiveHint();
+  });
+
+  // 时间轴长一条
+  live.on('timeline', (d) => {
+    lastUpdateAt = Date.now();
+    if (!d || !d.item) return;
+    appendTimelineItem(d.item);
+    updateLiveHint();
+  });
+
+  live.on('disconnected', () => {
+    const el = document.getElementById('liveHint');
+    if (el) { el.textContent = '连接断开，正在重连…'; el.style.color = '#ffb37a'; }
+  });
+
+  live.on('connected', () => {
+    // 重连后补差异：拉一次全量对比
+    setTimeout(() => { if (currentView === 'timeline') ensureTimeline(true); }, 800);
+    updateLiveHint();
+  });
+
+  live.on('reload', () => {
+    lastUpdateAt = Date.now();
+    ensureTimeline(true);
+    if (typeof useSource === 'function') useSource('cheng');
+  });
+
+  live.connect();
+}
+
+/** 更新「上次更新 X 分钟前」 */
+function updateLiveHint() {
+  const el = document.getElementById('liveHint');
+  if (!el) return;
+  if (!lastUpdateAt) { el.textContent = ''; return; }
+  const sec = Math.floor((Date.now() - lastUpdateAt) / 1000);
+  el.style.color = '';
+  if (sec < 10) el.textContent = '刚刚更新';
+  else if (sec < 60) el.textContent = `上次更新 ${sec} 秒前`;
+  else if (sec < 3600) el.textContent = `上次更新 ${Math.floor(sec / 60)} 分钟前`;
+  else el.textContent = `上次更新 ${Math.floor(sec / 3600)} 小时前`;
+}
+setInterval(updateLiveHint, 10000);
+
+/** 把新星加进场景（淡入，不重建布局） */
+function addStarToScene(node, edges) {
+  if (!node || !node.id) return;
+  if (nodes.some(n => n.id === node.id)) return;   // 已经有了
+
+  // 位置：锚在最强邻居旁边
+  let px = 0, py = 0, pz = 0;
+  const best = (edges || []).slice().sort((a, b) => b.cos - a.cos)[0];
+  if (best) {
+    const anchorId = best.source === node.id ? best.target : best.source;
+    const anchor = nodes.find(n => n.id === anchorId);
+    if (anchor) {
+      px = anchor.px + (Math.random() - 0.5) * 0.06;
+      py = anchor.py + (Math.random() - 0.5) * 0.06;
+      pz = anchor.pz + (Math.random() - 0.5) * 0.06;
+    }
+  }
+
+  const idx = nodes.length;
+  nodes.push({
+    id: node.id,
+    k: node.kind || 'fact',
+    kindRaw: node.kindRaw || node.kind,
+    t: node.text || '',
+    ts: node.ts || '',
+    date: node.date || '',
+    imp: node.importance != null ? node.importance : null,
+    conf: null,
+    scope: node.topic || '',
+    tags: node.topic ? [node.topic] : [],
+    degree: (edges || []).length,
+    px, py, pz, tx: px, ty: py, tz: pz,
+    freshAt: Date.now(),        // 标记新星，画的时候淡入
+  });
+  N = nodes.length;
+
+  // 新边（前端格式是 {a, b, w} 索引）
+  for (const e of (edges || [])) {
+    const a = nodes.findIndex(n => n.id === e.source);
+    const b = nodes.findIndex(n => n.id === e.target);
+    if (a < 0 || b < 0 || a === b) continue;
+    edges.push({ a, b, w: e.cos, cos: e.cos, freshAt: Date.now() });
+  }
+
+  if (typeof buildAdj === 'function') buildAdj();
+  if (typeof buildFlowList === 'function') buildFlowList();
+  if (typeof updateHud === 'function') updateHud();
+  if (typeof toast === 'function') toast(`新记忆：${(node.text || '').slice(0, 20)}…`);
+}
+
+/** 时间轴追加一条（不重载整个列表） */
+function appendTimelineItem(item) {
+  if (!TL_DATA) return;
+  const date = item.date || '未知';
+  let day = (TL_DATA.days || []).find(d => d.date === date);
+  if (!day) {
+    day = { date, count: 0, items: [] };
+    TL_DATA.days.unshift(day);
+  }
+  day.items.push(item);
+  day.count++;
+  TL_DATA.total = (TL_DATA.total || 0) + 1;
+
+  const cnt = document.getElementById('tlCount');
+  if (cnt) cnt.textContent = `${TL_DATA.total} 条 · ${TL_DATA.days.length} 天`;
+
+  if (currentView !== 'timeline') return;
+
+  // 找到那一天的容器，追加
+  const wrap = document.querySelector(`.tl-day[data-date="${date}"]`);
+  if (wrap) {
+    const items = wrap.querySelector('.tl-items');
+    const el = renderTlItem(item);
+    el.classList.add('fresh');
+    items.appendChild(el);
+    const n = wrap.querySelector('.tl-n');
+    if (n) n.textContent = day.count + ' 条';
+  } else {
+    // 新的一天，重新渲染
+    renderTimeline(TL_DATA.days);
+  }
+}
+
+/* 恢复上次的状态 */
+(function restoreUi(){
+  let railOpen = true, view = 'starmap';
+  try {
+    railOpen = localStorage.getItem('rail-open') !== '0';
+    const v = localStorage.getItem('view');
+    if (v === 'settings' || v === 'starmap') view = v;
+  } catch {}
+  setRail(railOpen);
+  setView(view);
+})();
+
 loadCustom();
 
 document.getElementById('addTheme').onclick = ()=> newThemeEditor();
@@ -2941,16 +3730,13 @@ async function openSourceDir(){
 }
 document.getElementById('addSrc').onclick = addSourceFiles;
 document.getElementById('openSrcDir').onclick = openSourceDir;
-document.querySelectorAll('.author a').forEach(a=>{
-  a.onclick = (e)=>{ e.preventDefault(); const u = a.getAttribute('data-url'); if (window.starmap && window.starmap.openExternal) window.starmap.openExternal(u); };
-});
 async function boot(){
   resize();
   initSprites();
 
   let info = { sources: [] };
   try { info = await window.starmap.listSources(); } catch(e){}
-  document.getElementById('ver').textContent = info.versions ? 'v0.2 · electron '+info.versions.electron.split('.')[0] : 'v0.2';
+
 
   renderSources(info.sources || []);
   buildPanel();
@@ -2965,6 +3751,10 @@ async function boot(){
     const ld = document.getElementById('loading');
     if (ld) ld.querySelector('.txt').textContent = '没有可用的记忆数据源';
   }
+
+  // 接实时推送
+  initLive();
+
   requestAnimationFrame(loop);
 }
 

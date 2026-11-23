@@ -1,13 +1,17 @@
 {
   "name": "cheng-memory-star-map",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.2.0",
+  "description": "澄的记忆星图 —— 把记忆画成一片星图",
   "type": "module",
-  "description": "澄的记忆星图 — 只读记忆可视化服务",
-  "engines": { "node": ">=22.5" },
+  "private": true,
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
-    "serve": "node server/index.mjs",
-    "build": "node server/build.mjs",
-    "status": "node server/status.mjs"
+    "start": "node server/server.mjs",
+    "dev": "node server/server.mjs",
+    "nowatch": "node server/server.mjs --no-watch",
+    "embed": "node server/embed.mjs",
+    "test": "node server/_test-clean.mjs && node server/_test-watcher.mjs && node server/_test-vectors.mjs && node server/_test-incr.mjs && node server/_test-sources.mjs && node server/_test-schema.mjs"
   }
 }

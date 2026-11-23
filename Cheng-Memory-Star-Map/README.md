@@ -12,15 +12,17 @@
 # 1. 生成数据（大肥鱼的导出脚本）
 python D:/大肥鱼工具/memory-graph/export-graph.py
 
-# 2. 补向量（bge-m3，走本机 Ollama）
-node server/embed.mjs
-
-# 3. 起服务
+# 2. 起服务（会自动读 graph.json + vectors.json，并开始监听）
 node server/server.mjs
 # → http://127.0.0.1:17800/
 ```
 
 或者双击 `tray/星图.bat` —— 托盘会自己拉起服务。
+
+**一条命令跑全部测试：**
+```bash
+npm test
+```
 
 ---
 
@@ -28,17 +30,19 @@ node server/server.mjs
 
 ```
 Cheng-Memory-Star-Map/
-├── app/index.html        前端（单文件，Canvas 2D 渲染）
+├── app/index.html        前端（单文件，Canvas 2D）
 ├── server/
-│   ├── server.mjs        后台服务（HTTP + 单实例锁）
-│   └── embed.mjs         向量计算（bge-m3）
-├── tray/
-│   ├── 星图托盘.ps1      系统托盘（右键菜单 / 自动守护）
-│   ├── 星图.bat          双击启动托盘
-│   ├── make-icon.ps1     生成图标（橙色底 + 白「澄」字）
-│   └── starmap.ico       托盘图标
-├── data-sources/         数据源（*.json，按 memory-graph/1 规范）
-└── data/                 运行时（锁 / 日志 / 向量缓存）
+│   ├── server.mjs        主服务（HTTP + SSE + 单实例锁）
+│   ├── paths.mjs         路径解析（读 .dsh-fish-location.json）
+│   ├── clean.mjs         清洗（乱码/去重/标记拆解/meta分类）
+│   ├── watcher.mjs       增量监听（fs.watch + 字节偏移）
+│   ├── vectors.mjs       向量（读 vectors.json + 现算 + 保活）
+│   ├── incremental.mjs   增量引擎（加节点/算边/时间轴）
+│   ├── sources.mjs       读 works/notes/appointments/diary
+│   └── schema-watch.mjs  插件变化检测（两层）
+├── tray/                 系统托盘
+├── data/                 运行时（锁/日志/向量缓存/schema指纹）
+└── data-sources/         可选：本地放的 graph.json
 ```
 
 ---

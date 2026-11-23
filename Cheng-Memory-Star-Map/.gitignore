@@ -1,11 +1,17 @@
-# 运行时文件（锁、日志）—— 每次启动都会重建
+# 运行时文件（锁、日志、监听状态、schema 指纹）—— 每次启动都会重建
 data/*.lock
 data/*.log
+data/watch-state.json
+data/schema-fingerprint.json
+data/timeline/
 
-# 向量缓存（4.7 MB，跑 embed.mjs 就能重建）
+# 向量缓存（4.7 MB，跑 embed.mjs 或服务启动时会重建）
 data/vector-cache.json
 
 # 真实记忆数据（6 MB，含私人记忆原文 + 向量）
-# 数据由 memory-graph/export-graph.py 导出，再跑 server/embed.mjs 补向量
+# 数据由 memory-graph/export-graph.py 导出
 data-sources/*.json
 data-sources/*.jsonl
+
+# 测试脚本是有价值的资产，不受仓库根 _* 规则限制
+!server/_test-*.mjs

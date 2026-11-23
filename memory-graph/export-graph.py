@@ -9,6 +9,14 @@ OUT    = r'D:/大肥鱼工具/memory-graph'
 OLLAMA = 'http://127.0.0.1:11434'
 MODEL  = 'bge-m3'
 THRESH = 0.6
+WRITE_VECTORS = True
+
+# 2026-11-23：给 Alma 留的开关。--full 就是全量重跑（本来就是这个脚本的行为），
+# --no-vectors 跳过向量文件（只要图的时候），--thresh 换余弦阈值。
+for _a in sys.argv[1:]:
+    if _a=='--no-vectors': WRITE_VECTORS=False
+    elif _a.startswith('--thresh='): THRESH=float(_a.split('=',1)[1])
+    elif _a.startswith('--out='): OUT=_a.split('=',1)[1]
 
 SCHEDULE_RE = re.compile(r'^【鱼鱼窝】')
 INJECTION_RE = re.compile(r'^(【群聊|【注意：|把这一段当成整体来回|只有想专门接其中某一条|要 ?@ ?某个人|（你记得这些事)')
@@ -117,7 +125,12 @@ try:
         n=norm(c)
         dup=any(n==x or (len(n)>=40 and (n in x or x in n)) for x in ins_norms)
         if dup: continue
-        mem_nodes.append({'id':'mem:%d'%i,'kind':'memory','text':c,'target':en.get('target'),'importance':en.get('importance')})
+        # 2026-11-23：原来用位置序号 mem:%d，memories.json 插/删一条后面全移位，增量服务会把老记忆当新星。
+        # 改用 created_at（实测 7 条被编辑过、created_at 不变，稳定）压成 20261121T034252Z 这种形态。
+        created=(en.get('created_at') or '').strip()
+        cid=re.sub(r'[-:.]','',created).replace('Z','Z') or ('idx%d'%i)
+        mem_nodes.append({'id':'mem:'+cid,'kind':'memory','text':c,'target':en.get('target'),
+                          'importance':en.get('importance'),'created_at':created})
 except Exception as ex:
     print('MEM ERR', ex, file=sys.stderr)
 
@@ -149,6 +162,28 @@ try:
     vecs=[l2(v) for v in raw]
 except Exception as ex:
     print('EMBED ERR', ex, file=sys.stderr)
+
+# ---------- vectors.json（2026-11-23 给 Alma 的增量服务用）----------
+# 独立文件，不塞进 graph.json 的节点里（250x1024 会把节点撑爆）。
+# key = sha1(text).slice(0,16)，跟 Cheng-Memory-Star-Map/data/vector-cache.json 同一套 key。
+# 存的是 l2 归一化后的向量：增量服务算 cos 直接点积，不用再归一化。
+# （原来的 vector-cache.json 存的是原始向量，norm≈25.2，不 l2 会算出 600 多倍的假余弦。）
+import hashlib
+def vkey(t):
+    return hashlib.sha1(t.encode('utf-8')).hexdigest()[:16]
+
+vectors={}
+if WRITE_VECTORS and vecs and len(vecs)==len(nodes):
+    for k,x in enumerate(nodes):
+        vectors[vkey(x['text'])]=[round(v,6) for v in vecs[k]]
+    vdoc={
+        'generatedAt': datetime.datetime.now().isoformat(timespec='seconds'),
+        'embedModel': MODEL, 'dim': len(vecs[0]), 'normalized': True,
+        'key': 'sha1(text) 前16位hex', 'count': len(vectors),
+        'vectors': vectors,
+    }
+    json.dump(vdoc, open(os.path.join(OUT,'vectors.json'),'w',encoding='utf-8'), ensure_ascii=False)
+    print('vectors.json', len(vectors), 'x', len(vecs[0]), file=sys.stderr)
 
 edges=[]
 if vecs and len(vecs)==len(nodes):

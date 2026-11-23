@@ -3,233 +3,210 @@
 /**
  * 澄的记忆星图 · 后台服务
  *
- * 把记忆画成一片星图：一颗星 = 一条记忆。
- * 只读：不改任何记忆文件、不回写。
+ * 一颗星 = 一条记忆。只读，不改任何记忆文件。
  *
  * 用法：
  *   node server.mjs                启动（默认 17800）
  *   node server.mjs --port 18000   换端口
+ *   node server.mjs --no-watch     不监听文件变化（只出静态数据）
  *
  * 接口：
- *   GET  /                 → 前端页面
- *   GET  /api/sources      → 可用数据源列表
- *   GET  /api/source?id=…  → 某个数据源的节点
- *   GET  /api/health       → 健康检查
+ *   GET  /                        → 前端页面
+ *   GET  /api/health              → 健康检查
+ *   GET  /api/graph               → 图数据（nodes + edges）
+ *   GET  /api/voice               → voice 层（单独一层）
+ *   GET  /api/timeline?days=N     → 时间轴（按天分组）
+ *   GET  /api/content             → works/notes/appointments/diary
+ *   GET  /api/status              → 完整状态（统计/向量/schema/监听）
+ *   GET  /api/schema              → schema 变化检查
+ *   GET  /api/stream              → SSE 实时推送
+ *   POST /api/reload              → 手动重载全量
+ *
+ * 数据分层：
+ *   核心层（进图算边）  judgment / said / rule / insight / memory / work
+ *   voice 层（默认关）  voice
+ *   流水层（时间轴）    无 topic 的 utterance
+ *   内容层（时间轴）    diary / notes / appointments
  */
 
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(HERE, '..');
-const HOME = os.homedir();
+import { P, RUNTIME, FISH_ROOT, exists, ensureDir, statOf, describePaths } from './paths.mjs';
+import { GraphState, LINK_THRESHOLD } from './incremental.mjs';
+import { EventWatcher, readAll } from './watcher.mjs';
+import { readAllContent } from './sources.mjs';
+import { check as checkSchema, loadSaved, saveSnapshot } from './schema-watch.mjs';
+import { cleanEvent } from './clean.mjs';
+
+/* ══════════ 启动参数 ══════════ */
 
 const ARGS = process.argv.slice(2);
 const argOf = (name) => {
   const hit = ARGS.find(a => a.startsWith(`--${name}=`));
   return hit ? hit.slice(name.length + 3) : null;
 };
+const hasFlag = (name) => ARGS.includes(`--${name}`);
 
 const PORT = Number(argOf('port') || process.env.PORT || 17800);
 const HOST = '127.0.0.1';
+const NO_WATCH = hasFlag('no-watch');
 
-const clamp01 = (v) => Math.max(0, Math.min(1, Number(v) || 0));
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, '..');
 
-/* ══════════ 数据源发现 ══════════
-   和 Electron 版一致的三个位置，多一个项目内的 data-sources/ */
-function customDirs() {
-  return [...new Set([
-    path.join(ROOT, 'data-sources'),                          // 项目内
-    path.join(HOME, '.starmap', 'sources'),                   // 用户级
-    path.join(ROOT, 'data'),                                  // 兼容旧的 data/
-  ])];
-}
+/* ══════════ 全局状态 ══════════ */
 
-function listSourceFiles() {
-  const out = [];
-  for (const dir of customDirs()) {
-    let ents = [];
-    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
-    for (const e of ents) {
-      if (!e.isFile()) continue;
-      const ext = path.extname(e.name).toLowerCase();
-      if (ext !== '.json' && ext !== '.jsonl') continue;
-      // 内部文件不当数据源
-      if (e.name.startsWith('_') || e.name === 'vector-cache.json') continue;
-      out.push({ dir, file: path.join(dir, e.name), name: e.name });
+/** 图 + 时间轴 */
+const GS = new GraphState();
+
+/** 内容层（works/notes/appointments/diary） */
+let CONTENT = null;
+
+/** schema 检查结果 */
+let SCHEMA = null;
+
+/** 监听器 */
+let WATCHER = null;
+
+/** SSE 客户端 */
+const SSE_CLIENTS = new Set();
+
+/** 启动时间 */
+const STARTED_AT = Date.now();
+
+/* ══════════ 初始化 ══════════ */
+
+/**
+ * 从导出文件载入全量。
+ * @returns {Promise<object>} 载入统计
+ */
+async function loadFull(opts = {}) {
+  const t0 = Date.now();
+
+  // 找 graph.json 和 vectors.json
+  const graphPath = opts.graphPath || findFile(['data-sources/graph.json', '../memory-graph/graph.json', 'data/graph.json']);
+  const vectorsPath = opts.vectorsPath || findFile(['data-sources/vectors.json', '../memory-graph/vectors.json', 'data/vectors.json']);
+
+  let loaded = { nodes: 0, edges: 0, vectors: 0, error: null };
+
+  if (graphPath && exists(graphPath)) {
+    try {
+      const graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
+      loaded = await GS.loadFromGraph(graph, { vectorsJsonPath: vectorsPath });
+      loaded.graphPath = graphPath;
+      loaded.vectorsPath = vectorsPath;
+    } catch (e) {
+      loaded.error = `读 graph.json 失败：${e.message}`;
     }
-  }
-  return out;
-}
-
-/* ══════════ 节点规范化 ══════════
-   字段和 memory-graph/1 一致，前端已经认这套 */
-function normNode(x, i, tag) {
-  x = x || {};
-  return {
-    id: String(x.id != null ? x.id : `${tag}-${i}`),
-    k: String(x.kind || x.k || 'fact'),
-    t: String(x.text || x.t || ''),
-    ts: String(x.ts || x.time || x.date || '').slice(0, 10),
-    imp: clamp01(x.importance != null ? x.importance : (x.imp != null ? x.imp : 0.5)),
-    conf: clamp01(x.confidence != null ? x.confidence : (x.conf != null ? x.conf : 0.8)),
-    scope: String(x.scope || ''),
-    tags: Array.isArray(x.tags) ? x.tags.map(String) : [],
-    arch: !!x.archived,
-    use: Number(x.useCount || x.use || 0),
-    src: String(x.source || tag),
-    det: (x.details && typeof x.details === 'object') ? x.details : {},
-    v: -1,
-  };
-}
-
-/* ══════════ 读一个源 ══════════ */
-function loadSource(meta) {
-  let raw;
-  try {
-    const txt = fs.readFileSync(meta.file, 'utf8');
-    if (path.extname(meta.file).toLowerCase() === '.jsonl') {
-      raw = {
-        nodes: txt.split('\n')
-          .filter(l => l.trim())
-          .map(l => { try { return JSON.parse(l); } catch { return null; } })
-          .filter(Boolean),
-      };
-    } else {
-      raw = JSON.parse(txt);
-    }
-  } catch (e) {
-    return { error: `读取失败：${e.message}` };
+  } else {
+    loaded.error = '找不到 graph.json（先跑 export-graph.py）';
   }
 
-  const list = Array.isArray(raw) ? raw : (raw.nodes || []);
-  if (!list.length) return { error: '这个文件里没有节点' };
+  // 内容层
+  CONTENT = readAllContent();
 
-  const id = 'custom:' + meta.name.replace(/\.[^.]+$/, '');
-  const nodes = [];
-  const quant = [];          // 量化后的向量，前端算余弦用
-  let dim = 0;
-  let withVec = 0;
-
-  for (let i = 0; i < list.length; i++) {
-    const n = normNode(list[i], i, id);
-    const vec = list[i] && list[i].vector;
-    if (Array.isArray(vec) && vec.length && quant.length < 4000) {
-      if (!dim) dim = vec.length;
-      if (vec.length === dim) {
-        // 量化到 int8，前端能省内存也够用（和 Electron 版一个做法）
-        const q = new Int8Array(dim);
-        let norm = 0;
-        for (let d = 0; d < dim; d++) norm += vec[d] * vec[d];
-        norm = Math.sqrt(norm) || 1;
-        for (let d = 0; d < dim; d++) {
-          q[d] = Math.max(-127, Math.min(127, Math.round((vec[d] / norm) * 127)));
+  // 时间轴：把 events 里所有「不进图」的东西灌进去
+  if (!NO_WATCH) {
+    const all = readAll();
+    for (const e of all.events) {
+      const c = cleanEvent(e);
+      if (!c) continue;
+      // 只有 utterance 无 topic / meta 内容 / 其他类型才进时间轴
+      const isStream = c.kind === 'utterance' && !c.topic;
+      const isMeta = c.kind === 'meta';
+      const isOther = !['utterance', 'heard', 'voice', 'meta'].includes(c.kind);
+      if (isStream || isMeta || isOther) {
+        if (c.text || c.flags?.silent) {
+          GS.timeline.push(GS._toTimelineItem(c, isStream ? 'stream' : 'content'));
         }
-        n.v = withVec;
-        quant.push(Array.from(q));
-        withVec++;
       }
     }
-    nodes.push(n);
-  }
-
-  // 有向量就打包成 base64 的 int8 数组（前端 decodeVectors 认这个格式）
-  let vecB64 = '';
-  if (withVec && dim) {
-    const flat = new Int8Array(withVec * dim);
-    let off = 0;
-    for (const q of quant) {
-      flat.set(q, off);
-      off += dim;
+    // 内容层也塞进时间轴
+    for (const w of CONTENT.works.items) {
+      GS.timeline.push({ ...w, layer: 'content' });
     }
-    vecB64 = Buffer.from(flat.buffer).toString('base64');
+    for (const n of CONTENT.notes.items) GS.timeline.push({ ...n, layer: 'content' });
+    for (const a of CONTENT.appointments.items) GS.timeline.push({ ...a, layer: 'content' });
+    for (const d of CONTENT.diary.entries) GS.timeline.push({ ...d, layer: 'content' });
   }
 
-  // 统计（前端 HUD 要用）
-  const kinds = {};
-  let missingVector = 0;
-  for (const n of nodes) {
-    kinds[n.k] = (kinds[n.k] || 0) + 1;
-    if (n.v < 0) missingVector++;
+  loaded.ms = Date.now() - t0;
+  loaded.timeline = GS.timeline.length;
+  return loaded;
+}
+
+/** 在几个候选位置里找第一个存在的文件 */
+function findFile(rels) {
+  for (const r of rels) {
+    const p = path.resolve(RUNTIME.root, r);
+    if (exists(p)) return p;
   }
-
-  return {
-    ok: true,
-    id,
-    title: String(raw.title || meta.name.replace(/\.[^.]+$/, '')),
-    note: String(raw.note || ''),
-    nodes,
-    dim,
-    withVec,
-    vecB64,
-    linkMode: withVec ? 'vector' : 'text',
-    stats: {
-      total: nodes.length,
-      kinds,
-      withVector: withVec,
-      missingVector,
-    },
-  };
+  // 再试硬编码的兄弟项目
+  const sibling = path.resolve(RUNTIME.root, '..', 'memory-graph');
+  for (const name of ['graph.json', 'vectors.json']) {
+    const p = path.join(sibling, name);
+    if (exists(p)) return p;
+  }
+  return null;
 }
 
-/* ══════════ 缓存（按 mtime 失效） ══════════ */
-const cache = new Map();
+/* ══════════ SSE ══════════ */
 
-function getSource(name) {
-  const files = listSourceFiles();
-  const meta = files.find(f => f.name === name || f.name.replace(/\.[^.]+$/, '') === name);
-  if (!meta) return { error: '找不到这个源' };
-
-  let mtime = 0;
-  try { mtime = fs.statSync(meta.file).mtimeMs; } catch {}
-
-  const hit = cache.get(meta.file);
-  if (hit && hit.mtime === mtime) return hit.data;
-
-  const data = loadSource(meta);
-  if (data.ok) cache.set(meta.file, { mtime, data });
-  return data;
+function sseSend(res, event, data) {
+  try {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  } catch {}
 }
 
-function sourceList() {
-  const files = listSourceFiles();
-  return files.map(f => {
-    let size = 0;
-    try { size = fs.statSync(f.file).size; } catch {}
+function sseBroadcast(event, data) {
+  for (const res of SSE_CLIENTS) sseSend(res, event, data);
+}
 
-    // 列表项要带 stats/title/subtitle，前端直接用
-    const d = getSource(f.name);
-    const total = d.ok ? d.nodes.length : 0;
-    const title = d.ok ? d.title : f.name.replace(/\.[^.]+$/, '');
-    const sub = d.ok
-      ? `${d.stats.withVector ? '向量 ' + d.stats.withVector : '无向量'} · ${(size / 1024).toFixed(0)} KB`
-      : '读取失败';
+/* ══════════ 监听回调 ══════════ */
 
-    return {
-      id: f.name,
-      name: f.name.replace(/\.[^.]+$/, ''),
-      file: f.name,
-      dir: f.dir,
-      size,
-      title,
-      subtitle: sub,
-      stats: { total, kinds: d.ok ? d.stats.kinds : {}, withVector: d.ok ? d.stats.withVector : 0 },
-    };
-  });
+async function onNewEvent(rawEvent) {
+  try {
+    const r = await GS.ingest(rawEvent, { inGraph: true });
+
+    if (r.action === 'node') {
+      // 新星
+      sseBroadcast('node', {
+        node: r.node,
+        edges: r.edges || [],
+        summary: GS.summary(),
+      });
+    } else if (r.action === 'timeline') {
+      // 时间轴长了一条
+      sseBroadcast('timeline', {
+        item: r.timeline,
+        date: r.timeline?.date || '',
+      });
+    } else if (r.action === 'dedup') {
+      sseBroadcast('dedup', { id: rawEvent.id, reason: r.reason, of: r.of });
+    }
+    // skip 不推
+  } catch (e) {
+    sseBroadcast('error', { message: e.message });
+  }
 }
 
 /* ══════════ HTTP ══════════ */
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
 };
 
 function json(res, body, status = 200) {
@@ -242,26 +219,136 @@ function json(res, body, status = 200) {
   res.end(text);
 }
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
+  /* ---------- 健康 ---------- */
   if (url.pathname === '/api/health') {
-    return json(res, { ok: true, version: '0.1.0', sources: sourceList().length });
+    return json(res, {
+      ok: true,
+      version: '0.2.0',
+      uptime: Math.floor((Date.now() - STARTED_AT) / 1000),
+      nodes: GS.nodes.size,
+      edges: GS.edges.length,
+      timeline: GS.timeline.length,
+    });
   }
 
-  if (url.pathname === '/api/sources') {
-    return json(res, { ok: true, sources: sourceList() });
+  /* ---------- 图 ---------- */
+  if (url.pathname === '/api/graph') {
+    return json(res, { ok: true, ...GS.toGraphJSON(), linkThreshold: LINK_THRESHOLD });
   }
 
-  if (url.pathname === '/api/source') {
-    const id = url.searchParams.get('id');
-    if (!id) return json(res, { ok: false, error: '缺少 id' }, 400);
-    const data = getSource(id);
-    if (!data.ok) return json(res, { ok: false, error: data.error }, 404);
-    return json(res, data);
+  /* ---------- voice 层 ---------- */
+  if (url.pathname === '/api/voice') {
+    return json(res, { ok: true, nodes: GS.voiceLayer() });
   }
 
-  // 静态文件：/ → app/index.html
+  /* ---------- 时间轴 ---------- */
+  if (url.pathname === '/api/timeline') {
+    const days = Number(url.searchParams.get('days')) || 0;
+    const date = url.searchParams.get('date');
+    if (date) {
+      return json(res, { ok: true, items: GS.timelineJSON({ date }) });
+    }
+    const byDay = GS.timelineByDay();
+    return json(res, {
+      ok: true,
+      days: days ? byDay.slice(0, days) : byDay,
+      total: GS.timeline.length,
+    });
+  }
+
+  /* ---------- 内容层 ---------- */
+  if (url.pathname === '/api/content') {
+    return json(res, { ok: true, ...(CONTENT || readAllContent()) });
+  }
+
+  /* ---------- 状态 ---------- */
+  if (url.pathname === '/api/status') {
+    return json(res, {
+      ok: true,
+      uptime: Math.floor((Date.now() - STARTED_AT) / 1000),
+      paths: { fishRoot: FISH_ROOT, events: P.events },
+      graph: GS.summary(),
+      content: CONTENT ? CONTENT.totals : null,
+      schema: SCHEMA ? { verdict: SCHEMA.verdict, messages: SCHEMA.messages } : null,
+      watcher: WATCHER ? {
+        running: WATCHER.running,
+        offset: WATCHER.offset,
+        stats: WATCHER.stats,
+      } : null,
+      sseClients: SSE_CLIENTS.size,
+    });
+  }
+
+  /* ---------- schema 检查 ---------- */
+  if (url.pathname === '/api/schema') {
+    const all = readAll();
+    const r = checkSchema(all.events);
+    if (r.firstRun) saveSnapshot(r.fingerprint, r.inventory);
+    SCHEMA = r;
+    return json(res, {
+      ok: true,
+      verdict: r.verdict,
+      messages: r.messages,
+      fingerprint: r.fingerprint.values,
+      inventory: r.inventory.byType,
+      fpChanges: r.fpDiff.changes,
+      invChanges: { added: r.invDiff.added, removed: r.invDiff.removed },
+    });
+  }
+
+  /* ---------- SSE ---------- */
+  if (url.pathname === '/api/stream') {
+    res.writeHead(200, {
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-cache, no-transform',
+      'connection': 'keep-alive',
+      'x-accel-buffering': 'no',
+    });
+    res.write(': connected\n\n');
+    SSE_CLIENTS.add(res);
+
+    // 连上先推一次当前摘要（重连后能对齐）
+    sseSend(res, 'hello', {
+      nodes: GS.nodes.size,
+      edges: GS.edges.length,
+      timeline: GS.timeline.length,
+      serverTime: new Date().toISOString(),
+    });
+
+    // 心跳（防代理超时）
+    const hb = setInterval(() => {
+      try { res.write(': hb\n\n'); } catch {}
+    }, 25000);
+
+    req.on('close', () => {
+      clearInterval(hb);
+      SSE_CLIENTS.delete(res);
+    });
+    return;
+  }
+
+  /* ---------- 手动重载 ---------- */
+  if (url.pathname === '/api/reload' && req.method === 'POST') {
+    try {
+      // 清空图，重新载入
+      GS.nodes.clear();
+      GS.adj.clear();
+      GS.edges.length = 0;
+      GS.edgeIdx.clear();
+      GS.timeline.length = 0;
+      GS.stats = { added: 0, deduped: 0, garbled: 0, heartbeat: 0, edges: 0 };
+      const r = await loadFull();
+      sseBroadcast('reload', { ...r, summary: GS.summary() });
+      return json(res, { ok: true, ...r });
+    } catch (e) {
+      return json(res, { ok: false, error: e.message }, 500);
+    }
+  }
+
+  /* ---------- 静态文件 ---------- */
   let rel = url.pathname === '/' ? 'app/index.html' : decodeURIComponent(url.pathname).replace(/^\/+/, '');
   const file = path.resolve(ROOT, rel);
 
@@ -269,7 +356,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' });
     return res.end('Forbidden');
   }
-  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
+  if (!exists(file) || !fs.statSync(file).isFile()) {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     return res.end('Not found');
   }
@@ -281,40 +368,32 @@ const server = http.createServer((req, res) => {
   fs.createReadStream(file).pipe(res);
 });
 
-/* ══════════ 单实例锁 ══════════
-   两把锁：
-   1. 端口（操作系统级）—— 已有实例在跑就起不来
-   2. 锁文件（应用级）—— 给出可读的提示，并防止同端口不同 PID 的竞态
-*/
+/* ══════════ 单实例锁 ══════════ */
+
 const LOCK_FILE = path.join(ROOT, 'data', 'server.lock');
 
+function isAlive(pid) {
+  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
+}
+
 function acquireLock() {
-  fs.mkdirSync(path.dirname(LOCK_FILE), { recursive: true });
+  ensureDir(path.dirname(LOCK_FILE));
   try {
-    // wx = 独占创建，已存在就抛
     const fd = fs.openSync(LOCK_FILE, 'wx');
     fs.writeSync(fd, JSON.stringify({ pid: process.pid, port: PORT, at: new Date().toISOString() }));
     fs.closeSync(fd);
     return true;
   } catch (e) {
     if (e.code !== 'EEXIST') throw e;
-    // 已存在：看看那个 PID 还活着吗
     let info = {};
     try { info = JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8')); } catch {}
-    if (info.pid && isAlive(info.pid)) {
-      return { busy: true, pid: info.pid, port: info.port };
-    }
-    // 残留锁：前一次没退干净，接管
+    if (info.pid && isAlive(info.pid)) return { busy: true, pid: info.pid, port: info.port };
     try { fs.unlinkSync(LOCK_FILE); } catch {}
     const fd = fs.openSync(LOCK_FILE, 'wx');
     fs.writeSync(fd, JSON.stringify({ pid: process.pid, port: PORT, at: new Date().toISOString() }));
     fs.closeSync(fd);
     return true;
   }
-}
-
-function isAlive(pid) {
-  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
 }
 
 function releaseLock() {
@@ -324,25 +403,73 @@ function releaseLock() {
   } catch {}
 }
 
+/* ══════════ 启动 ══════════ */
+
 const lock = acquireLock();
 if (lock && lock.busy) {
   console.error(`[星图] 已经在运行了（PID ${lock.pid}，端口 ${lock.port}）`);
   console.error(`[星图] 直接打开：http://${HOST}:${lock.port}/`);
-  console.error('[星图] 要重启就先停掉它。');
   process.exit(0);
 }
 
+console.log('[星图] 正在载入…');
+console.log(describePaths());
+console.log('');
+
+const boot = await loadFull();
+if (boot.error) {
+  console.error(`[星图] ⚠️  ${boot.error}`);
+} else {
+  console.log(`[星图] 图：${boot.nodes} 节点 / ${boot.edges} 边 / ${boot.vectors} 向量（${boot.ms}ms）`);
+}
+console.log(`[星图] 时间轴：${boot.timeline} 条`);
+if (CONTENT) {
+  const t = CONTENT.totals;
+  console.log(`[星图] 内容：works ${t.works} / notes ${t.notes} / appointments ${t.appointments} / diary ${t.diary}（${t.diaryDays} 天）`);
+}
+
+// schema 检查
+{
+  const all = readAll();
+  const r = checkSchema(all.events);
+  SCHEMA = r;
+  if (r.firstRun) {
+    saveSnapshot(r.fingerprint, r.inventory);
+    console.log('[星图] schema：首次记录');
+  } else if (r.verdict !== 'same') {
+    console.log(`[星图] ⚠️  schema 有变化（${r.verdict}）：`);
+    for (const m of r.messages) console.log(`        ${m}`);
+    if (r.verdict === 'breaking') {
+      console.log('[星图] ⚠️  这是减法/收紧，建议重跑全量导出后再用');
+    }
+    saveSnapshot(r.fingerprint, r.inventory);
+  } else {
+    console.log('[星图] schema：无变化');
+  }
+}
+
+// 启动监听
+if (!NO_WATCH) {
+  WATCHER = new EventWatcher({ pollMs: 3000, debounceMs: 120 });
+  WATCHER.on('event', onNewEvent);
+  WATCHER.on('log', (m) => console.log(`[监听] ${m}`));
+  WATCHER.on('error', (e) => console.error(`[监听] ${e.message}`));
+  WATCHER.start();
+  console.log('[星图] 监听已启动');
+}
+
+// 保活 Ollama（澄实测：bge-m3 只占 657MiB，跟 ComfyUI 不打架）
+GS.vectors.startKeepalive((m) => console.log(`[向量] ${m}`));
+
 server.listen(PORT, HOST, () => {
-  const srcs = sourceList();
+  console.log('');
   console.log(`[星图] http://${HOST}:${PORT}  (PID ${process.pid})`);
-  console.log(`[星图] 数据源目录：${customDirs().join('  |  ')}`);
-  console.log(`[星图] 发现 ${srcs.length} 个源：${srcs.map(s => s.name).join(', ') || '（空）'}`);
+  console.log('');
 });
 
 server.on('error', (e) => {
   if (e.code === 'EADDRINUSE') {
     console.error(`[星图] 端口 ${PORT} 已被占用 —— 可能已经有一个实例在跑了`);
-    console.error(`[星图] 打开 http://${HOST}:${PORT}/ 看看`);
     releaseLock();
     process.exit(0);
   }
@@ -353,9 +480,12 @@ server.on('error', (e) => {
 
 function shutdown(sig) {
   console.log(`\n[星图] ${sig} 收到，正在停止…`);
+  if (WATCHER) WATCHER.stop();
+  GS.vectors.stopKeepalive();
+  for (const res of SSE_CLIENTS) { try { res.end(); } catch {} }
+  SSE_CLIENTS.clear();
   releaseLock();
   server.close(() => process.exit(0));
-  // 兜底：1.5 秒还没关干净就硬退
   setTimeout(() => process.exit(0), 1500).unref();
 }
 
