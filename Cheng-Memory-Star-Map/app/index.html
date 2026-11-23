@@ -1707,15 +1707,25 @@ function applyShape(){
     pitch = cs && cs.pitch != null ? cs.pitch : -0.16;
   } else if (base === 'cluster'){
     // 分区：记忆按 kind/scope/tag 分成几团，每团一个团心、一圈边界、一个中文标签
+    // 团心按斐波那契球面铺在一层壳上（不是摊在 z≈0 的平面里），这样转起来才有前后层次
     const gs = groupNodes();
     const g = rnd((OPTS.seed||20261118) ^ 0x51ed270b);
     const R = cs && cs.radius != null ? cs.radius : 0.80;
     const sz = Math.sqrt(Math.max(1, N));
+    const GS = gs.length;
+    const GOLD = Math.PI * (3 - Math.sqrt(5));      // 黄金角 ≈2.39996，球面均布
     gs.forEach((grp, gi)=>{
-      const ang = gi/gs.length*Math.PI*2 - Math.PI/2 + (g()-0.5)*0.14;
-      const cxx = Math.cos(ang)*R;
-      const cyy = Math.sin(ang)*R*0.88 + 0.02;
-      const czz = (g()-0.5)*0.20;
+      // —— 团心：球面均布，y 稍微压扁一点，读起来像星系盘而不是空心球
+      const t = GS <= 1 ? 0.5 : (gi + 0.5) / GS;
+      const uy = 1 - 2*t;                            // -1..1
+      const ring = Math.sqrt(Math.max(0, 1 - uy*uy)); // 该纬度上的圈半径
+      const ang = GOLD * gi + (g() - 0.5) * 0.16;     // 加一点抖动，别太规整
+      // 半径也随纬度轻微起伏，避免所有团心都贴在同一个球面上
+      const rr = R * (0.86 + 0.14 * (0.5 + 0.5 * Math.sin(gi * 1.7 + 0.9)));
+      const cxx = Math.cos(ang) * ring * rr;
+      const cyy = uy * rr * 0.72;
+      const czz = Math.sin(ang) * ring * rr;
+
       const rad = 0.052 + 0.100*Math.sqrt(grp.idx.length/sz);
       for (const i of grp.idx){
         const n = nodes[i];
@@ -1731,7 +1741,8 @@ function applyShape(){
       CL_LABEL_IDX.set(grp.label, grp.idx);
     });
     yaw = cs && cs.yaw != null ? cs.yaw : 0;
-    pitch = cs && cs.pitch != null ? cs.pitch : -0.04;
+    // 俯仰角给一点，别正对着看——正对着看会把深度压没
+    pitch = cs && cs.pitch != null ? cs.pitch : -0.22;
   } else {
     const cmap = computeClusters(8);
     for (let i=0;i<N;i++){
@@ -3189,7 +3200,8 @@ function loop(t){
     }
     if (++spriteTick % 6 === 0) initSprites();
 
-    if (!dragging && OPTS.autoRotate && baseShape() !== 'cluster') yaw += OPTS.autoRotate*0.001*dt;
+    // 分区形态也转了：团心散在三维壳上，转起来才看得出前后层次
+    if (!dragging && OPTS.autoRotate) yaw += OPTS.autoRotate*0.001*dt;
     // 设置页盖住时不用画，省 CPU（切回来第一帧照常）
     if (currentView !== 'settings') draw();
   } catch (err) {
