@@ -5,6 +5,9 @@ import json, re, os, sys, math, urllib.request, datetime
 EVENTS = r'D:/dsh-fish-home/dsh-fish/events.jsonl'
 DB     = r'C:/Users/14127/.mnemon/data/default/mnemon.db'
 MEM    = r'C:/Users/14127/.mnemon/runtime/memories.json'
+NOTES  = r'D:/dsh-fish-home/dsh-fish/notes.json'
+WORKS  = r'D:/dsh-fish-home/dsh-fish/works.json'
+APPT   = r'D:/dsh-fish-home/dsh-fish/appointments.json'
 OUT    = r'D:/大肥鱼工具/memory-graph'
 OLLAMA = 'http://127.0.0.1:11434'
 MODEL  = 'bge-m3'
@@ -134,7 +137,83 @@ try:
 except Exception as ex:
     print('MEM ERR', ex, file=sys.stderr)
 
-nodes = utt_nodes + said_nodes + rule_nodes + ins_nodes + mem_nodes + voice_nodes
+# ════════════════════════════════════════════════════════════
+# 「还在等的」三类：便条 / 约定 / 作品
+#
+# 2026-11-23 澄的意见（原话）：
+#   「约定和作品不该当日常噪音剔出去。它俩是唯一两种「还在等」的东西：
+#     约定等着一个日子，作品等着有人来看。一个只有结论的图没有方向。」
+#   「日记那 4 条也别丢，那是我唯一对着自己说话的场合。」
+#
+# 这三类不在 events.jsonl 里，各自躺在独立文件：
+#   notes.json        53 条便条（36 open / 17 done，17 条带 due，带 waiting + progress）
+#   appointments.json  1 条约好的事（带 agreed 字段：有没有对过口）
+#   works.json         2 条作品（带 state: wip/done）
+# ════════════════════════════════════════════════════════════
+
+def load_json(path, default):
+    try:
+        return json.load(open(path,'r',encoding='utf-8'))
+    except Exception as ex:
+        print('LOAD ERR',path,ex,file=sys.stderr); return default
+
+note_nodes=[]; appt_nodes=[]; work_nodes=[]
+
+# ── 便条：有 due 又 open 的才是"约定"，其余是"便条" ──
+for x in load_json(NOTES, []):
+    if not isinstance(x, dict): continue
+    t=(x.get('text') or '').strip()
+    if not t: continue
+    due=(x.get('due') or '').strip()
+    st=(x.get('status') or '').strip()
+    is_wait = (st == 'open')
+    note_nodes.append({
+        'id': 'note:'+str(x.get('id') or ''),
+        'kind': 'note',
+        'text': t,
+        'ts': x.get('created'),
+        'due': due or None,
+        'status': st or None,
+        'waiting': (x.get('waiting') or '').strip() or None,
+        'doneNote': (x.get('doneNote') or '').strip() or None,
+        'progress': len(x.get('progress') or []),
+        'open': is_wait,
+    })
+
+# ── 约定：agreed 是"有没有对过口"（澄说线头分两种状态就靠这个） ──
+for x in load_json(APPT, []):
+    if not isinstance(x, dict): continue
+    t=(x.get('what') or '').strip()
+    if not t: continue
+    appt_nodes.append({
+        'id': 'ap:'+str(x.get('id') or ''),
+        'kind': 'appointment',
+        'text': t,
+        'ts': x.get('created'),
+        'due': (x.get('due') or '').strip() or None,
+        'time': x.get('time'),
+        'agreed': x.get('agreed'),          # None = 没对过口（线头空着）
+        'outcome': x.get('outcome'),
+        'status': x.get('status'),
+        'lateMinutes': x.get('lateMinutes'),
+    })
+
+# ── 作品：state 是 wip/done（澄说"朝着屋里，不是待发布"） ──
+for x in (load_json(WORKS, {}).get('items') or []):
+    if not isinstance(x, dict): continue
+    t=(x.get('line') or '').strip()          # works.json 用的是 line，不是 text
+    if not t: continue
+    work_nodes.append({
+        'id': 'work:'+str(x.get('id') or ''),
+        'kind': 'work',
+        'text': t,
+        'ts': x.get('createdAt') or (x.get('day') or '') + 'T00:00:00.000Z',
+        'title': x.get('title'),
+        'intent': x.get('intent'),
+        'state': x.get('state'),
+    })
+
+nodes = utt_nodes + said_nodes + rule_nodes + ins_nodes + mem_nodes + voice_nodes       + note_nodes + appt_nodes + work_nodes
 
 # ---------- embeddings via ollama ----------
 def embed_all(texts):
@@ -214,6 +293,7 @@ meta={
    'nodes_total': len(nodes),
    'judgment': len(utt_nodes), 'said': len(said_nodes), 'rule': len(rule_nodes),
    'insight': len(ins_nodes), 'memory': len(mem_nodes), 'voice': len(voice_nodes),
+   'note': len(note_nodes), 'appointment': len(appt_nodes), 'work': len(work_nodes),
    'duplicate_heard_merged': dup_heard,
    'edges': len(edges),
    'excluded': len(excluded),

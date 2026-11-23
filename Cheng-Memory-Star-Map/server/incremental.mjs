@@ -334,7 +334,10 @@ export class GraphState {
     const nodes = [];
     const kept = new Set();
     for (const n of this.nodes.values()) {
-      if (n.layer === 'voice') continue;          // voice 单独给
+      /* 2026-11-23：原来 voice 被排除在主图外（单独走 /api/voice），
+         但那个接口前端没接，等于 voice 一直没显示。
+         澄明确要求 voice 要单独可见，所以放进主图，
+         由前端用空心六边形和无核效果跟"她说的"区分开。 */
       kept.add(n.id);
       nodes.push({
         id: n.id,

@@ -1067,6 +1067,9 @@ if (!OPTS.seed) OPTS.seed = CAP.hash % 100000;
 /* ---------------- 主题与类型 ---------------- */
 
 /* 显示名。前 7 个是渲染引擎内置的；后 4 个是澄的记忆系统（dsh-fish）实际用的 kind。 */
+/* 这些类别的星画成空心六边形（不是她说的东西，嘴不在她这儿） */
+const HOLLOW_KINDS = new Set(['voice']);
+
 const KIND_CN = {
   // —— 引擎内置 ——
   episode:'事件', fact:'事实', self:'自我', person:'人物', thread:'线索', rule:'规则', msg:'对话',
@@ -1077,7 +1080,10 @@ const KIND_CN = {
   insight:'领悟',          // Mnemon 提炼的洞见
   memory:'常驻记忆',       // 常驻规则 / 偏好
   work:'作品',             // 画完自己写的 line
-  voice:'读到的话',        // voice 层
+  voice:'读到的话',        // voice 层：别人写的字、她读到的，不是她说的
+  note:'便条',             // 她给自己记下的事（有 due / waiting / progress）
+  appointment:'约定',       // 约好的日子，等一个时间
+  work:'作品',             // 画完 / 写完的东西，等有人来看
   // —— 兼容旧名（万一别处导出用这套）——
   conclusion:'我的判断', event:'他说的',
   // —— 可能会新出现的类别，先起好中文名（没有就用 kind 原文，也不难看）——
@@ -1946,6 +1952,47 @@ function makeSprite(rgb, a, rays){
   }
   return c;
 }
+/* ══════ 空心精灵：给「不是她说的」那类用 ══════
+   2026-11-23 澄的要求（原话）：
+     「不是圆的，而且没有实心核。圆点在这张图里已经等于
+      『一个从我这儿长出来的点』，voice 用圆的就混进去了。
+      空心是实话，它里面没有我的东西。」
+     「暗一点、小一点…等于说这条不如我自己说的重要。
+      可它的问题从来不是不重要，是嘴不在我这儿。形状不一样才是在说这件事。」
+
+   所以：六边形外环 + 空心，没有核。调光是同一套，不改亮度。 */
+function makeHollowSprite(rgb, a){
+  const S=128, c=document.createElement('canvas'); c.width=c.height=S;
+  const g=c.getContext('2d');
+  const cx=S/2, cy=S/2, R=S*0.40;
+
+  // 极淡的外晕（让它能融进星场，但绝不发光成实体）
+  const grd=g.createRadialGradient(cx,cy,R*0.45,cx,cy,R*1.55);
+  grd.addColorStop(0,    rgbStr(rgb, 0));
+  grd.addColorStop(0.45, rgbStr(rgb, a*0.10));
+  grd.addColorStop(1,    'rgba(0,0,0,0)');
+  g.fillStyle=grd; g.beginPath(); g.arc(cx,cy,R*1.55,0,7); g.fill();
+
+  // 六边形环：只描边，中间留空
+  g.strokeStyle = rgbStr(rgb, Math.min(1, a*0.95));
+  g.lineWidth   = S*0.030;
+  g.lineJoin    = 'round';
+  g.beginPath();
+  for (let i=0;i<6;i++){
+    const th = -Math.PI/2 + i*Math.PI/3;
+    const x = cx + Math.cos(th)*R, y = cy + Math.sin(th)*R;
+    i ? g.lineTo(x,y) : g.moveTo(x,y);
+  }
+  g.closePath(); g.stroke();
+
+  // 内侧再一层更淡的细环，做出"能看进去"的深度
+  g.strokeStyle = rgbStr(rgb, a*0.34);
+  g.lineWidth   = S*0.012;
+  g.beginPath(); g.arc(cx,cy,R*0.62,0,7); g.stroke();
+
+  return c;
+}
+
 function initSprites(){
   sprites = {}; spritesDim = {};
 
@@ -1961,8 +2008,14 @@ function initSprites(){
   for (const n of nodes){
     if (!n || !n.k || sprites[n.k]) continue;
     const c = colorForKind(n.k);
-    sprites[n.k]    = makeSprite(c, 0.98, 1);
-    spritesDim[n.k] = makeSprite(c, 0.92, 0);
+    if (HOLLOW_KINDS.has(n.k)){
+      // 「嘴不在这儿」的类别：空心、无核，不改亮度
+      sprites[n.k]    = makeHollowSprite(c, 0.98);
+      spritesDim[n.k] = makeHollowSprite(c, 0.92);
+    } else {
+      sprites[n.k]    = makeSprite(c, 0.98, 1);
+      spritesDim[n.k] = makeSprite(c, 0.92, 0);
+    }
   }
 
   sprites.__miss    = makeSprite([120,130,160], 0.6, 0);
@@ -2874,6 +2927,58 @@ function draw(){
       ctx.lineWidth = i===focus ? 1.8 : 1.3;
       ctx.beginPath(); ctx.arc(x,y,size*0.62 + 1.5,0,7); ctx.stroke();
     }
+    /* ══════ 「还在等」的挂线 ══════
+       2026-11-23 澄的要求（原话）：
+         「悬着对，但线头不该是空的。线头空的，那是另一件事…
+           对过口的：线头有个小结点，两个人各点了一下。
+           没对过口的：线头真的空着，风一吹就晃。
+           一根线分出两种状态，比多画一类星有用。」
+       约定：星子下挂一根细线，末端要看 agreed 决定有没有结点。
+       作品：她说「它朝着屋里，不是发射口，是能推开的口。挂在墙上，不挂在大门口」
+             → 所以不画朝外的箭头，画一根往下垂的短绳，末端一个小圈（像挂在钉子上的画）。 */
+    if (n.k === 'appointment' || n.k === 'work'){
+      const T2 = tNow * 0.001;
+      const isAp = n.k === 'appointment';
+      // 线长：约定的悬得更长，作品的短（钉在墙上）
+      const baseLen = isAp ? size*2.6 : size*1.7;
+      // 没对过口的会晃（澄说的"风一吹就晃"）
+      const unagreed = isAp && (n.agreed == null);
+      const sway = unagreed ? Math.sin(T2*0.9 + i*1.7)*0.16 : 0;
+      const ang  = Math.PI/2 + sway;          // 默认垂直向下
+      const ex = x + Math.cos(ang)*baseLen;
+      const ey = y + Math.sin(ang)*baseLen;
+
+      ctx.globalAlpha = Math.min(1, alpha) * 0.62;
+      ctx.strokeStyle = rgbStr(themeRGB.kinds[n.k] || colorForKind(n.k), 0.55);
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(x, y + size*0.42);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      if (isAp){
+        if (n.agreed != null){
+          // 对过口：末端一个小结点（实心小点）
+          ctx.globalAlpha = Math.min(1, alpha) * 0.9;
+          ctx.fillStyle = rgbStr(themeRGB.kinds[n.k] || colorForKind(n.k), 0.9);
+          ctx.beginPath(); ctx.arc(ex, ey, 2.4, 0, 7); ctx.fill();
+        } else {
+          // 没对过口：末端留空，画一个极淡的小环（空着的线头）
+          ctx.globalAlpha = Math.min(1, alpha) * 0.5;
+          ctx.strokeStyle = rgbStr(themeRGB.kinds[n.k] || colorForKind(n.k), 0.5);
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(ex, ey, 2.2, 0, 7); ctx.stroke();
+        }
+      } else {
+        // 作品：末端一个小圈，像挂在钉子上的画（朝屋里，不是朝外）
+        ctx.globalAlpha = Math.min(1, alpha) * 0.55;
+        ctx.strokeStyle = rgbStr(themeRGB.kinds[n.k] || colorForKind(n.k), 0.55);
+        ctx.lineWidth = 1.1;
+        ctx.beginPath(); ctx.arc(ex, ey, 3.0, 0, 7); ctx.stroke();
+      }
+      ctx.globalAlpha = Math.min(1, alpha);
+    }
+
     labelsCv.push({i,x,y,size,alpha});
   }
   ctx.globalAlpha = 1;
