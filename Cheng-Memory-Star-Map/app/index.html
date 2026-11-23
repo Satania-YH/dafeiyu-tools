@@ -5015,6 +5015,49 @@ function initLive() {
 
   live.connect();
 
+  /* ══════ 临时演示：多分类 + 数量悬殊 ══════
+     一次铺开 10 个分类，每个分类的子星数量差很多
+     （2 / 3 / 8 / 15 / 25 / 40 / 60 / 90 / 120 / 150 颗），
+     用来看"星多时会不会缩小、团会不会越界"。
+     删掉这段即可恢复。 */
+
+  if (window.__DEMO_MIX !== false) {
+    const plan = [
+      { label: '播客',   n: 2   },
+      { label: '抖音',   n: 3   },
+      { label: '相册',   n: 8   },
+      { label: 'B站',    n: 15  },
+      { label: '游戏',   n: 25  },
+      { label: '知乎',   n: 40  },
+      { label: '小说',   n: 60  },
+      { label: '微博',   n: 90  },
+      { label: '代码库', n: 120 },
+      { label: '小红书', n: 150 },
+    ];
+
+    setTimeout(() => {
+      if (!nodes.length) return;
+      for (let ci = 0; ci < plan.length; ci++) {
+        const { label, n } = plan[ci];
+        const kind = 'mix_' + ci;
+        KIND_CN[kind] = label;
+
+        let prevId = (nodes.find(x => x.k === 'said') || nodes[0]).id;
+        for (let i = 0; i < n; i++) {
+          const id = 'MIX-' + ci + '-' + i;
+          addStarToScene({
+            id, kind,
+            text: '【' + label + '】第 ' + (i + 1) + ' 条',
+            ts: new Date().toISOString(),
+            date: new Date(Date.now() + 8*3600*1000).toISOString().slice(0,10),
+            importance: 3, topic: label,
+          }, [{ source: id, target: prevId, cos: 0.8 }]);
+          prevId = id;
+        }
+      }
+    }, 800);
+  }
+
 }
 
 /** 更新「上次更新 X 分钟前」 */
