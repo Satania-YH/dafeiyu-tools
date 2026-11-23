@@ -1024,6 +1024,7 @@ const DEFAULTS = {
   linkAlpha: 1,
   linkThreshold: 0.72,
   autoRotate: 0.12,
+
   glow: 0.60,
   starfield: 260,
   spread: 1.0,
@@ -1878,6 +1879,18 @@ function rot(p){
   return [x, y2, z2];
 }
 
+/* ══════ 投影（透视）══════
+   persp = base / (FOV - z)：近大远小，有空间纵深。
+   正交模式试过，因为 fitK（自动缩放适配）是按透视算的，
+   切正交后整张图会缩成一团，效果不好，所以不做。 */
+
+function perspAt(z) {
+  return base0 / (FOV - z);
+}
+
+/* 当前帧的基准缩放（draw() 里会更新） */
+let base0 = 1;
+
 /* ---------------- 精灵 ---------------- */
 function makeSprite(rgb, a, rays){
   // 一颗星：白核 + 彩色体积光晕 + 四长芒 + 四短芒（预渲染，绘制时只 drawImage）
@@ -2055,8 +2068,8 @@ function drawCoreStar(ctx){
   // 投影原点：和节点同一套相机/缩放，所以它永远在星系正中
   const r3 = rot({ x:0, y:0, z:0 });
   const REF = Math.min(W,H)/2 * 0.86;
-  const base = REF * 1.30 * zoom;
-  const persp = base / (FOV - r3[2]);
+  base0 = REF * 1.30 * zoom;
+  const persp = perspAt(r3[2]);
   const cx = W/2 + panX, cy = H/2 + panY;
   const x = cx + r3[0]*persp*fitK;
   const y = cy + r3[1]*persp*fitK;
@@ -2572,6 +2585,7 @@ function draw(){
   const cx = W/2 + panX, cy = H/2 + panY;
   const REF = Math.min(W,H)/2 * 0.86;
   const base = REF * 1.30 * zoom;
+  base0 = base;                      // 供 perspAt() 用，必须在任何投影前设置
 
   // —— 星云雾：跟着记忆聚簇走（节点密集处才起雾，颜色取那片记忆的类型色）
   if (baseShape() === 'nebula' && N > 0){
@@ -2590,7 +2604,7 @@ function draw(){
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (const b of arr){
       const rp = rot({ x:b.x/b.c, y:b.y/b.c, z:b.z/b.c });
-      const persp = base / (FOV - rp[2]);
+      const persp = perspAt(rp[2]);
       const mx = cx + rp[0]*persp, my = cy + rp[1]*persp;
       const mr = Math.max(60, base * 0.07 * (1.2 + Math.sqrt(b.c)*0.55) * (persp/(base/FOV)) * 0.55);
       const col = [b.r/b.c, b.g/b.c, b.bl/b.c];
@@ -2629,7 +2643,7 @@ function draw(){
   for (let i=0;i<N;i++){
     const n = nodes[i];
     const r = rot({x:n.px, y:n.py, z:n.pz});
-    const persp = base / (FOV - r[2]);
+    const persp = perspAt(r[2]);
     const x = cx + r[0]*persp;
     const y = cy + r[1]*persp;
     proj[i*4]=x; proj[i*4+1]=y; proj[i*4+2]=persp; proj[i*4+3]=r[2];
@@ -2887,7 +2901,7 @@ function draw(){
         tx = gr.wx; ty = gr.wy; tz = gr.wz;
       }
       const r = rot({ x:tx*OPTS.spread, y:ty*OPTS.spread, z:tz*OPTS.spread });
-      const persp = base / (FOV - r[2]);
+      const persp = perspAt(r[2]);
       const px = cx + r[0]*persp*fitK, py = cy + r[1]*persp*fitK;
       if (px < -240 || px > W+240 || py < -240 || py > H+240) continue;
       const lx = px - 20, ly = py - 34;
@@ -3729,6 +3743,7 @@ const SLIDERS = [
   { key:'linkAlpha',     label:'连线亮度', min:0.15,max:3,   step:0.05,fmt:v=>v.toFixed(2) },
   { key:'glow',          label:'发光强度', min:0,   max:1.6, step:0.05, fmt:v=>v.toFixed(2) },
   { key:'autoRotate',    label:'自转速度', min:0,   max:1.2, step:0.02, fmt:v=>v.toFixed(2) },
+  /* 投影方式：不是数值滑条，单独做个开关（下面 TOGGLES 里处理） */
       { key:'starfield',     label:'星尘密度', min:0,   max:600, step:10,  fmt:v=>String(v|0) },
   { key:'sizePower',     label:'大小幂次', min:0.6, max:4,   step:0.1, fmt:v=>v.toFixed(1) },
 ];
