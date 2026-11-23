@@ -1,0 +1,29 @@
+﻿# XiaoJingVoice tray watchdog
+# Scheduled every 2 minutes. Only acts while DeepSeek Harness is up:
+# if the XiaoJing tray is not holding its mutex, launch it detached (WMI -> outside the
+# task process tree, so it survives DSH restarts).
+$ErrorActionPreference = 'SilentlyContinue'
+$mutexName = 'Local\XiaoJingVoiceTray'
+$logPath = 'D:\大肥鱼工具\xiaojing-sync.log'
+$tray = 'D:\大肥鱼工具\XiaoJingVoice\xiaojing-tray.ps1'
+
+$dsh = Get-Process -Name 'DeepSeek Harness' -ErrorAction SilentlyContinue
+if (-not $dsh) { exit 0 }
+
+try {
+    $m = [System.Threading.Mutex]::OpenExisting($mutexName)
+    $m.Dispose()
+    exit 0
+} catch { }
+
+try {
+    $cmd = 'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $tray + '"'
+    $res = ([wmiclass]'Win32_Process').Create($cmd)
+    $line = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  watchdog: xiaojing tray not running -> starting (rc=' + $res.ReturnValue + ' pid=' + $res.ProcessId + ')'
+} catch {
+    $line = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '  watchdog: xiaojing start failed: ' + $_.Exception.Message
+}
+try {
+    [System.IO.File]::AppendAllText($logPath, [char]13 + [char]10 + $line + [char]13 + [char]10, (New-Object System.Text.UTF8Encoding($false)))
+} catch { }
+exit 0
