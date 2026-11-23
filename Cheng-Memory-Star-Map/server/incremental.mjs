@@ -128,6 +128,20 @@ export class GraphState {
     if (n.category) out.category = String(n.category);
     if (n.target) out.target = String(n.target);
 
+    /* 「还在等的」三类（便条/约定/作品）的状态字段。
+       之前这些全被这里吃掉，前端拿到 undefined，分不出开着的和了结的。 */
+    if (n.open !== undefined) out.open = !!n.open;
+    if (n.due) out.due = String(n.due);
+    if (n.waiting) out.waiting = String(n.waiting);
+    if (n.progress !== undefined) out.progress = Number(n.progress) || 0;
+    if (n.status) out.status = String(n.status);
+    if (n.agreed !== undefined) out.agreed = n.agreed;
+    if (n.outcome) out.outcome = String(n.outcome);
+    if (n.state) out.state = String(n.state);
+    if (n.title) out.title = String(n.title);
+    if (n.intent) out.intent = String(n.intent);
+    if (n.doneNote) out.doneNote = String(n.doneNote);
+
     // voice 单独一层
     if (kind === 'voice') out.layer = 'voice';
 
@@ -349,6 +363,19 @@ export class GraphState {
         degree: n.degree,
         ...(n.importance != null ? { importance: n.importance } : {}),
         ...(n.pos ? { pos: n.pos } : {}),
+        /* 「还在等的」那几类要用的字段，之前没透传，
+           前端拿不到 open/due/waiting/agreed，全成了 undefined。 */
+        ...(n.open != null ? { open: n.open } : {}),
+        ...(n.due ? { due: n.due } : {}),
+        ...(n.waiting ? { waiting: n.waiting } : {}),
+        ...(n.progress != null ? { progress: n.progress } : {}),
+        ...(n.status ? { status: n.status } : {}),
+        ...(n.agreed !== undefined ? { agreed: n.agreed } : {}),
+        ...(n.outcome ? { outcome: n.outcome } : {}),
+        ...(n.state ? { state: n.state } : {}),
+        ...(n.title ? { title: n.title } : {}),
+        ...(n.intent ? { intent: n.intent } : {}),
+        ...(n.doneNote ? { doneNote: n.doneNote } : {}),
       });
     }
     // 边必须两端都在 nodes 里，否则前端按 id 找索引会落空

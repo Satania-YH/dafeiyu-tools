@@ -207,7 +207,10 @@ for x in (load_json(WORKS, {}).get('items') or []):
         'id': 'work:'+str(x.get('id') or ''),
         'kind': 'work',
         'text': t,
-        'ts': x.get('createdAt') or (x.get('day') or '') + 'T00:00:00.000Z',
+        # createdAt 是毫秒数（1795227128554），不是 ISO；day 才是可读日期。
+        # 用 day 拼 ISO，前端 fmtLocalTs 才认得（+8h 换算成本地钟）。
+        'ts': (x.get('day') or '') + 'T00:00:00.000Z' if x.get('day') else None,
+        'day': x.get('day'),
         'title': x.get('title'),
         'intent': x.get('intent'),
         'state': x.get('state'),
