@@ -336,21 +336,35 @@
   .tl-fbtn.on .n{ color:#b08d4e; }
   .tl-fbtn.zero{ opacity:.35; cursor:default; }
 
-  /* ── 日期筛选：和分类筛选分两排，用小一号的字 + 蓝色系，
-        一眼能分出"上面是类别、下面是日期"，不会混成一条 ── */
-  .tl-dfilter{
-    margin-top:-12px;      /* 贴着分类行，别空出一大块 */
-    padding-top:0; border-bottom:1px solid rgba(140,170,255,.08);
+  /* ── 日期选择器：三个下拉 + 一个清空，永远一行 ── */
+  .tl-picker{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    margin:-10px 0 20px; padding-bottom:15px;
+    border-bottom:1px solid rgba(140,170,255,.08);
   }
-  .tl-dbtn{
-    font-size:11px; padding:4px 10px; min-width:0;
-    letter-spacing:.02em;
+  .tl-sel{
+    font-family:inherit; font-size:11.5px; letter-spacing:.02em;
+    padding:5px 26px 5px 10px; border-radius:7px; cursor:pointer;
+    background:rgba(140,170,255,.05); border:1px solid rgba(140,170,255,.14);
+    color:#a8b6d4; transition:.15s;
+    appearance:none; -webkit-appearance:none;
+    /* 自绘箭头，原生那个在深色底上很丑 */
+    background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a99'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 9px center;
   }
-  .tl-dbtn.on{
-    background:rgba(122,180,255,.14); border-color:rgba(122,180,255,.45); color:#9dc8ff;
+  .tl-sel:hover{ background-color:rgba(140,170,255,.10); border-color:rgba(140,170,255,.26); color:#cfdcf7; }
+  .tl-sel:focus{ outline:none; border-color:rgba(122,180,255,.5); box-shadow:0 0 0 2px rgba(122,180,255,.10); }
+  .tl-sel option{ background:#121826; color:#c8d4ec; }
+  .tl-reset{
+    font-family:inherit; font-size:11px; width:24px; height:24px; border-radius:6px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(140,170,255,.12);
+    color:#6b7a99; cursor:pointer; transition:.15s; flex:none;
+    display:flex; align-items:center; justify-content:center; padding:0;
   }
-  .tl-dbtn.on .n{ color:#6d94c4; }
-  .tl-dbtn .n{ margin-left:5px; }
+  .tl-reset:hover{ background:rgba(255,120,120,.12); border-color:rgba(255,120,120,.35); color:#ff9d9d; }
+  .tl-pickcount{
+    font-size:11px; color:#7da4d8; letter-spacing:.03em; margin-left:2px;
+  }
 
   /* 每天一块 */
   .tl-day{ margin-bottom:26px; position:relative; padding-left:22px; }
@@ -812,7 +826,7 @@
       <span class="ico">✦</span><span class="nav-label">记忆星图</span>
     </button>
     <button class="nav-item" data-view="timeline">
-      <span class="ico">☰</span><span class="nav-label">记忆时间轴</span>
+      <span class="ico">☰</span><span class="nav-label">记忆轨迹</span>
     </button>
     <button class="nav-item" data-view="excluded">
       <span class="ico">⊘</span><span class="nav-label">未成之星</span>
@@ -895,14 +909,21 @@
   <section id="timeline">
    <div class="tl-page">
     <div class="tl-head">
-      <h1>记 忆 时 间 轴</h1>
+      <h1>记 忆 轨 迹</h1>
       <span class="tl-count" id="tlCount"></span>
     </div>
     <p class="tl-sub">按时间倒序 · 每天点开看当天说过的话、写过的东西</p>
     <!-- 分类筛选：点一下只看这一类，再点一下取消 -->
     <div class="tl-filter" id="tlFilter"></div>
-    <!-- 日期筛选：点一下只看那一天，可多选。2026-11-24 用户要求「加上时间的筛选」 -->
-    <div class="tl-filter tl-dfilter" id="tlDateFilter"></div>
+    <!-- 日期筛选：三个下拉（年 / 月 / 日），不铺按钮。
+         2026-11-24 用户：「要不加个选择器吧 年月日 搞这么多有点臃肿」 -->
+    <div class="tl-picker" id="tlPicker">
+      <select class="tl-sel" id="tlSelYear"><option value="">全部年份</option></select>
+      <select class="tl-sel" id="tlSelMonth"><option value="">全部月份</option></select>
+      <select class="tl-sel" id="tlSelDay"><option value="">全部日期</option></select>
+      <button class="tl-reset" id="tlReset" title="清空日期筛选">✕</button>
+      <span class="tl-pickcount" id="tlPickCount"></span>
+    </div>
     <div id="tlBody"><div class="tl-empty">正在读取…</div></div>
    </div>
   </section>
@@ -919,6 +940,14 @@
       看清楚了好说话 —— 判错了的直接标出来，我改逻辑重跑。
     </p>
     <div class="ex-filter" id="exFilter"></div>
+    <!-- 同款日期选择器（2026-11-24 用户：「未成之星也加个同款时间筛选」） -->
+    <div class="tl-picker" id="exPicker">
+      <select class="tl-sel" id="exSelYear"><option value="">全部年份</option></select>
+      <select class="tl-sel" id="exSelMonth"><option value="">全部月份</option></select>
+      <select class="tl-sel" id="exSelDay"><option value="">全部日期</option></select>
+      <button class="tl-reset" id="exReset" title="清空日期筛选">✕</button>
+      <span class="tl-pickcount" id="exPickCount"></span>
+    </div>
     <div id="exBody"><div class="ex-empty">正在读取…</div></div>
    </div>
   </section>
@@ -6037,6 +6066,16 @@ let TL_FILTER = null;
    没有做「最近7天/这个月」那种预设 —— 全库只有 5 天数据，
    那些档位全是同一个结果，等于骗人。就按天选，一选一个准。 */
 let TL_DATE_SET = new Set();
+/* 三层筛选，越具体优先级越高（日 > 月 > 年）：
+     TL_DATE_SET  'YYYY-MM-DD' 的集合，多选
+     TL_MONTH_SEL 'YYYY-MM'，选整月
+     TL_YEAR_SEL  'YYYY'，选整年
+   2026-11-24 用户：「年份能选吗」—— 原来年份只用来展开月份，不能筛。
+   现在三层都能单独筛，选哪层就只看哪层。 */
+let TL_MONTH_SEL = null;     // 选中的整月
+let TL_YEAR_SEL = null;      // 选中的整年
+/* 默认筛选只做一次。用户自己改过之后，数据刷新不能把他选的冲掉。 */
+let TL_DEFAULT_DONE = false;
 
 /* 统一把 UTC 的 ts 格式化成"本地时间"字符串（UTC+8）。
    全项目所有要显示 ts 的地方都应该走这里，
@@ -6130,6 +6169,11 @@ const EX_REASON_ORDER = ['injection-command','injection-wrapped','injection','sy
   'self-said','self-said-likely-question','markup','group-format','unknown'];
 
 let EX_DATA = null;
+/* 未成之星的日期筛选（和时间轴同一套三下拉）
+   2026-11-24 用户：「未成之星也加个同款时间筛选」
+   默认不锁最新一天 —— 这里总共才 147 条，全量看得过来；
+   而且这一页的目的是"翻账"，一进来就被筛掉反而不好找。 */
+let EX_YEAR_SEL = null, EX_MONTH_SEL = null, EX_DAY_SEL = null;
 let EX_FILTER = null;
 
 async function ensureExcluded() {
@@ -6154,7 +6198,6 @@ function renderExcluded() {
   if (!body || !EX_DATA) return;
 
   const all = EX_DATA.items || [];
-  if (cEl) cEl.textContent = '共 ' + all.length + ' 条 · 来源 ' + (EX_DATA.path || '');
 
   // 筛选按钮
   if (fEl) {
@@ -6175,9 +6218,98 @@ function renderExcluded() {
     }
   }
 
-  const list = EX_FILTER ? all.filter(x => x.reason === EX_FILTER) : all;
+  /* ── 日期筛选：和时间轴同一套三下拉 ──
+     2026-11-24 用户：「未成之星也加个同款时间筛选」
+     级联逻辑一样：选了年，月只剩那一年；选了月，日只剩那个月。 */
+  const selY = document.getElementById('exSelYear');
+  const selM = document.getElementById('exSelMonth');
+  const selD = document.getElementById('exSelDay');
+  if (selY && selM && selD) {
+    const dated = all.filter(x => x.ts && x.ts.length >= 10);
+    const byY = new Map(), byM = new Map(), allD = new Map();
+    for (const it of dated) {
+      const d = it.ts.slice(0, 10);
+      const y = d.slice(0, 4), ym = d.slice(0, 7);
+      byY.set(y, (byY.get(y) || 0) + 1);
+      byM.set(ym, (byM.get(ym) || 0) + 1);
+      allD.set(d, (allD.get(d) || 0) + 1);
+    }
+
+    const curY = selY.value, curM = selM.value, curD = selD.value;
+
+    selY.innerHTML = '<option value="">全部年份</option>';
+    for (const y of [...byY.keys()].sort().reverse()) {
+      const o = document.createElement('option');
+      o.value = y; o.textContent = y + ' 年（' + byY.get(y) + '）';
+      selY.appendChild(o);
+    }
+    selY.value = curY && byY.has(curY) ? curY : '';
+
+    const yScope = selY.value;
+    selM.innerHTML = '<option value="">全部月份</option>';
+    for (const ym of [...byM.keys()].sort().reverse()) {
+      if (yScope && !ym.startsWith(yScope)) continue;
+      const o = document.createElement('option');
+      o.value = ym;
+      o.textContent = ym.slice(5).replace(/^0/, '') + ' 月（' + byM.get(ym) + '）';
+      selM.appendChild(o);
+    }
+    selM.value = curM && [...selM.options].some(o => o.value === curM) ? curM : '';
+
+    const mScope = selM.value;
+    selD.innerHTML = '<option value="">全部日期</option>';
+    const dayKeys = [...allD.keys()].filter(d =>
+      mScope ? d.startsWith(mScope) : (yScope ? d.startsWith(yScope) : true)
+    ).sort().reverse();
+    for (const d of dayKeys) {
+      const o = document.createElement('option');
+      o.value = d;
+      o.textContent = d.slice(5).replace('-', '/') + ' 日（' + allD.get(d) + '）';
+      selD.appendChild(o);
+    }
+    selD.value = curD && dayKeys.indexOf(curD) >= 0 ? curD : '';
+
+    const apply = () => {
+      EX_YEAR_SEL = selY.value || null;
+      EX_MONTH_SEL = selM.value || null;
+      EX_DAY_SEL = selD.value || null;
+      renderExcluded();
+    };
+    selY.onchange = () => { selM.value = ''; selD.value = ''; apply(); };
+    selM.onchange = () => { selD.value = ''; apply(); };
+    selD.onchange = apply;
+    const rb = document.getElementById('exReset');
+    if (rb) rb.onclick = () => { selY.value = ''; selM.value = ''; selD.value = ''; apply(); };
+
+    const pc = document.getElementById('exPickCount');
+    if (pc) {
+      if (EX_DAY_SEL)        pc.textContent = '只看 ' + EX_DAY_SEL;
+      else if (EX_MONTH_SEL) pc.textContent = '只看 ' + EX_MONTH_SEL;
+      else if (EX_YEAR_SEL)  pc.textContent = '只看 ' + EX_YEAR_SEL + ' 年';
+      else                   pc.textContent = '';
+    }
+  }
+
+  const dateOk = (it) => {
+    const d = (it.ts || '').slice(0, 10);
+    if (!d) return !EX_DAY_SEL && !EX_MONTH_SEL && !EX_YEAR_SEL;   // 没时间的，只有"全部"时显示
+    if (EX_DAY_SEL)   return d === EX_DAY_SEL;
+    if (EX_MONTH_SEL) return d.startsWith(EX_MONTH_SEL);
+    if (EX_YEAR_SEL)  return d.startsWith(EX_YEAR_SEL);
+    return true;
+  };
+
+  let list = EX_FILTER ? all.filter(x => x.reason === EX_FILTER) : all;
+  list = list.filter(dateOk);
+
+  if (cEl) {
+    cEl.textContent = (list.length !== all.length)
+      ? '筛出 ' + list.length + ' / ' + all.length + ' 条 · 来源 ' + (EX_DATA.path || '')
+      : '共 ' + all.length + ' 条 · 来源 ' + (EX_DATA.path || '');
+  }
+
   if (!list.length) {
-    body.innerHTML = '<div class="ex-empty">这一类没有东西</div>';
+    body.innerHTML = '<div class="ex-empty">这个筛选条件下没有东西</div>';
     return;
   }
 
@@ -6236,40 +6368,134 @@ function renderTimeline(days) {
     }
   }
 
-  /* ── 日期筛选条 ──
-     2026-11-24 用户：「时间记忆轴加上时间的筛选」。
-     每行一个日期 + 条数。点一下只看那天，可以多选，再点取消。
-     「全部」清空。选中的日期在下面照常折叠，不改变原来的分组结构。 */
-  const dEl = document.getElementById('tlDateFilter');
-  if (dEl) {
-    dEl.innerHTML = '';
-    const allBtn = document.createElement('button');
-    const noDate = TL_DATE_SET.size === 0;
-    allBtn.className = 'tl-fbtn tl-dbtn' + (noDate ? ' on' : '');
-    allBtn.innerHTML = '全部日期<span class="n">' + all.length + '</span>';
-    allBtn.onclick = () => { TL_DATE_SET.clear(); renderTimeline(days); };
-    dEl.appendChild(allBtn);
+  /* ══════════════════════════════════════════════════════════
+     日期筛选：三个下拉选择器（年 / 月 / 日）
+     
+     2026-11-24 用户：「要不加个选择器吧 年月日 搞这么多有点臃肿」
+     之前是三层按钮铺开（月一排、日一排），数据一多就变成按钮墙。
+     换成原生 <select>，三个加起来只占一行，而且：
+       · 下拉天然支持几十个选项，不需要折叠
+       · 键盘能选，不用鼠标一个个点
+       · 选了年，月/日的选项就只剩那一年里的 —— 不会选到空集
+     ══════════════════════════════════════════════════════════ */
 
-    for (const g of out) {
-      const b = document.createElement('button');
-      const on = TL_DATE_SET.has(g.date);
-      b.className = 'tl-fbtn tl-dbtn' + (on ? ' on' : '');
-      const d = new Date(g.date + 'T00:00:00');
-      const md = (d.getMonth() + 1) + '/' + d.getDate();
-      b.innerHTML = md + '<span class="n">' + g.items.length + '</span>';
-      b.title = g.date;
-      b.onclick = () => {
-        if (TL_DATE_SET.has(g.date)) TL_DATE_SET.delete(g.date);
-        else TL_DATE_SET.add(g.date);
-        renderTimeline(days);
-      };
-      dEl.appendChild(b);
+  // 先按 年/月/日 归拢
+  const byYear = new Map(), byMonth = new Map(), allDates = [];
+  for (const g of out) {
+    const y = g.date.slice(0, 4), ym = g.date.slice(0, 7);
+    byYear.set(y, (byYear.get(y) || 0) + g.items.length);
+    byMonth.set(ym, (byMonth.get(ym) || 0) + g.items.length);
+    allDates.push(g.date);
+  }
+
+  const selY = document.getElementById('tlSelYear');
+  const selM = document.getElementById('tlSelMonth');
+  const selD = document.getElementById('tlSelDay');
+  const pickCount = document.getElementById('tlPickCount');
+
+  if (selY && selM && selD) {
+    // —— 年 ——
+    const curY = selY.value;
+    selY.innerHTML = '<option value="">全部年份</option>';
+    for (const y of [...byYear.keys()].sort().reverse()) {
+      const o = document.createElement('option');
+      o.value = y;
+      o.textContent = y + ' 年（' + byYear.get(y) + '）';
+      selY.appendChild(o);
+    }
+    selY.value = curY && byYear.has(curY) ? curY : '';
+
+    // —— 月：只在选了年时限制范围 ——
+    const yearScope = selY.value;
+    const curM = selM.value;
+    selM.innerHTML = '<option value="">全部月份</option>';
+    for (const ym of [...byMonth.keys()].sort().reverse()) {
+      if (yearScope && !ym.startsWith(yearScope)) continue;
+      const o = document.createElement('option');
+      o.value = ym;
+      o.textContent = (ym.slice(5).replace(/^0/, '')) + ' 月（' + byMonth.get(ym) + '）';
+      selM.appendChild(o);
+    }
+    selM.value = curM && [...selM.options].some(o => o.value === curM) ? curM : '';
+
+    // —— 日：只在该月（或该年）里有数据的日子 ——
+    const monthScope = selM.value;
+    const curD = selD.value;
+    selD.innerHTML = '<option value="">全部日期</option>';
+    const dayList = allDates.filter(d => {
+      if (monthScope) return d.startsWith(monthScope);
+      if (yearScope) return d.startsWith(yearScope);
+      return true;
+    }).sort().reverse();
+    for (const d of dayList) {
+      const o = document.createElement('option');
+      o.value = d;
+      o.textContent = d.slice(5) + '（' + (byMonth.get(d.slice(0,7)) ? '' : '') + '）';
+      // 条数从 out 里找（同名日期只有一条）
+      const g = out.find(x => x.date === d);
+      o.textContent = d.slice(5).replace('-', '/') + '  日（' + (g ? g.items.length : 0) + '）';
+      selD.appendChild(o);
+    }
+    selD.value = curD && dayList.indexOf(curD) >= 0 ? curD : '';
+
+    /* 默认值：第一次进时间轴就锁定「最新那一天」。
+       2026-11-24 用户：「默认显示当前最新月最新日的 不然数据太多没意义」
+       —— 一进来 1074 条铺满屏，人只会关掉它。
+       只做一次（TL_DEFAULT_DONE），之后用户怎么选就怎么留着，
+       不会因为数据刷新把他自己选的筛选冲掉。 */
+    if (!TL_DEFAULT_DONE && dayList.length) {
+      TL_DEFAULT_DONE = true;
+      const newest = dayList[0];              // dayList 已经倒序，[0] = 最新
+      selY.value = newest.slice(0, 4);
+      selM.value = newest.slice(0, 7);
+      selD.value = newest;
+      // 选了更细的就不用再摆上层那个空的，先把选项补全一轮
+      TL_YEAR_SEL = selY.value || null;
+      TL_MONTH_SEL = selM.value || null;
+      TL_DATE_SET.clear();
+      TL_DATE_SET.add(newest);
+    }
+
+    // —— 三个下拉的变化都直接改筛选状态 ——
+    const apply = () => {
+      TL_YEAR_SEL = selY.value || null;
+      TL_MONTH_SEL = selM.value || null;
+      TL_DATE_SET.clear();
+      if (selD.value) TL_DATE_SET.add(selD.value);
+      renderTimeline(days);
+    };
+    selY.onchange = () => { selM.value = ''; selD.value = ''; apply(); };
+    selM.onchange = () => { selD.value = ''; apply(); };
+    selD.onchange = apply;
+
+    const rb = document.getElementById('tlReset');
+    if (rb) rb.onclick = () => {
+      selY.value = ''; selM.value = ''; selD.value = '';
+      apply();
+    };
+
+    // 旁边写一句"现在筛的是哪几条"，不用去猜
+    if (pickCount) {
+      if (TL_DATE_SET.size)     pickCount.textContent = '只看 ' + [...TL_DATE_SET][0];
+      else if (TL_MONTH_SEL)    pickCount.textContent = '只看 ' + TL_MONTH_SEL;
+      else if (TL_YEAR_SEL)     pickCount.textContent = '只看 ' + TL_YEAR_SEL + ' 年';
+      else                      pickCount.textContent = '';
     }
   }
 
-  // ── 按筛选过滤（分类 + 日期，两个条件同时生效）──
+  /* ── 按筛选过滤（分类 + 年/月/日，同时生效）──
+     日期这一侧是三层，越具体越优先：
+       有选日 → 只看那几天
+       否则有选月 → 只看那个月
+       否则有选年 → 只看那年 */
+  const dateOk = (date) => {
+    if (TL_DATE_SET.size) return TL_DATE_SET.has(date);
+    if (TL_MONTH_SEL) return date.startsWith(TL_MONTH_SEL);
+    if (TL_YEAR_SEL) return date.startsWith(TL_YEAR_SEL);
+    return true;
+  };
   const groups = out
-    .filter(g => TL_DATE_SET.size === 0 || TL_DATE_SET.has(g.date))
+    .filter(g => dateOk(g.date))
     .map(g => {
       const items = TL_FILTER ? g.items.filter(it => tlCatOf(it) === TL_FILTER) : g.items;
       return { date: g.date, count: items.length, items };
@@ -6282,6 +6508,8 @@ function renderTimeline(days) {
     const fb = [];
     if (TL_FILTER) fb.push('分类');
     if (TL_DATE_SET.size) fb.push(TL_DATE_SET.size + ' 天');
+    else if (TL_MONTH_SEL) fb.push(TL_MONTH_SEL);
+    else if (TL_YEAR_SEL) fb.push(TL_YEAR_SEL + ' 年');
     cntEl.textContent = `${total} 条 · ${groups.length} 天` + (fb.length ? '（已筛选：' + fb.join(' + ') + '）' : '');
   }
 
