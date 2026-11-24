@@ -683,12 +683,124 @@ if (!NO_WATCH) {
   console.log('[星图] 监听已启动');
 }
 
+/* ══════════ 记忆源自动重导 ══════════
+ * 用户要求（2026-11-24）：「澄的记忆有更新的时候，能够实时自动同步到星图上」
+ *    后来放宽成：「能做到最大限度的记忆实时同步就行，不是非要」
+ *
+ * 已经实时的：events.jsonl（秒级）、便条/作品/约定/日记（2 秒轮询）
+ * 还欠着的：mnemon.db 的 insight、memories.json 的常驻记忆
+ *
+ * 这一段负责把后者也接上：监听这两个文件的 mtime，变了就跑 export-graph.py。
+ * 因为向量缓存已经加好（澄那句「别用『它该沉淀』给『载体还没缓存』打掩护」），
+ * 一次重导现在只要几秒，自动跑才成为可能。
+ *
+ * 澄提醒的四个坑，都处理了：
+ *   ① mnemon.db 的 mtime 会频繁变 → 防抖（10 秒内只跑一次）
+ *   ② 别两个导出撞一起 → 文件锁 + REEXPORTING 标志
+ *   ③ 别让页面读到写一半的 → export-graph.py 那边用临时文件原子替换（见下）
+ *   ④ 导出失败别 reload → 宁可留旧图
+ */
+const MEMORY_SOURCES = [
+  { key: 'mnemonDb', path: P.mnemonDb },
+  { key: 'memoriesJson', path: P.memories },
+];
+
+const AUTO_EXPORT_DEBOUNCE_MS = 10_000;    // 10 秒内多处变化只跑一次
+const AUTO_EXPORT_POLL_MS = 5_000;         // 5 秒查一次 mtime
+const AUTO_EXPORT_COOLDOWN_MS = 30_000;    // 两次自动导出最小间隔
+
+let autoExportTimer = null;
+let lastAutoExportAt = 0;
+let autoExportCount = 0;
+
+async function runAutoExport(why) {
+  if (REEXPORTING) { console.log('[自动重导] 上一次还没跑完，跳过'); return; }
+  const now = Date.now();
+  if (now - lastAutoExportAt < AUTO_EXPORT_COOLDOWN_MS) return;
+
+  REEXPORTING = true;
+  lastAutoExportAt = now;
+  autoExportCount++;
+  const t0 = Date.now();
+  console.log(`[自动重导] 开始（第 ${autoExportCount} 次，触发源 ${why}）`);
+
+  try {
+    const { spawn } = await import('node:child_process');
+    const script = 'D:/大肥鱼工具/memory-graph/export-graph.py';
+    const child = spawn('python', [script], { cwd: 'D:/大肥鱼工具/memory-graph' });
+    let err = '';
+    child.stderr.on('data', d => { err += d.toString(); });
+    const code = await new Promise((resolve) => child.on('close', resolve));
+
+    if (code !== 0) {
+      // 坑④：失败不 reload，留旧图
+      console.error(`[自动重导] 失败（exit ${code}），保留旧图。stderr 尾部：`, err.slice(-400));
+      return;
+    }
+    const ms = Date.now() - t0;
+    console.log(`[自动重导] 完成，用时 ${ms}ms。重载中…`);
+
+    // 重载内存里的图（和 /api/reload 同一套）
+    GS.nodes.clear(); GS.adj.clear(); GS.edges.length = 0;
+    GS.edgeIdx.clear(); GS.timeline.length = 0;
+    GS.stats = { added: 0, deduped: 0, garbled: 0, heartbeat: 0, edges: 0 };
+    await loadFull();
+    sseBroadcast('reload', { reason: 'auto-export', ms, summary: GS.summary() });
+    console.log(`[自动重导] 图已刷新：${GS.nodes.size} 节点 / ${GS.edges.length} 边`);
+  } catch (e) {
+    console.error('[自动重导] 异常：', e.message);
+  } finally {
+    REEXPORTING = false;
+  }
+}
+
+function watchMemorySources() {
+  if (NO_WATCH) return;
+  if (process.env.STARMAP_NO_AUTO_EXPORT === '1') {
+    console.log('[自动重导] 已禁用（STARMAP_NO_AUTO_EXPORT=1）');
+    return;
+  }
+
+  const mtimes = new Map();
+  const statOf = (f) => {
+    try { return fs.statSync(f).mtimeMs; }
+    catch { return null; }
+  };
+
+  // 初始化快照（启动时读到的就是当前状态，不算「变化」）
+  for (const f of MEMORY_SOURCES) mtimes.set(f.key, statOf(f.path));
+  console.log('[自动重导] 已启动（监听 mnemon.db / memories.json，5s 轮询，10s 防抖）');
+
+  setInterval(() => {
+    let hit = null;
+    for (const f of MEMORY_SOURCES) {
+      const now = statOf(f.path);
+      const prev = mtimes.get(f.key);
+      if (now != null && now !== prev) {
+        mtimes.set(f.key, now);
+        hit = f.key;
+      }
+    }
+    if (!hit) return;
+
+    // 坑①：防抖。db 写入时 mtime 会连跳好几次，攒一下再跑
+    if (autoExportTimer) clearTimeout(autoExportTimer);
+    autoExportTimer = setTimeout(() => {
+      autoExportTimer = null;
+      runAutoExport(hit).catch(e => console.error('[自动重导]', e.message));
+    }, AUTO_EXPORT_DEBOUNCE_MS);
+  }, AUTO_EXPORT_POLL_MS).unref?.();
+}
+
 // 保活 Ollama（澄实测：bge-m3 只占 657MiB，跟 ComfyUI 不打架）
 GS.vectors.startKeepalive((m) => console.log(`[向量] ${m}`));
 
 // 内容层热重载：便条/作品/约定/日记 变了就重读（轮询 mtime，2 秒一次）
 watchContentFiles();
 console.log('[内容层] 热重载已启动（轮询 mtime，2s）');
+
+// 记忆源自动重导（mnemon.db / memories.json）
+watchMemorySources();
 
 server.listen(PORT, HOST, () => {
   console.log('');

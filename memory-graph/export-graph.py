@@ -905,8 +905,33 @@ meta={
  'merged': merges,
 }
 graph={'meta':meta,'nodes':nodes,'edges':edges}
-json.dump(graph, open(os.path.join(OUT,'graph.json'),'w',encoding='utf-8'), ensure_ascii=False, indent=1)
-json.dump(excluded, open(os.path.join(OUT,'graph-excluded.json'),'w',encoding='utf-8'), ensure_ascii=False, indent=1)
+# ════════════════════════════════════════════════════════════
+# 原子写入（2026-11-24 澄提醒的第三个坑）
+#   「写 graph.json 用临时文件再原子替换，别让页面读到写一半的。」
+#
+# 做法：先写 .tmp，再 os.replace() 覆盖。
+#   os.replace 在同一文件系统上是原子的（Windows/POSIX 都保证），
+#   所以读的人要么看到完整的旧文件，要么看到完整的新文件，不会看到半截。
+# ════════════════════════════════════════════════════════════
+
+def atomic_dump(obj, path, **kw):
+    tmp = path + '.tmp'
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(obj, f, **kw)
+            f.flush()
+            os.fsync(f.fileno())      # 保证真落盘再替换
+        os.replace(tmp, path)
+    except Exception:
+        # 失败时清掉临时文件，别留垃圾
+        try:
+            if os.path.exists(tmp): os.remove(tmp)
+        except Exception:
+            pass
+        raise
+
+atomic_dump(graph, os.path.join(OUT, 'graph.json'), ensure_ascii=False, indent=1)
+atomic_dump(excluded, os.path.join(OUT, 'graph-excluded.json'), ensure_ascii=False, indent=1)
 
 summary=json.dumps(meta, ensure_ascii=False, indent=1)
 open(os.path.join(OUT,'_summary.txt'),'w',encoding='utf-8').write(summary)

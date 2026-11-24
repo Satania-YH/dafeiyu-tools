@@ -5675,6 +5675,7 @@ function renderTlItem(it) {
 
 /* ══════════ 实时推送 ══════════ */
 
+let lastDataChangeAt = 0;   // 上次「真的"收到新数据」的时刻
 let lastUpdateAt = 0;
 
 function initLive() {
@@ -5691,6 +5692,7 @@ function initLive() {
     lastUpdateAt = Date.now();
     if (!d || !d.node) return;
     addStarToScene(d.node, d.edges || []);
+    lastDataChangeAt = Date.now();     // 真的长了一颗星
     updateLiveHint();
   });
 
@@ -5708,6 +5710,7 @@ function initLive() {
      前端收到就重新拉一次图（merge 而不是重建，避免整图跳变）。 */
   live.on('content', (d) => {
     lastUpdateAt = Date.now();
+    lastDataChangeAt = Date.now();     // 内容层变了（便条划掉/新作品…）
     updateLiveHint();
     // 小改动不打扰用户，但要在图上反映出来 → 静默重拉
     if (typeof refreshGraphQuiet === 'function') refreshGraphQuiet(d && d.changed);
@@ -5837,16 +5840,33 @@ async function relayoutAfterReload() {
 window.relayoutAfterReload = relayoutAfterReload;
 
 /** 更新「上次更新 X 分钟前」 */
+/* ══════ 「多久前」要说准 ══════
+   2026-11-24 用户问：「能够多少多少秒前更新是真的吗 是自己刷新的还是识别到了更新才更新的」
+   实测结论：不会自己刷新，只有文件真变了才跑。
+
+   但原来的文案「上次更新 N 秒前」有歧义 —— 它只反映「上次收到任何 SSE 事件」，
+   包括心跳/时间轴推送，容易被读成「图一直是新的」。
+
+   所以现在分两个时间戳：
+     lastUpdateAt   —— 收到任何事件（含心跳）。这个太宽，不再显示。
+     lastDataChangeAt —— 真的往图上加了/改了东西。这个才值得说。
+   而且明确写「数据」两个字，别让人以为是自动轮询。 */
 function updateLiveHint() {
   const el = document.getElementById('liveHint');
   if (!el) return;
-  if (!lastUpdateAt) { el.textContent = ''; return; }
-  const sec = Math.floor((Date.now() - lastUpdateAt) / 1000);
+
+  // 没有过真实数据变化 → 只说「已连接」，不编时间
+  if (!lastDataChangeAt) {
+    el.textContent = '已连接 · 暂无新数据';
+    el.style.color = '';
+    return;
+  }
+  const sec = Math.floor((Date.now() - lastDataChangeAt) / 1000);
   el.style.color = '';
-  if (sec < 10) el.textContent = '刚刚更新';
-  else if (sec < 60) el.textContent = `上次更新 ${sec} 秒前`;
-  else if (sec < 3600) el.textContent = `上次更新 ${Math.floor(sec / 60)} 分钟前`;
-  else el.textContent = `上次更新 ${Math.floor(sec / 3600)} 小时前`;
+  if (sec < 10) el.textContent = '刚刚收到新数据';
+  else if (sec < 60) el.textContent = `新数据 ${sec} 秒前`;
+  else if (sec < 3600) el.textContent = `新数据 ${Math.floor(sec / 60)} 分钟前`;
+  else el.textContent = `新数据 ${Math.floor(sec / 3600)} 小时前`;
 }
 setInterval(updateLiveHint, 10000);
 
