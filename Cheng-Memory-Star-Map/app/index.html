@@ -369,6 +369,21 @@
   /* 内容区限宽：不限的话图表会横着拉太长，右边数字被挤出画面 */
   .st-page{ max-width:1240px; }
 
+  /* 数据源 Tab */
+  .st-srctabs{
+    display:inline-flex; gap:2px; margin:2px 0 10px;
+    background:rgba(140,170,255,.05);
+    border:1px solid rgba(140,170,255,.12); border-radius:8px; padding:2px;
+  }
+  .st-srcbtn{
+    font-family:inherit; font-size:11.5px; padding:5px 16px; border-radius:6px;
+    background:transparent; border:none; color:#7c88a6; cursor:pointer;
+    transition:.15s; display:inline-flex; align-items:center; gap:6px;
+  }
+  .st-srcbtn:hover{ color:#c3cde6; }
+  .st-srcbtn.on{ background:rgba(122,180,255,.16); color:#9dc8ff; }
+  .st-srcn{ font-size:10px; opacity:.6; font-variant-numeric:tabular-nums; }
+
   .st-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
   .st-head h1{ margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff; }
   .st-count{ font-size:11.5px; color:#5c6884; }
@@ -1436,6 +1451,16 @@
       <h1>记 忆 变 化</h1>
       <span class="st-count" id="stCount"></span>
     </div>
+    <!-- 数据源切换：星图（413 颗清洗后的星） vs 记忆（1136 条原始事件）
+         2026-11-24 用户：「加个 Tab 可以进行切换 分别看星图的统计数据和记忆的统计数据」 -->
+    <div class="st-srctabs" id="stSrcTabs">
+      <button class="st-srcbtn on" data-src="graph">
+        星图<span class="st-srcn" id="stSrcGraphN"></span>
+      </button>
+      <button class="st-srcbtn" data-src="events">
+        记忆<span class="st-srcn" id="stSrcEventsN"></span>
+      </button>
+    </div>
     <p class="st-sub" id="stSub">最近长出了什么，以及这段时间她往哪偏了。</p>
 
 
@@ -1943,6 +1968,9 @@ const KIND_CN = {
   spoken:'说出去的',        // 她自己写的、但写在公开地方（QQ 空间等）
                             // 澄：「嘴是在我这儿的，是我写的，只是写在公开的窗上。
                             //      区别不在谁写的，在给不给别人看。」
+  // —— 原始事件流里的分类（记忆模式，和记忆轨迹同一套）——
+  约定:'约定', 说的:'说的', 便条:'便条', 日记:'日记', 作品:'作品', 纪录:'纪录', 流水:'流水',
+  revise:'改口', 'diary-revision':'日记',
   // —— 兼容旧名（万一别处导出用这套）——
   conclusion:'我的判断', event:'他说的',
   // —— 可能会新出现的类别，先起好中文名（没有就用 kind 原文，也不难看）——
@@ -7066,6 +7094,9 @@ let ST_TODAY_RANGE = 'today';  // today | yday | week
    —— 一进来就是今天，不是"全部 398 条"那种糊在一起的总数。
    只初始化一次，用户自己选过之后不再覆盖（ST_DEFAULT_DONE）。 */
 let ST_DEFAULT_DONE = false;
+/* 数据源：graph = 星图（413 颗清洗后的星）/ events = 记忆（原始事件流）
+   2026-11-24 用户：「加个 Tab 可以进行切换 分别看星图的统计数据和记忆的统计数据」 */
+let ST_SRC = 'graph';
 /* ── 时间范围 = 起止两个日期 ──
    粒度按钮只是把这个范围"快速填好"，填完还能手动改。 */
 function stRangeDates() {
@@ -7147,8 +7178,10 @@ function stBucket(iso) {
     const key = y + '-' + String(m+1).padStart(2,'0') + '-' + String(dd).padStart(2,'0');
     return { key, label: (m+1) + '/' + dd, full: key };
   }
-  const key = String(y);
-  return { key, label: y + ' 年', full: key };
+  /* 没指定粒度（自定义范围）时按天分桶 ——
+     否则会掉到最后那个"年"桶，所有数据挤成一列。 */
+  const key = y + '-' + String(m+1).padStart(2,'0') + '-' + String(dd).padStart(2,'0');
+  return { key, label: (m+1) + '/' + dd, full: key };
 }
 
 function stEnsure() {
@@ -7162,13 +7195,57 @@ function renderStats() {
   if (!host) return;
   if (!DATA || !DATA.nodes) return;
 
-  const allNodes = DATA.nodes;
+  /* ── 数据源 ──
+     graph  : DATA.nodes（413 颗，已有 kind/n.k 字段）
+     events : TL_DATA.days（1136 条原始事件，字段是 type 不是 kind）
+     统一转成 {k, ts} 的形状，后面的图表代码不用分情况。 */
+  let allNodes;
+  if (ST_SRC === 'events') {
+    const days = (TL_DATA && TL_DATA.days) || [];
+    allNodes = [];
+    /* 直接复用记忆轨迹那套分类（tlCatOf），不要再自己另造一套 ——
+       2026-11-25 用户：「记忆里面不是有这么多分类吗 怎么你里面只要几个」
+       轨迹的分类是：约定 / 说的 / 便条 / 日记 / 作品 / 纪录 / 流水
+       我自己映射成了 said/note/meta/... 结果只剩四五个。 */
+    const TL_MAP = {
+      appointment: '约定', utterance: '说的', note: '便条', diary: '日记',
+      work: '作品', meta: '纪录', stream: '流水',
+    };
+    for (const d of days) {
+      for (const it of (d.items || [])) {
+        const cat = tlCatOf(it);                       // 用轨迹同一套口径
+        allNodes.push({
+          k: TL_MAP[cat] || cat,
+          ts: it.ts || it.created || '',
+          _src: cat,
+        });
+      }
+    }
+  } else {
+    allNodes = DATA.nodes;
+  }
 
-  /* 默认范围：今天 → 今天（只做一次，用户改过之后不再覆盖） */
+  /* ── 默认日期范围（只算一次，两个 Tab 共用）──
+     2026-11-25 用户：「跟星图模式保持一致」
+     —— 切 Tab 不重置日期，这样两边看的是同一段，能对比。
+     初值按**星图数据**算（它是清洗后的稳定集）：
+       今天有星就今天，没有就退到最近有星的那天。 */
   if (!ST_DEFAULT_DONE) {
     ST_DEFAULT_DONE = true;
-    const [a, b] = stPresetRange('day');
-    ST_FROM = a; ST_TO = b;
+    const gNodes = (DATA && DATA.nodes) || [];
+    const ds = gNodes.map(n => stLocalDate(n.ts)).filter(Boolean).sort();
+    const latest = ds.length ? ds[ds.length - 1] : stLocalDate(new Date().toISOString());
+
+    /* 默认「最近 7 天」—— 不是只今天。
+       今天刚过午夜时只有 2 条，一进来空荡荡的像坏了；
+       看 7 天既有内容，也不会一下跳到两个月前。
+       终点取"最新有数据的那天"（不是今天），因为凌晨时今天常常是空的。 */
+    const endD = new Date(latest + 'T00:00:00');
+    const startD = new Date(endD); startD.setDate(startD.getDate() - 6);
+    const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    ST_FROM = fmt(startD);
+    ST_TO = fmt(endD);
+    ST_GRAIN = '';        // 不预设任何粒度高亮（这是自定义范围）
   }
 
   /* ── 时间范围 ──
@@ -7227,7 +7304,7 @@ function renderStats() {
   };
 
   const head = '<tr>'
-    + '<th class="st-rh">' + (ST_GRAIN === 'day' || ST_GRAIN === 'all' ? '日期' : ST_GRAIN === 'week' ? '周' : ST_GRAIN === 'month' ? '月份' : '年份') + '</th>'
+    + '<th class="st-rh">' + (ST_GRAIN === 'week' ? '周' : ST_GRAIN === 'month' ? '月份' : ST_GRAIN === 'year' ? '年份' : '日期') + '</th>'
     + kindCols.map(k => '<th' + (KIND_CN[k] ? '' : '') + '>' + esc(KIND_CN[k] || k) + '</th>').join('')
     + '<th>合计</th>'
     + '</tr>';
@@ -7267,12 +7344,23 @@ function renderStats() {
   if (flEl) flEl.textContent = ST_FROM ? ST_FROM.slice(5).replace('-', '/') : '—';
   if (tlEl) tlEl.textContent = ST_TO ? ST_TO.slice(5).replace('-', '/') : '—';
 
+  /* 数据源 Tab 上的条数 */
+  const gn = document.getElementById('stSrcGraphN');
+  const en = document.getElementById('stSrcEventsN');
+  if (gn) gn.textContent = ((DATA && DATA.nodes) ? DATA.nodes.length : 0);
+  if (en) {
+    const days = (TL_DATA && TL_DATA.days) || [];
+    let t = 0;
+    for (const d of days) t += (d.items || []).length;
+    en.textContent = t || '…';
+  }
+
   /* ── 3) 头部计数 ── */
   const cEl = document.getElementById('stCount');
   if (cEl) {
     const tot = rows.reduce((a, r) => a + r.total, 0);
     cEl.textContent = tot + ' 条 · ' + rows.length + ' 个' +
-      (ST_GRAIN === 'day' || ST_GRAIN === 'all' ? '日期' : ST_GRAIN === 'week' ? '周' : ST_GRAIN === 'month' ? '月' : '年');
+      (ST_GRAIN === 'week' ? '周' : ST_GRAIN === 'month' ? '月' : ST_GRAIN === 'year' ? '年' : '日期');
   }
 
   /* ── 4) 改口：澄要的那一块 ──
@@ -8158,14 +8246,49 @@ function drawStatsChart(rows, kindCols, kindTotals) {
 }
 
 function ensureStats() {
-  renderStats();
   bindStatsUI();
+  renderStats();
+  /* 记忆数据还没加载 → 后台拉一次，拉完只刷 Tab 上的数字
+     （用户 2026-11-25：「右侧的没显示全」—— Tab 上写的是 …，
+      因为那时 TL_DATA 还没到） */
+  if (!TL_DATA) {
+    loadTimeline()
+      .then(() => {
+        const en = document.getElementById('stSrcEventsN');
+        if (en) {
+          const days = (TL_DATA && TL_DATA.days) || [];
+          let t = 0;
+          for (const d of days) t += (d.items || []).length;
+          en.textContent = t;
+        }
+        if (ST_SRC === 'events') renderStats();
+      })
+      .catch(() => {});
+  }
 }
 
 let ST_UI_BOUND = false;
 function bindStatsUI() {
   if (ST_UI_BOUND) return;
   ST_UI_BOUND = true;
+
+  /* 数据源 Tab：星图 / 记忆 */
+  const srcTabs = document.getElementById('stSrcTabs');
+  if (srcTabs && !srcTabs.dataset.bound) {
+    srcTabs.dataset.bound = '1';
+    srcTabs.addEventListener('click', (ev) => {
+      const b = ev.target.closest('.st-srcbtn');
+      if (!b || !b.dataset.src) return;
+      ST_SRC = b.dataset.src;
+      ST_SF_PAGE = 0;              // 切数据源，星空回到第一页
+      [...srcTabs.querySelectorAll('.st-srcbtn')].forEach(x => x.classList.toggle('on', x === b));
+      if (ST_SRC === 'events' && !TL_DATA) {
+        loadTimeline().then(() => renderStats()).catch(() => renderStats());
+      } else {
+        renderStats();
+      }
+    });
+  }
 
   const seg = document.getElementById('stSeg');
   if (seg) {
