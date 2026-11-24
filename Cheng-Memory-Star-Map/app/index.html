@@ -369,6 +369,12 @@
   /* 内容区限宽：不限的话图表会横着拉太长，右边数字被挤出画面 */
   .st-page{ max-width:1240px; }
 
+  .st-empty-hint{
+    padding:22px 18px; margin:10px 0 16px; border-radius:10px;
+    background:rgba(140,170,255,.03); border:1px dashed rgba(140,170,255,.14);
+    font-size:12px; color:#6b7a99; line-height:1.7; text-align:center;
+  }
+
   /* 数据源 Tab */
   .st-srctabs{
     display:inline-flex; gap:2px; margin:2px 0 10px;
@@ -1453,6 +1459,7 @@
     </div>
     <!-- 数据源切换：星图（413 颗清洗后的星） vs 记忆（1136 条原始事件）
          2026-11-24 用户：「加个 Tab 可以进行切换 分别看星图的统计数据和记忆的统计数据」 -->
+    <div class="st-empty-hint" id="stEmptyHint" style="display:none"></div>
     <div class="st-srctabs" id="stSrcTabs">
       <button class="st-srcbtn on" data-src="graph">
         星图<span class="st-srcn" id="stSrcGraphN"></span>
@@ -7173,6 +7180,13 @@ function stBucket(iso) {
     const key = y + '-' + String(m+1).padStart(2,'0');
     return { key, label: (m+1) + ' 月', full: key };
   }
+  /* 按年：整个 2026 是一个桶。
+     ⚠️ 2026-11-25 发现这个分支被前面的改动吃掉了 ——
+     选「今年」时显示"418 条 · 6 个年"（其实全在 2026）。 */
+  if (ST_GRAIN === 'year') {
+    const key = String(y);
+    return { key, label: y + ' 年', full: key };
+  }
   if (ST_GRAIN === 'all') {
     // 「全部」按天分桶 —— 否则所有数据挤成一个"年"桶，看不出变化
     const key = y + '-' + String(m+1).padStart(2,'0') + '-' + String(dd).padStart(2,'0');
@@ -7236,16 +7250,12 @@ function renderStats() {
     const ds = gNodes.map(n => stLocalDate(n.ts)).filter(Boolean).sort();
     const latest = ds.length ? ds[ds.length - 1] : stLocalDate(new Date().toISOString());
 
-    /* 默认「最近 7 天」—— 不是只今天。
-       今天刚过午夜时只有 2 条，一进来空荡荡的像坏了；
-       看 7 天既有内容，也不会一下跳到两个月前。
-       终点取"最新有数据的那天"（不是今天），因为凌晨时今天常常是空的。 */
-    const endD = new Date(latest + 'T00:00:00');
-    const startD = new Date(endD); startD.setDate(startD.getDate() - 6);
-    const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    ST_FROM = fmt(startD);
-    ST_TO = fmt(endD);
-    ST_GRAIN = '';        // 不预设任何粒度高亮（这是自定义范围）
+    /* 默认「今天」，就是今天 —— 不自动跳到别的日期。
+       2026-11-25 用户：「今天没数据就显示空空如也这类提示就行」
+       —— 别偷偷换日期骗人，没数据就说没数据。 */
+    const todayD = stLocalDate(new Date().toISOString());
+    ST_FROM = todayD; ST_TO = todayD;
+    ST_GRAIN = 'day';
   }
 
   /* ── 时间范围 ──
@@ -7343,6 +7353,46 @@ function renderStats() {
   const tlEl = document.getElementById('stToLabel');
   if (flEl) flEl.textContent = ST_FROM ? ST_FROM.slice(5).replace('-', '/') : '—';
   if (tlEl) tlEl.textContent = ST_TO ? ST_TO.slice(5).replace('-', '/') : '—';
+
+  /* ── 空状态：这个时间段一条都没有 ──
+     2026-11-25 用户：「今天没数据就显示空空如也这类提示就行」
+     —— 别画一堆空图表让人以为是 bug。 */
+  if (!rows.length) {
+    const cEl0 = document.getElementById('stCount');
+    if (cEl0) cEl0.textContent = '0 条';
+    const host0 = document.getElementById('stMatrix');
+    if (host0) host0.innerHTML = '';
+    const bar0 = document.getElementById('stTodayBars');
+    if (bar0) bar0.innerHTML = '';
+    const goto0 = document.getElementById('stTodayGoto');
+    if (goto0) goto0.innerHTML = '';
+    const t0 = document.getElementById('stTodayTitle');
+    if (t0) t0.textContent = '这段没有记录';
+    const s0 = document.getElementById('stTodaySub');
+    if (s0) s0.textContent = range.from ? (range.from + ' → ' + range.to) : '';
+    // 清掉所有 canvas，别留着上一轮的图
+    for (const id of ['stPie','stBar','stArea','stChart','stStarCv']) {
+      const c = document.getElementById(id);
+      if (c && c.getContext) {
+        const g2 = c.getContext('2d');
+        g2.setTransform(1,0,0,1,0,0);
+        g2.clearRect(0,0,c.width,c.height);
+      }
+    }
+    const lgs = ['stPieLegend','stAreaLegend','stLegend','stHeat','stExtreme','stSfPager'];
+    for (const id of lgs) {
+      const e2 = document.getElementById(id);
+      if (e2) e2.innerHTML = '';
+    }
+    const emptyEl = document.getElementById('stEmptyHint');
+    if (emptyEl) {
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = '这几天没有新记忆 —— 换个时间段看看，或者去「记忆轨迹」翻翻。';
+    }
+    return;
+  }
+  const emptyEl0 = document.getElementById('stEmptyHint');
+  if (emptyEl0) emptyEl0.style.display = 'none';
 
   /* 数据源 Tab 上的条数 */
   const gn = document.getElementById('stSrcGraphN');
@@ -8717,7 +8767,14 @@ function renderStartrack() {
         + '<div class="tl-body"><div class="tl-meta">'
         + '<span class="tl-kind k-' + esc(n.k || '') + '">' + esc(KIND_CN[n.k] || n.k || '') + '</span>'
         + '</div><div class="tl-text">' + esc(txt) + '</div></div>';
-      el.onclick = () => { selected = -1; openCard(-1, n); };
+      /* openCard() 的参数是**节点下标**，不是节点对象。
+         2026-11-25 踩到：这里直接传了 n，openCard 内部去拿 nodes[i].tags
+         就崩了（Cannot read properties of undefined (reading 'tags')）。
+         所以先按 id 查出下标再传。 */
+      el.onclick = () => {
+        const idx = (DATA.nodes || []).findIndex(x => x.id === n.id);
+        if (idx >= 0) { setView('starmap'); setTimeout(() => openCard(idx), 120); }
+      };
       items.appendChild(el);
     }
     wrap.appendChild(items);
