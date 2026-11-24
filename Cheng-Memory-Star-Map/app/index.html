@@ -336,6 +336,22 @@
   .tl-fbtn.on .n{ color:#b08d4e; }
   .tl-fbtn.zero{ opacity:.35; cursor:default; }
 
+  /* ── 日期筛选：和分类筛选分两排，用小一号的字 + 蓝色系，
+        一眼能分出"上面是类别、下面是日期"，不会混成一条 ── */
+  .tl-dfilter{
+    margin-top:-12px;      /* 贴着分类行，别空出一大块 */
+    padding-top:0; border-bottom:1px solid rgba(140,170,255,.08);
+  }
+  .tl-dbtn{
+    font-size:11px; padding:4px 10px; min-width:0;
+    letter-spacing:.02em;
+  }
+  .tl-dbtn.on{
+    background:rgba(122,180,255,.14); border-color:rgba(122,180,255,.45); color:#9dc8ff;
+  }
+  .tl-dbtn.on .n{ color:#6d94c4; }
+  .tl-dbtn .n{ margin-left:5px; }
+
   /* 每天一块 */
   .tl-day{ margin-bottom:26px; position:relative; padding-left:22px; }
   .tl-day::before{
@@ -799,7 +815,7 @@
       <span class="ico">☰</span><span class="nav-label">记忆时间轴</span>
     </button>
     <button class="nav-item" data-view="excluded">
-      <span class="ico">⊘</span><span class="nav-label">剔掉的</span>
+      <span class="ico">⊘</span><span class="nav-label">未成之星</span>
     </button>
     <button class="nav-item" data-view="settings">
       <span class="ico">⚙</span><span class="nav-label">通用设置</span>
@@ -885,20 +901,22 @@
     <p class="tl-sub">按时间倒序 · 每天点开看当天说过的话、写过的东西</p>
     <!-- 分类筛选：点一下只看这一类，再点一下取消 -->
     <div class="tl-filter" id="tlFilter"></div>
+    <!-- 日期筛选：点一下只看那一天，可多选。2026-11-24 用户要求「加上时间的筛选」 -->
+    <div class="tl-filter tl-dfilter" id="tlDateFilter"></div>
     <div id="tlBody"><div class="tl-empty">正在读取…</div></div>
    </div>
   </section>
 
-  <!-- ══════ 剔掉的清单：能看依据、能改判 ══════ -->
+  <!-- ══════ 未成之星：能看依据、能改判 ══════ -->
   <section id="excluded">
    <div class="ex-page">
     <div class="ex-head">
-      <h1>剔 掉 的</h1>
+      <h1>未 成 之 星</h1>
       <span class="ex-count" id="exCount"></span>
     </div>
     <p class="ex-sub">
-      每条都写着「为什么被剔」和「哪条规则判的」。看清楚了好说话——
-      判错了的直接标出来，我改逻辑重跑。
+      记忆库里的东西，有些还没长成星。每条都写着「为什么没长成」和「哪条规则判的」。
+      看清楚了好说话 —— 判错了的直接标出来，我改逻辑重跑。
     </p>
     <div class="ex-filter" id="exFilter"></div>
     <div id="exBody"><div class="ex-empty">正在读取…</div></div>
@@ -1388,6 +1406,13 @@ let selected = -1, hovered = -1;
    —— 原来我做的是「选中星 → 它那几条线全标字」，一圈挂着十几块文字，还是乱。
    正确的：平时一条都不显示；悬浮到哪条线，才显示那一条。 */
 let hoverEdge = -1;
+/* 虚线（extraEdges 的「共标签 / 同周」）也要能悬浮和点击。
+   2026-11-24 用户：「实线不也是悬浮出字吗 实线现在不也是吗 实线是点击？」
+   —— 对，实线是「悬浮出字 + 点击弹卡」，虚线就该一样。
+   它们不在 edges 数组里，所以另用一个对象存：
+     hoverDash = { idx, r }  idx = extraEdges 里的下标
+     为 null 表示没悬浮在虚线上 */
+let hoverDash = null;
 let labelsCv = [];
 let focusCache = { i:-1, list:[] };
 
@@ -2972,6 +2997,11 @@ function draw(){
   /* 一次只显示一条 —— 悬浮到哪条线，才显示那条。
      平时一条都不显示（3235 条全标名字会糊成一片）。 */
   const labelLinks = (hoverEdge >= 0) && (OPTS.showLinkLabel !== false);
+  /* 两种连线名牌都在这里只"记位置"，真正画在帧末（draw() 的最后）。
+     原来它们跟连线一起画 —— 在星星之前 —— 于是星星、流光、分类标签
+     全盖在名牌上面。截图里字被线划穿，就是这个原因。 */
+  let dashLabel = null;     // 虚线名牌 { txt, mx, my, tag }
+  let edgeLabel = null;     // 实线名牌 { txt, mx, my, color }
 
   const focusSet = new Set();
   if (focus>=0) for (const ei of adj[focus]) { const e=edges[ei]; focusSet.add(e.a===focus?e.b:e.a); }
@@ -2999,13 +3029,93 @@ function draw(){
       if (isF){ a = Math.min(0.92, a*4 + 0.30); lw = lw*1.8 + 0.5; col = focusColor; }
       else { a *= 0.18; }
     }
+    /* 当鼠标指着某条线时，其余聚焦线再退一档 ——
+       不是靠"把这条弄得特别亮"，是靠"让别的让开"。
+       这是让一样东西显得重要的更省事的办法，也不刺眼。 */
+    if (hoverEdge >= 0 && !isF) a *= 0.55;
     if (nodeGroup.length && nodeGroup[e.a] >= 0 && nodeGroup[e.b] >= 0 && nodeGroup[e.a] !== nodeGroup[e.b]) a *= 0.40;
     if (a <= 0.02) continue;
+
+    /* ══════ 悬浮到这条线时的"选中效果" ══════
+       2026-11-24 用户：「怎么只有虚线有选中效果 实线也要有啊 然后选中效果不够高级」
+       虚线那边有 isHovered（变亮变粗），实线原来只管"是不是聚焦线"，
+       没有"被指到"这一层。现在补上，而且做得克制一点：
+         · 底下铺一层宽而淡的柔光（不是描两遍，是"发出来"的光）
+         · 主线提亮、略加粗
+         · 两端各一粒小光点，让这条线看起来"通着"
+       不用虚线、不用动画 —— 动的东西会抢注意力，静态的层次更耐看。 */
+    const isHoveredEdge = (eiHover === hoverEdge);
+
+    /* ⚠️ 2026-11-24 用户：「你这变的太粗了啊」。
+       第一版加了固定像素（lw*5+4），zoom 之后基础 lw 本来就有 2~3px，
+       再加 4px 直接变成一条光带。改成纯倍数：
+         · 外层柔光 lw*3.4（不含加法）
+         · 主线     lw*1.35
+       这样细的线还是细的，粗的也只是等比略粗，不会突然变光柱。 */
+    if (isHoveredEdge) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      /* 柔光不改主线的粗细，它是"线外面的一层雾"。
+         用固定值而不是 lw 倍数 —— 否则细线（lw 0.5）的柔光只有 1.7px，
+         几乎看不见；粗线（lw 1.4）又变成 4.8px 的光带。 */
+      ctx.strokeStyle = rgbStr(col, 0.10);
+      ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+      ctx.strokeStyle = rgbStr(col, 0.22);
+      ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+      ctx.restore();
+    }
+
+    /* 线宽一点不变（用户定的），"被选中"靠下面那套霓虹做法。 */
     ctx.strokeStyle = rgbStr(col, Math.min(0.95, a));
     ctx.lineWidth = lw;
-    if (isF){ ctx.shadowBlur = 10; ctx.shadowColor = rgbStr(col, .9); }
+    if (isF || isHoveredEdge){ ctx.shadowBlur = isHoveredEdge ? 14 : 10; ctx.shadowColor = rgbStr(col, .9); }
     ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
-    if (isF){ ctx.shadowBlur = 0; }
+    if (isF || isHoveredEdge){ ctx.shadowBlur = 0; }
+
+    /* ══════ 选中效果：霓虹管，不是"加粗变亮" ══════
+       2026-11-24 用户：「或者加个边框颜色都行 只要看起来像是在选中
+                          然后效果高级一点就行」
+
+       单纯提亮看起来像"这条线调高了透明度"，不像"被选中"。
+       真霓虹灯的结构是：中间一根白热的芯，外面一圈彩色的辉。
+       所以：先画彩色主管（上面已画），再在上面叠一条极细的白芯 ——
+       总宽度还是 lw 不变，但视觉上"中心被点亮"了。
+       两端用圆环而不是实心点：实心点像焊上去的珠子，圆环才像"被框住"。 */
+    if (isHoveredEdge) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+
+      /* 芯色 = 这条线自己的颜色，往白提 72% —— 保留色相，只提亮度。
+         2026-11-24 用户：「纯白不够高级」。
+         对：纯白是 PPT 高亮；现实里灯管最烫那一处也不是纯白，是"这种光的最亮处"。
+         暖线得暖白，冷线得冷白，整条线才像一根真的灯管。 */
+      const coreCol = [
+        col[0] + (255 - col[0]) * 0.72,
+        col[1] + (255 - col[1]) * 0.72,
+        col[2] + (255 - col[2]) * 0.72
+      ];
+      ctx.strokeStyle = rgbStr(coreCol, .92);
+      ctx.lineWidth = Math.max(0.75, lw * 0.55);
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+
+      for (const [ex, ey] of [[ax,ay],[bx,by]]) {
+        const rr = 5.2 + Math.min(1.6, lw * 0.9);
+        const g = ctx.createRadialGradient(ex, ey, rr*0.5, ex, ey, rr*2.2);
+        g.addColorStop(0, rgbStr(col, 0.26));
+        g.addColorStop(1, rgbStr(col, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(ex, ey, rr*2.2, 0, 7); ctx.fill();
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = rgbStr(coreCol, .88);
+        ctx.lineWidth = 1.1;
+        ctx.beginPath(); ctx.arc(ex, ey, rr, 0, 7); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    }
 
     /* ══════ 聚焦时给连线「加名字」══════
        2026-11-24 澄：「线没有名字……普通人一眼就把它读成『这两件事有关』，
@@ -3015,51 +3125,91 @@ function draw(){
        标什么：相似度 + 对面那颗星的一句话标题。
        为什么不是「因为文字相似 0.87」这种长句 —— 太长会盖住星点，
        数字（0.87）+ 对方标题已经够读出「哦是跟那条像」。 */
-    /* 只画鼠标正悬浮着的那一条（hoverEdge）。一次一块文字，绝不叠。 */
+    /* 只给鼠标正悬浮着的那一条（hoverEdge）记位置 —— 真正画在帧末。
+       为什么要挪到帧末：名牌原来是跟连线一起画的，**在星星之前**，
+       于是星星、流光、分类标签全盖在它上面。截图里字被线划穿，就是这原因。 */
     if (labelLinks && eiHover === hoverEdge){
       const other = (e.a === selected) ? e.b : (e.b === selected ? e.a : e.b);
       const on = nodes[other];
       if (on){
-        const mx = (ax + bx) / 2, my = (ay + by) / 2;
         const ttl = linkLabelOf(on.t, 16);
         const txt = e.w.toFixed(2) + (ttl ? '  ' + ttl : '');
-        ctx.font = '500 11px ui-sans-serif, system-ui, "Microsoft YaHei", sans-serif';
-        const tw = ctx.measureText(txt).width;
-        const pw = tw + 14, ph = 19;
-        /* 往上挪，别压在星点上 —— 截过一版，0.633 的「0.」被星点盖住，
-           只剩「1.63」，能读成另一个数。 */
-        const px = mx - pw / 2, py = my - ph / 2 - 11;
-
-        /* 底要实。半透明的底下面有星点、有其他线的名牌，会透上来打架。
-           这是「一次性只出现一块」的东西，实底不会挡什么，反而读得清。 */
-        ctx.globalAlpha = 0.94;
-        ctx.fillStyle = 'rgba(10,14,26,.92)';
-        roundRect(ctx, px, py, pw, ph, 4);
-        ctx.fill();
-        ctx.globalAlpha = 0.55;
-        ctx.strokeStyle = rgbStr(focusColor, .5);
-        ctx.lineWidth = 1;
-        roundRect(ctx, px, py, pw, ph, 4);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = 'rgba(226,236,255,.96)';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(txt, px + 7, py + ph / 2 + 0.5);
+        edgeLabel = {
+          txt,
+          mx: (ax + bx) / 2,
+          my: (ay + by) / 2,
+          color: focusColor
+        };
       }
     }
   }
+
+  /* 虚线的名牌：和实线一样，悬浮到哪条才显示那条。
+     2026-11-24 用户：「实线不也是悬浮出字吗 实线现在不也是吗 实线是点击？」
+     —— 对，实线是「悬浮出字 + 点击弹卡」，虚线就该一样，不能只画不认。 */
 
   if (focus>=0 && extra.length){
     ctx.save(); ctx.setLineDash([4,5]); ctx.lineWidth = 1;
     const fx=proj[focus*4], fy=proj[focus*4+1];
     const fv = tbV(focus);
-    for (const r of extra){
+    for (let k = 0; k < extra.length; k++){
+      const r = extra[k];
       const rv = Math.min(fv, tbV(r.j));
       if (rv <= 0.004) continue;
-      ctx.globalAlpha = rv;
-      ctx.strokeStyle = r.type==='tag' ? 'rgba(255,205,110,.42)' : 'rgba(110,220,215,.40)';
-      ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(proj[r.j*4], proj[r.j*4+1]); ctx.stroke();
+      const bx = proj[r.j*4], by = proj[r.j*4+1];
+      const isHovered = hoverDash && hoverDash.idx === k;
+      const dCol = r.type==='tag' ? [255,205,110] : [110,220,215];
+
+      /* 和实线一套视觉：悬浮时先在底下铺一层宽柔光，再画主线 + 两端光点。
+         两边长得一样，人才不用去分辨"这条是哪种线"。 */
+      if (isHovered) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(' + dCol.join(',') + ',.10)';
+        ctx.lineWidth = 3.4;
+        ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(bx,by); ctx.stroke();
+        ctx.strokeStyle = 'rgba(' + dCol.join(',') + ',.22)';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(bx,by); ctx.stroke();
+        ctx.restore();
+        ctx.setLineDash([4,5]);        // restore 把 dash 也还原了，重新设
+      }
+
+      ctx.globalAlpha = isHovered ? Math.min(1, rv * 1.9) : rv;
+      ctx.strokeStyle = 'rgba(' + dCol.join(',') + ',' + (isHovered ? '.95' : (r.type==='tag' ? '.42' : '.40')) + ')';
+      ctx.lineWidth = 1;      // 悬浮也不加粗（和实线一致）
+      ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(bx,by); ctx.stroke();
+
+      if (isHovered) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        /* 和实线同一套：白芯 + 圆环。虚线是点线，白芯只在实段上，
+           所以干脆不画芯（会变成一串白点），只做两端圆环 —
+           这样"被框住了"的感觉一样，又不会把虚线画成实线。 */
+        /* 圆环用「这条线自己的色往白提」——和实线一致，不用纯白。 */
+        const dCore = [
+          dCol[0] + (255 - dCol[0]) * 0.72,
+          dCol[1] + (255 - dCol[1]) * 0.72,
+          dCol[2] + (255 - dCol[2]) * 0.72
+        ];
+        for (const [ex, ey] of [[fx,fy],[bx,by]]) {
+          const rr = 5.2;
+          const g = ctx.createRadialGradient(ex, ey, rr*0.5, ex, ey, rr*2.2);
+          g.addColorStop(0, 'rgba(' + dCol.join(',') + ',.24)');
+          g.addColorStop(1, 'rgba(' + dCol.join(',') + ',0)');
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.arc(ex, ey, rr*2.2, 0, 7); ctx.fill();
+          ctx.globalAlpha = 0.9;
+          ctx.strokeStyle = 'rgba(' + dCore.join(',') + ',.88)';
+          ctx.lineWidth = 1.1;
+          ctx.beginPath(); ctx.arc(ex, ey, rr, 0, 7); ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+        ctx.setLineDash([4,5]);
+      }
+      if (isHovered) dashLabel = { txt: dashLabelOf(r), mx: (fx+bx)/2, my: (fy+by)/2, tag: r.type==='tag' };
     }
     ctx.restore();
   }
@@ -3486,6 +3636,43 @@ function draw(){
     }
     ctx.restore();
   }
+
+  /* ════════════════════════════════════════════════════════════
+     连线名牌 —— 必须在最后画
+     
+     2026-11-24 用户看截图问「虚线的名牌和背后的实线叠在一起什么意思」。
+     意思是：名牌画在星星之前，星星的光晕、连线流光、分类标签全压在它上面，
+     字就"被线划穿"了。半透明底也压不住 —— 底下是加色混合的亮星。
+     
+     所以：两种名牌（实线、虚线）都在连线循环里只记位置，
+     等星星、流光、分类标签全画完，这里统一画。
+     ════════════════════════════════════════════════════════════ */
+  const drawLinkLabel = (lb, strokeColor) => {
+    ctx.save();
+    ctx.font = '500 11px ui-sans-serif, system-ui, "Microsoft YaHei", sans-serif';
+    const tw = ctx.measureText(lb.txt).width;
+    const pw = tw + 14, ph = 19;
+    const px = lb.mx - pw/2;
+    const py = lb.my - ph/2 - 13;      // 往上让开线本身
+    /* 底几乎不透明。半透明的底下面是加色混合的亮星，压不住，
+       会出现"字后面有光斑"的脏感觉。这是同一时刻只有一块的东西，
+       挡不了什么，读清比透视重要。 */
+    ctx.globalAlpha = 0.97;
+    ctx.fillStyle = 'rgba(9,13,24,.95)';
+    roundRect(ctx, px, py, pw, ph, 4); ctx.fill();
+    ctx.globalAlpha = 0.6;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1;
+    roundRect(ctx, px, py, pw, ph, 4); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(232,240,255,.98)';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(lb.txt, px + 7, py + ph/2 + 0.5);
+    ctx.restore();
+  };
+
+  if (edgeLabel) drawLinkLabel(edgeLabel, rgbStr(edgeLabel.color, .55));
+  if (dashLabel) drawLinkLabel(dashLabel, dashLabel.tag ? 'rgba(255,205,110,.6)' : 'rgba(110,220,215,.6)');
 }
 
 /* ---------------- 焦点补充关系 ---------------- */
@@ -3527,6 +3714,76 @@ const SPIN_RAMP_MS = 700;          // 恢复用了多久（渐入）
 
 function touchInteraction(){
   lastInteractAt = performance.now();
+}
+
+/**
+ * 找离点击点最近的虚线（extraEdges 的「共标签 / 同周」）。
+ * 和 pickEdge 一套算法，只是数据源是 extra 而不是 edges。
+ * @returns { idx, r } 或 null
+ */
+function pickDash(clientX, clientY) {
+  if (selected < 0) return null;
+  const extra = extraEdges(selected);
+  if (!extra.length) return null;
+  const r0 = cv.getBoundingClientRect();
+  const mx = clientX - r0.left, my = clientY - r0.top;
+  const fx = proj[selected*4], fy = proj[selected*4+1];
+  let best = null, bestD = 7;
+
+  for (let k = 0; k < extra.length; k++) {
+    const r = extra[k];
+    const bx = proj[r.j*4], by = proj[r.j*4+1];
+    if (!isFinite(fx) || !isFinite(fy) || !isFinite(bx) || !isFinite(by)) continue;
+    const dx = bx - fx, dy = by - fy;
+    const len2 = dx*dx + dy*dy;
+    let t = len2 > 0 ? ((mx - fx)*dx + (my - fy)*dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const d = Math.hypot(mx - (fx + dx*t), my - (fy + dy*t));
+    if (d < bestD) { bestD = d; best = { idx: k, r }; }
+  }
+  return best;
+}
+
+/** 虚线的名字：说清它凭什么是虚线（不是记忆里的关系，是我按标签/时间找的） */
+function dashLabelOf(r) {
+  const n = nodes[r.j];
+  const ttl = linkLabelOf(n.t, 16);
+  if (r.type === 'tag') {
+    // 找出共享了哪个标签，这比只写「共标签」有用得多
+    const base = nodes[selected], bt = base.tags || [];
+    const shared = bt.filter(t => (n.tags || []).indexOf(t) >= 0);
+    return '共标签 ' + (shared[0] || '') + (ttl ? '  ' + ttl : '');
+  }
+  const d = Date.parse(n.ts) || 0;
+  const ds = d ? (new Date(d).getMonth()+1) + '/' + new Date(d).getDate() : '';
+  return '同周 ' + ds + (ttl ? '  ' + ttl : '');
+}
+
+/** 虚线详情卡 */
+function openDashCard(dash) {
+  if (!cardEl || !dash) return;
+  const r = dash.r, n = nodes[r.j], base = nodes[selected];
+  if (!n || !base) return;
+
+  const isTag = r.type === 'tag';
+  const kindTxt = isTag ? '共标签' : '同一周';
+
+  cardEl.innerHTML =
+    '<div class="row1">'
+      + '<span class="badge" style="background:#ffcd6e1f;color:#ffcd6e">虚线 · ' + esc(kindTxt) + '</span>'
+      + '<span class="close" id="cx">✕</span>'
+    + '</div>'
+    + '<div class="meta">'
+      + '<div class="lab">' + (isTag ? '共享标签' : '时间') + '</div><div class="val">' + esc(isTag ? ((base.tags||[]).filter(t=>(n.tags||[]).indexOf(t)>=0)[0] || '—') : (new Date(Date.parse(n.ts)||0).toLocaleDateString('zh-CN'))) + '</div>'
+      + '<div class="lab">这一头</div><div class="val">' + esc((base.t || '').slice(0, 80)) + '</div>'
+      + '<div class="lab">那一头</div><div class="val">' + esc((n.t || '').slice(0, 80)) + '</div>'
+    + '</div>'
+    + '<div class="feel">这条虚线不在记忆里。它是我照着'
+    + (isTag ? '「两边挂了同一个标签」' : '「两边写在同一周」') + '帮你找出来的，'
+    + '所以它是虚的 —— 只说明它们可能该放在一起看，不代表真有关系。</div>';
+
+  cardEl.classList.add('show');
+  setTimeout(() => { const c2 = document.getElementById('cx'); if (c2) c2.onclick = closeCard; }, 0);
 }
 
 /* 拾取：mx/my 是视口坐标（clientX/clientY），
@@ -3603,8 +3860,12 @@ function openEdgeCard(ei) {
   const A = nodes[e.a], B = nodes[e.b];
   if (!A || !B) return;
 
+  /* 不清 selected（2026-11-24 用户：「我点击连线的时候 卡片出来了
+     但是子星选中没了啊」）。
+     我原来写 selected=-1 是想「把焦点让给线段」，但那样刚点的那颗星
+     就丢了 —— 而这条线正是从它出发的，丢了它等于不知道在看谁。
+     现在：星保持选中，线只是被"点开看看"。 */
   selectedEdge = ei;
-  selected = -1;               // 让焦点转到这条线上
 
   /* ══════ 措辞：按澄 2026-11-24 定的 ══════
      她否定了我原来那套「很像 / 比较像 / 有点像 / 勉强算像」：
@@ -3697,11 +3958,16 @@ stage.addEventListener('pointermove', e=>{
      实测：同一点上 pick 返回星 5、pickEdge 返回线 733 —— 线中点经常
      正好落在某颗小星上。若先判星，鼠标永远停在"星"上，线永远 hover 不到。 */
   hoverEdge = -1;
+  hoverDash = null;
   if (selected >= 0) {
     hoverEdge = pickEdge(e.clientX, e.clientY);
+    /* 实线优先。没命中实线再判虚线 ——
+       用户 2026-11-24：「虚线点不了吗」「实线不也是悬浮出字吗」，
+       所以虚线也得能悬浮出字、能点。 */
+    if (hoverEdge < 0) hoverDash = pickDash(e.clientX, e.clientY);
   }
   // 悬浮在线上时给个手型光标，让人知道"这条能点"
-  if (hoverEdge >= 0) stage.style.cursor = 'pointer';
+  if (hoverEdge >= 0 || hoverDash) stage.style.cursor = 'pointer';
   else if (i < 0) stage.style.cursor = '';
   if (i >= 0 || i === -2) touchInteraction();   // 悬停到星星上：先停下，好点
   // 气泡是 fixed 定位，边界要用视口宽高来夹，不能用画布的 W/H
@@ -3725,7 +3991,7 @@ stage.addEventListener('pointermove', e=>{
     tipEl.classList.remove('show');
   }
 });
-stage.addEventListener('pointerleave', ()=>{ hovered=-1; hoverEdge=-1; stage.style.cursor=''; tipEl.classList.remove('show'); });
+stage.addEventListener('pointerleave', ()=>{ hovered=-1; hoverEdge=-1; hoverDash=null; stage.style.cursor=''; tipEl.classList.remove('show'); });
 stage.addEventListener('wheel', e=>{
   // 在搜索框 / 搜索结果里滚轮应该滚列表，不是缩放星图
   if (e.target.closest && e.target.closest('#searchBox')) return;
@@ -3752,6 +4018,9 @@ stage.addEventListener('click', e=>{
   if (selected >= 0) {
     const ei = pickEdge(e.clientX, e.clientY);
     if (ei >= 0) { openEdgeCard(ei); return; }
+    // 没点中实线，试试虚线（共标签 / 同周）
+    const dh = pickDash(e.clientX, e.clientY);
+    if (dh) { openDashCard(dh); return; }
   }
 
   const i = pick(e.clientX, e.clientY);
@@ -4530,6 +4799,8 @@ function closeCard(){
   selected = -1;
   selectedEdge = -1;
   hoverEdge = -1;
+  hoverDash = null;
+  stage.style.cursor = '';
   cardEl.classList.remove('show');
 }
 
@@ -5761,6 +6032,11 @@ async function loadTimeline() {
 
 /* 时间轴当前筛选的分类（null = 全部） */
 let TL_FILTER = null;
+/* 日期筛选：选中的日期集合（多选）。空 Set = 全部。
+   2026-11-24 用户要求「时间记忆轴加上时间的筛选」。
+   没有做「最近7天/这个月」那种预设 —— 全库只有 5 天数据，
+   那些档位全是同一个结果，等于骗人。就按天选，一选一个准。 */
+let TL_DATE_SET = new Set();
 
 /* 统一把 UTC 的 ts 格式化成"本地时间"字符串（UTC+8）。
    全项目所有要显示 ts 的地方都应该走这里，
@@ -5865,7 +6141,7 @@ async function ensureExcluded() {
     if (!j.ok) throw new Error(j.error || '读取失败');
     EX_DATA = j;
   } catch (e) {
-    if (body) body.innerHTML = '<div class="ex-empty">读不到剔除清单：' + esc(String(e.message || e)) + '</div>';
+    if (body) body.innerHTML = '<div class="ex-empty">读不到这份清单：' + esc(String(e.message || e)) + '</div>';
     return;
   }
   renderExcluded();
@@ -5960,8 +6236,40 @@ function renderTimeline(days) {
     }
   }
 
-  // ── 按筛选过滤 ──
+  /* ── 日期筛选条 ──
+     2026-11-24 用户：「时间记忆轴加上时间的筛选」。
+     每行一个日期 + 条数。点一下只看那天，可以多选，再点取消。
+     「全部」清空。选中的日期在下面照常折叠，不改变原来的分组结构。 */
+  const dEl = document.getElementById('tlDateFilter');
+  if (dEl) {
+    dEl.innerHTML = '';
+    const allBtn = document.createElement('button');
+    const noDate = TL_DATE_SET.size === 0;
+    allBtn.className = 'tl-fbtn tl-dbtn' + (noDate ? ' on' : '');
+    allBtn.innerHTML = '全部日期<span class="n">' + all.length + '</span>';
+    allBtn.onclick = () => { TL_DATE_SET.clear(); renderTimeline(days); };
+    dEl.appendChild(allBtn);
+
+    for (const g of out) {
+      const b = document.createElement('button');
+      const on = TL_DATE_SET.has(g.date);
+      b.className = 'tl-fbtn tl-dbtn' + (on ? ' on' : '');
+      const d = new Date(g.date + 'T00:00:00');
+      const md = (d.getMonth() + 1) + '/' + d.getDate();
+      b.innerHTML = md + '<span class="n">' + g.items.length + '</span>';
+      b.title = g.date;
+      b.onclick = () => {
+        if (TL_DATE_SET.has(g.date)) TL_DATE_SET.delete(g.date);
+        else TL_DATE_SET.add(g.date);
+        renderTimeline(days);
+      };
+      dEl.appendChild(b);
+    }
+  }
+
+  // ── 按筛选过滤（分类 + 日期，两个条件同时生效）──
   const groups = out
+    .filter(g => TL_DATE_SET.size === 0 || TL_DATE_SET.has(g.date))
     .map(g => {
       const items = TL_FILTER ? g.items.filter(it => tlCatOf(it) === TL_FILTER) : g.items;
       return { date: g.date, count: items.length, items };
@@ -5971,11 +6279,14 @@ function renderTimeline(days) {
   const cntEl = document.getElementById('tlCount');
   if (cntEl) {
     const total = groups.reduce((a, g) => a + g.count, 0);
-    cntEl.textContent = `${total} 条 · ${groups.length} 天` + (TL_FILTER ? '（已筛选）' : '');
+    const fb = [];
+    if (TL_FILTER) fb.push('分类');
+    if (TL_DATE_SET.size) fb.push(TL_DATE_SET.size + ' 天');
+    cntEl.textContent = `${total} 条 · ${groups.length} 天` + (fb.length ? '（已筛选：' + fb.join(' + ') + '）' : '');
   }
 
   if (!groups.length) {
-    body.innerHTML = '<div class="tl-empty">这个分类下没有记录</div>';
+    body.innerHTML = '<div class="tl-empty">这个筛选条件下没有记录</div>';
     return;
   }
 
