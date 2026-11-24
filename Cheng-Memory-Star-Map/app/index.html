@@ -397,33 +397,6 @@
     text-align:center; padding:60px 20px; color:#4d5871; font-size:12.5px; line-height:1.9;
   }
 
-  /* 底图快照提示：右上角、贴在「自转」按钮下面。
-     澄 2026-11-24 第二轮修正：「标在右上角做全局提示，别塞到分类标签旁边——
-     分类标签说的是『这颗星是什么』，快照说的是『整张图有多旧』，
-     两件事混在一个位置会互相打架。」
-     （她上一条说的是「别放全局」，这条改成「放右上角做全局提示」——
-       位置从画布角换到右上角，但语义仍是「整张图的属性」，不跟分类标签混。） */
-  .hud.snapshot{
-    right:22px; top:56px;
-    text-align:right;
-    font-size:11px; color:#68758f; letter-spacing:.02em;
-    line-height:1.8; max-width:300px;
-    padding:6px 10px; border-radius:8px;
-    background:rgba(10,16,28,.5);
-    border:1px solid rgba(120,180,255,.10);
-    backdrop-filter:blur(6px);
-    display:none;
-  }
-  .hud.snapshot.show{ display:block; }
-  .hud.snapshot .t{ color:#8b98b5; font-weight:500; }
-  .hud.snapshot .stale{ color:#e0a95f; }
-  .hud.snapshot .reload{
-    pointer-events:auto; cursor:pointer; color:#7fb0ff;
-    text-decoration:underline; text-decoration-color:rgba(127,176,255,.4);
-    text-underline-offset:2px;
-  }
-  .hud.snapshot .reload:hover{ color:#a8ccff; }
-
   /* ---------------- 剔掉的清单：铺满中间整块区域 ---------------- */
   #excluded{
     position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
@@ -733,6 +706,22 @@
     transition:all .18s; font-family:inherit; white-space:nowrap;
   }
   #topbar .hud.code{ font-family:"Consolas",monospace; }
+  /* 顶部同步按钮：只在 header 里，不在画布上 */
+  #topbar .hud.sync{
+    position:static; width:28px; height:28px; padding:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    border-radius:8px; cursor:pointer;
+    background:rgba(10,16,28,.74); border:1px solid rgba(120,180,255,.20);
+    color:#7f93b3; font-size:15px; line-height:1;
+    backdrop-filter:blur(10px); transition:all .18s;
+    font-family:inherit;
+  }
+  #topbar .hud.sync:hover{ background:rgba(120,180,255,.16); color:#b8ccff; border-color:rgba(120,180,255,.38); }
+  #topbar .hud.sync.busy{ color:#ffc45e; border-color:rgba(255,196,94,.4); }
+  #topbar .hud.sync.busy .ic{ display:inline-block; animation:spinSync .9s linear infinite; }
+  #topbar .hud.sync.done{ color:#7fe0b4; border-color:rgba(127,224,180,.4); }
+  @keyframes spinSync{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+
   .hud.spin{ position:absolute; right:22px; top:20px; pointer-events:auto; z-index:6; padding:7px 15px; border-radius:999px; background:rgba(10,16,28,.74); border:1px solid rgba(120,180,255,.20); color:#7f93b3; font-size:12px; letter-spacing:.6px; cursor:pointer; backdrop-filter:blur(10px); transition:all .22s; font-family:inherit; }
 .hud.spin:hover{ border-color:rgba(140,190,255,.45); color:#bcd6f5; }
 .hud.spin.on{ color:#c9e2ff; border-color:rgba(140,190,255,.55); box-shadow:0 0 20px rgba(110,170,255,.26), inset 0 0 12px rgba(110,170,255,.10); }
@@ -766,6 +755,9 @@
     <div class="sub">只读 · 本机 · 不联网</div>
     <div class="right">
       <span id="liveHint" style="font-size:10.5px;color:#5c6884;letter-spacing:.04em;white-space:nowrap"></span>
+      <button class="hud sync" id="syncBtn" title="记忆有更新会自动同步（约 20 秒内）。点这里手动催一次。">
+        <span class="ic">↻</span>
+      </button>
       <button class="hud spin" id="spinBtn" title="自动旋转 开/关">⟳ 自转</button>
       <button class="hud code" id="codeBtn" title="看当前形态的种子代码">查看种子代码</button>
     </div>
@@ -852,6 +844,7 @@
         <div class="presets" id="presets"></div>
       </div>
 
+
      </div>
     </div>
 
@@ -906,11 +899,6 @@
 
     <div class="hud stats" id="stats"></div>
 
-    <!-- ══════ 底图快照提示 ══════
-         澄 2026-11-24：「标在底图自己那一层上，别放全局——放全局会被读成
-         『整页都是旧的』，可 ② 明明是新的。」
-         「光说『这是快照』是免责声明，说『差了几条』才是能让人决定要不要重导的信息。」 -->
-    <div class="hud snapshot" id="snapHint"></div>
     <!-- 时间滑条：滑到哪天，星图就长到哪天（累计截止） -->
     <div id="timeBar">
       <button class="tm-play" id="tmPlay" title="从第一天开始，一天一天长出来">▶ 播放成长</button>
@@ -1022,9 +1010,6 @@
 
     const kinds = {};
     for (const n of nodes) kinds[n.k] = (kinds[n.k] || 0) + 1;
-
-    // 底图快照信息：画在画布角上
-    if (g.snapshot && typeof renderSnapshot === 'function') renderSnapshot(g.snapshot);
 
     return {
       ok: true,
@@ -4432,6 +4417,7 @@ function buildPanel(){
     slEl.appendChild(wrap);
   });
   renderPresets();
+
 }
 
 /* ---------------- 预设 ---------------- */
@@ -5739,6 +5725,34 @@ function initLive() {
     }
   });
 
+  /* ══════ 顶部同步按钮 ══════
+     记忆有更新会自动同步（约 20 秒）。这个按钮只是手动催一次，
+     平时不用点 —— 所以做成小图标，不占地方。 */
+  const syncBtn = document.getElementById('syncBtn');
+  if (syncBtn) {
+    syncBtn.onclick = async () => {
+      if (syncBtn.classList.contains('busy')) return;
+      syncBtn.classList.remove('done');
+      syncBtn.classList.add('busy');
+      try {
+        const r = await fetch('/api/reexport', { method: 'POST' });
+        const j = await r.json();
+        if (!j.ok) {
+          const NL = String.fromCharCode(10);
+          alert('同步失败：' + (j.error || '未知') + (j.stderr ? NL + NL + String(j.stderr).slice(-300) : ''));
+        } else {
+          syncBtn.classList.remove('busy');
+          syncBtn.classList.add('done');
+          setTimeout(() => syncBtn.classList.remove('done'), 2200);
+          return;
+        }
+      } catch (e) {
+        alert('同步请求失败：' + e.message);
+      }
+      syncBtn.classList.remove('busy');
+    };
+  }
+
   live.connect();
 }
 
@@ -5792,30 +5806,7 @@ async function refreshGraphQuiet(changed) {
 }
 window.refreshGraphQuiet = refreshGraphQuiet;
 
-/* ══════ 底图快照提示 ══════
-   说清两件事：底图什么时候导的、现在比它新了几条。
-   不算「整页都旧」——事件流是实时的，只有底图这一层是快照。 */
-function renderSnapshot(snap) {
-  const el = document.getElementById('snapHint');
-  if (!el) return;
-  if (!snap || !snap.exportedAtLocal) { el.classList.remove('show'); return; }
 
-  const t = String(snap.exportedAtLocal).replace(/^\d{4}\//, '');   // 去掉年份，省地方
-  const n = snap.newerCount || 0;
-  if (n > 0) {
-    el.innerHTML = '<span class="t">底图快照</span> · 导出 ' + esc(t)
-      + '<br><span class="stale">+ ' + n + ' 条未入图</span>'
-      + ' · <span class="reload" id="snapReload">重导</span>';
-    setTimeout(() => {
-      const btn = document.getElementById('snapReload');
-      if (btn) btn.onclick = () => { if (typeof relayoutAfterReload === 'function') relayoutAfterReload(); };
-    }, 0);
-  } else {
-    el.innerHTML = '<span class="t">底图快照</span> · 导出 ' + esc(t);
-  }
-  el.classList.add('show');
-}
-window.renderSnapshot = renderSnapshot;
 
 /* 点「重导」→ 真的跑 export-graph.py，跑完等 SSE 的 reload 事件 */
 async function relayoutAfterReload() {
@@ -5829,9 +5820,7 @@ async function relayoutAfterReload() {
       const tail = j.stderr ? (NL + NL + String(j.stderr).slice(-300)) : '';
       alert('重导失败：' + (j.error || '未知') + tail);
     } else {
-      // 成功：reload 事件会触发全量刷新；顺手把提示条隐藏
-      const h = document.getElementById('snapHint');
-      if (h) h.classList.remove('show');
+      // 成功：reload 事件会触发全量刷新
     }
   } catch (e) {
     alert('重导请求失败：' + e.message);
