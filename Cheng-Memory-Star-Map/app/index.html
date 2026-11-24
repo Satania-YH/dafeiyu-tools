@@ -397,6 +397,33 @@
     text-align:center; padding:60px 20px; color:#4d5871; font-size:12.5px; line-height:1.9;
   }
 
+  /* 底图快照提示：右上角、贴在「自转」按钮下面。
+     澄 2026-11-24 第二轮修正：「标在右上角做全局提示，别塞到分类标签旁边——
+     分类标签说的是『这颗星是什么』，快照说的是『整张图有多旧』，
+     两件事混在一个位置会互相打架。」
+     （她上一条说的是「别放全局」，这条改成「放右上角做全局提示」——
+       位置从画布角换到右上角，但语义仍是「整张图的属性」，不跟分类标签混。） */
+  .hud.snapshot{
+    right:22px; top:56px;
+    text-align:right;
+    font-size:11px; color:#68758f; letter-spacing:.02em;
+    line-height:1.8; max-width:300px;
+    padding:6px 10px; border-radius:8px;
+    background:rgba(10,16,28,.5);
+    border:1px solid rgba(120,180,255,.10);
+    backdrop-filter:blur(6px);
+    display:none;
+  }
+  .hud.snapshot.show{ display:block; }
+  .hud.snapshot .t{ color:#8b98b5; font-weight:500; }
+  .hud.snapshot .stale{ color:#e0a95f; }
+  .hud.snapshot .reload{
+    pointer-events:auto; cursor:pointer; color:#7fb0ff;
+    text-decoration:underline; text-decoration-color:rgba(127,176,255,.4);
+    text-underline-offset:2px;
+  }
+  .hud.snapshot .reload:hover{ color:#a8ccff; }
+
   /* ---------------- 剔掉的清单：铺满中间整块区域 ---------------- */
   #excluded{
     position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
@@ -878,6 +905,12 @@
     </div>
 
     <div class="hud stats" id="stats"></div>
+
+    <!-- ══════ 底图快照提示 ══════
+         澄 2026-11-24：「标在底图自己那一层上，别放全局——放全局会被读成
+         『整页都是旧的』，可 ② 明明是新的。」
+         「光说『这是快照』是免责声明，说『差了几条』才是能让人决定要不要重导的信息。」 -->
+    <div class="hud snapshot" id="snapHint"></div>
     <!-- 时间滑条：滑到哪天，星图就长到哪天（累计截止） -->
     <div id="timeBar">
       <button class="tm-play" id="tmPlay" title="从第一天开始，一天一天长出来">▶ 播放成长</button>
@@ -990,6 +1023,9 @@
     const kinds = {};
     for (const n of nodes) kinds[n.k] = (kinds[n.k] || 0) + 1;
 
+    // 底图快照信息：画在画布角上
+    if (g.snapshot && typeof renderSnapshot === 'function') renderSnapshot(g.snapshot);
+
     return {
       ok: true,
       title: '澄的记忆',
@@ -1088,6 +1124,10 @@
       es.addEventListener('timeline', (e) => {
         this.lastEventAt = Date.now();
         this._emit('timeline', JSON.parse(e.data));
+      });
+      es.addEventListener('content', (e) => {
+        this.lastEventAt = Date.now();
+        this._emit('content', JSON.parse(e.data));
       });
       es.addEventListener('dedup', (e) => this._emit('dedup', JSON.parse(e.data)));
       es.addEventListener('reload', (e) => this._emit('reload', JSON.parse(e.data)));
@@ -5662,6 +5702,18 @@ function initLive() {
     updateLiveHint();
   });
 
+  /* ══════ 内容层变了（便条被划掉、新作品、日记）══════
+     2026-11-24：原来服务端只在启动时读一次内容层，
+     澄划便条、写日记网页看不见。现在服务端监听文件变化并推这个事件，
+     前端收到就重新拉一次图（merge 而不是重建，避免整图跳变）。 */
+  live.on('content', (d) => {
+    lastUpdateAt = Date.now();
+    updateLiveHint();
+    // 小改动不打扰用户，但要在图上反映出来 → 静默重拉
+    if (typeof refreshGraphQuiet === 'function') refreshGraphQuiet(d && d.changed);
+    if (currentView === 'timeline') setTimeout(() => ensureTimeline(true), 400);
+  });
+
   live.on('disconnected', () => {
     const el = document.getElementById('liveHint');
     if (el) { el.textContent = '连接断开，正在重连…'; el.style.color = '#ffb37a'; }
@@ -5673,14 +5725,116 @@ function initLive() {
     updateLiveHint();
   });
 
-  live.on('reload', () => {
+  live.on('reload', (d) => {
     lastUpdateAt = Date.now();
     ensureTimeline(true);
-    if (typeof useSource === 'function') useSource('cheng');
+    /* 2026-11-24：重导底图之后要真的把星图换掉。
+       之前 reload 只刷时间轴，星图还停在内存里那份旧的
+       —— 点了「重导」看不到变化，等于白点。 */
+    if (typeof refreshGraphQuiet === 'function') {
+      refreshGraphQuiet(d && d.reason ? [d.reason] : []);
+    }
   });
 
   live.connect();
 }
+
+/* ══════ 静默重拉图（内容层变化时用）══════
+   不重建场景：只把「服务端有、本地没有」的星补进来，
+   再把本地已有星的 open/done/superseded 字段更新一遍。
+   这样澄划掉一条便条，图上那颗星会从「还开着」变成「已了结」，而不是整图闪一下。 */
+async function refreshGraphQuiet(changed) {
+  try {
+    const r = await fetch('/api/graph');
+    const g = await r.json();
+    if (!g || !g.ok) return;
+    const fresh = adaptGraph(g);
+    if (!fresh || !fresh.nodes) return;
+
+    // 建 id → 新节点 的映射
+    const byId = new Map();
+    for (const n of fresh.nodes) byId.set(n.id, n);
+
+    let added = 0, updated = 0;
+
+    // ① 已有的星：更新状态字段（open/done/superseded 等可能变了）
+    for (const n of nodes) {
+      const fn = byId.get(n.id);
+      if (!fn) continue;
+      let dirty = false;
+      for (const k of ['open', 'waitOutside', 'waitSelf', 'doneNote', 'superseded',
+                       'status', 'state', 'agreed', 'progress', 'imp', 'impRaw']) {
+        if (JSON.stringify(n[k]) !== JSON.stringify(fn[k])) { n[k] = fn[k]; dirty = true; }
+      }
+      if (dirty) updated++;
+    }
+
+    // ② 本地没有的星：加进来
+    for (const fn of fresh.nodes) {
+      if (nodes.some(n => n.id === fn.id)) continue;
+      addStarToScene(fn, (fresh.precomputedEdges || []).filter(e => e.source === fn.id || e.target === fn.id));
+      added++;
+    }
+
+    if (added || updated) {
+      console.log(`[内容层] 图上更新：新增 ${added} 颗，改状态 ${updated} 颗`, changed || '');
+      // 状态变了要重算分类颗数（便条 open/done 会影响小类保底尺寸）
+      if (typeof recountKinds === 'function') recountKinds();
+      initSprites();
+      if (typeof relayoutAllClusters === 'function' && added) relayoutAllClusters();
+    }
+  } catch (e) {
+    console.warn('[内容层] 重拉失败', e.message);
+  }
+}
+window.refreshGraphQuiet = refreshGraphQuiet;
+
+/* ══════ 底图快照提示 ══════
+   说清两件事：底图什么时候导的、现在比它新了几条。
+   不算「整页都旧」——事件流是实时的，只有底图这一层是快照。 */
+function renderSnapshot(snap) {
+  const el = document.getElementById('snapHint');
+  if (!el) return;
+  if (!snap || !snap.exportedAtLocal) { el.classList.remove('show'); return; }
+
+  const t = String(snap.exportedAtLocal).replace(/^\d{4}\//, '');   // 去掉年份，省地方
+  const n = snap.newerCount || 0;
+  if (n > 0) {
+    el.innerHTML = '<span class="t">底图快照</span> · 导出 ' + esc(t)
+      + '<br><span class="stale">+ ' + n + ' 条未入图</span>'
+      + ' · <span class="reload" id="snapReload">重导</span>';
+    setTimeout(() => {
+      const btn = document.getElementById('snapReload');
+      if (btn) btn.onclick = () => { if (typeof relayoutAfterReload === 'function') relayoutAfterReload(); };
+    }, 0);
+  } else {
+    el.innerHTML = '<span class="t">底图快照</span> · 导出 ' + esc(t);
+  }
+  el.classList.add('show');
+}
+window.renderSnapshot = renderSnapshot;
+
+/* 点「重导」→ 真的跑 export-graph.py，跑完等 SSE 的 reload 事件 */
+async function relayoutAfterReload() {
+  const el = document.getElementById('snapReload');
+  if (el) { el.textContent = '导中…'; el.style.pointerEvents = 'none'; el.style.opacity = '0.5'; }
+  try {
+    const r = await fetch('/api/reexport', { method: 'POST' });
+    const j = await r.json();
+    if (!j.ok) {
+      const NL = String.fromCharCode(10);
+      const tail = j.stderr ? (NL + NL + String(j.stderr).slice(-300)) : '';
+      alert('重导失败：' + (j.error || '未知') + tail);
+    } else {
+      // 成功：reload 事件会触发全量刷新；顺手把提示条隐藏
+      const h = document.getElementById('snapHint');
+      if (h) h.classList.remove('show');
+    }
+  } catch (e) {
+    alert('重导请求失败：' + e.message);
+  }
+}
+window.relayoutAfterReload = relayoutAfterReload;
 
 /** 更新「上次更新 X 分钟前」 */
 function updateLiveHint() {

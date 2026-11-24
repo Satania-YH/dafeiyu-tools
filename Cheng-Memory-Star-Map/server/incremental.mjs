@@ -60,6 +60,11 @@ export class GraphState {
     const nodes = Array.isArray(graph) ? graph : (graph.nodes || []);
     const edges = Array.isArray(graph) ? [] : (graph.edges || []);
 
+    /* 2026-11-24：保存导出时的 meta（含 generatedAt）。
+       之前整个 meta 被丢掉，前端就不知道底图是什么时候导的，
+       「底图快照 · 导出 10:00」那行提示显示不出来（澄建议要显示）。 */
+    this.exportMeta = Array.isArray(graph) ? {} : (graph.meta || {});
+
     // 1. 载入向量
     if (opts.vectorsJsonPath) {
       this.vectors.loadAll(opts.vectorsJsonPath);
@@ -394,7 +399,11 @@ export class GraphState {
     }
     // 边必须两端都在 nodes 里，否则前端按 id 找索引会落空
     const edges = this.edges.filter(e => kept.has(e.source) && kept.has(e.target));
-    return { nodes, edges, droppedEdges: this.edges.length - edges.length };
+    return {
+      nodes, edges,
+      droppedEdges: this.edges.length - edges.length,
+      meta: this.exportMeta || null,      // 导出时的 meta（含 generatedAt）
+    };
   }
 
   /** voice 层 */

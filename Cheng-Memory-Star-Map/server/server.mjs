@@ -69,6 +69,7 @@ const GS = new GraphState();
 
 /** 内容层（works/notes/appointments/diary） */
 let CONTENT = null;
+let REEXPORTING = false;      // 防重入：正在跑 export-graph.py 时不再接第二个
 
 /** schema 检查结果 */
 let SCHEMA = null;
@@ -175,6 +176,145 @@ function sseBroadcast(event, data) {
   for (const res of SSE_CLIENTS) sseSend(res, event, data);
 }
 
+/* ══════════ 内容层热重载 ══════════
+ * 澄 2026-11-24 指出的：「her_note 划便条、写日记，网页是看不见的，
+ *   除非启动或 POST /api/reload」—— 因为 CONTENT = readAllContent() 只在启动时读一次。
+ *
+ * 现在监听这 4 类文件的 mtime，一变就重读 + 广播 content 事件。
+ * 代价：每次 fs.watch 触发要重读几个小 json（都是几十 KB），很便宜。
+ * 防抖 300ms，避免编辑器/写入方连续写触发多次。
+ */
+const CONTENT_FILES = [
+  { key: 'notes',        path: P.notes },
+  { key: 'works',        path: P.works },
+  { key: 'appointments', path: P.appointments },
+  { key: 'diary',        path: P.diaryDir || null },
+];
+
+let contentReloadTimer = null;
+let contentReloadCount = 0;
+
+function reloadContent(why) {
+  try {
+    const prev = CONTENT;
+    CONTENT = readAllContent();
+    contentReloadCount++;
+    const changed = [];
+    if (prev) {
+      for (const k of ['notes', 'works', 'appointments', 'diary']) {
+        const a = prev.totals?.[k];
+        const b = CONTENT.totals?.[k];
+        if (a !== b) changed.push(`${k}: ${a} → ${b}`);
+      }
+    }
+    console.log(`[内容层] 重载 ${contentReloadCount} 次（${why}）` + (changed.length ? ' · ' + changed.join(', ') : ''));
+    sseBroadcast('content', {
+      totals: CONTENT.totals || null,
+      changed,
+      reason: why,
+      at: Date.now(),
+    });
+    return true;
+  } catch (e) {
+    console.error('[内容层] 重载失败:', e.message);
+    return false;
+  }
+}
+
+function scheduleContentReload(why) {
+  if (contentReloadTimer) clearTimeout(contentReloadTimer);
+  contentReloadTimer = setTimeout(() => { contentReloadTimer = null; reloadContent(why); }, 300);
+}
+
+/**
+ * 内容层监听 —— 用轮询 mtime，不用 fs.watch。
+ *
+ * 为什么：实测 Windows 上 fs.watch 单文件（notes.json）改 mtime 不触发，
+ * 而 fs.watch 目录又会在临时文件/编辑器备份时炸出一堆噪音事件。
+ * 这几个文件很小（notes 35KB），每 2 秒 stat 一次成本可忽略，而且绝不会漏。
+ *
+ * 2026-11-24 用户要求「全量实时刷新」，这条是那件事的落地。
+ */
+const CONTENT_POLL_MS = 2000;
+
+function watchContentFiles() {
+  if (NO_WATCH) return;
+
+  const mtimes = new Map();
+  const statOf = (f) => {
+    try { return fs.statSync(f.path).mtimeMs; }
+    catch { return null; }
+  };
+
+  // 初始化快照
+  for (const f of CONTENT_FILES) {
+    if (f.path) mtimes.set(f.key, statOf(f));
+  }
+
+  setInterval(() => {
+    let hit = null;
+    for (const f of CONTENT_FILES) {
+      if (!f.path) continue;
+      const now = statOf(f);
+      const prev = mtimes.get(f.key);
+      if (now != null && now !== prev) {
+        mtimes.set(f.key, now);
+        hit = f.key;
+      }
+    }
+    if (hit) scheduleContentReload(hit);
+  }, CONTENT_POLL_MS).unref?.();
+}
+
+/* ══════════ 底图快照信息 ══════════
+ * 回答两个问题：底图是什么时候导的？现在的 ②（内容层）比它新了几条？
+ * 前端拿这个在画布角上画「底图快照 · 导出 10:00 · +3 条未入图」。
+ */
+function buildSnapshotInfo(graphJson) {
+  const out = { exportedAt: null, exportedAtLocal: null, newerCount: 0, kinds: null, stale: false };
+  try {
+    const meta = graphJson?.meta || {};
+    const gen = meta.generatedAt || null;
+    out.exportedAt = gen;
+    if (gen) {
+      out.exportedAtLocal = new Date(gen).toLocaleString('zh-CN', {
+        hour12: false, timeZone: 'Asia/Shanghai',
+      });
+    }
+    out.kinds = meta.counts || null;
+  } catch {}
+
+  // 数一数：内容层里有多少条的时间晚于底图导出时间
+  try {
+    const genMs = out.exportedAt ? Date.parse(out.exportedAt) : 0;
+    let newer = 0;
+    const C = CONTENT || readAllContent();
+    const cmp = (t) => {
+      if (!t) return false;
+      const ms = Date.parse(t);
+      return Number.isFinite(ms) && ms > genMs;
+    };
+    // 便条：看 created / revisedAt / closedAt 里最新的那个
+    for (const n of (C.notes?.items || [])) {
+      const latest = n.createdMs
+        || Date.parse(n.revisedAt) || Date.parse(n.closedAt) || 0;
+      if (latest > genMs) newer++;
+    }
+    // 作品：createdAt / updatedAt 是毫秒数
+    for (const w of (C.works?.items || [])) {
+      const latest = Number(w.createdAt) || Number(w.updatedAt) || 0;
+      if (latest > genMs) newer++;
+    }
+    // 约定：createdMs
+    for (const a of (C.appointments?.items || [])) {
+      if ((a.createdMs || 0) > genMs) newer++;
+    }
+    out.newerCount = newer;
+    out.stale = newer > 0;
+  } catch {}
+  return out;
+}
+
 /* ══════════ 监听回调 ══════════ */
 
 async function onNewEvent(rawEvent) {
@@ -245,7 +385,15 @@ const server = http.createServer(async (req, res) => {
 
   /* ---------- 图 ---------- */
   if (url.pathname === '/api/graph') {
-    return json(res, { ok: true, ...GS.toGraphJSON(), linkThreshold: LINK_THRESHOLD });
+    /* 带上「底图快照」信息。
+       澄 2026-11-24 的建议：
+         「标在底图自己那一层上，别放全局——放全局会被读成『整页都是旧的』，
+           可 ② 明明是新的。」
+         「光说『这是快照』是免责声明，说『差了几条』才是能让人决定要不要重导的信息。」
+       所以这里给：导出时间 + 当前内容层比它新多少条。前端画在画布角上。 */
+    const base = GS.toGraphJSON();
+    const snap = buildSnapshotInfo(base);
+    return json(res, { ok: true, ...base, snapshot: snap, linkThreshold: LINK_THRESHOLD });
   }
 
   /* ---------- voice 层 ---------- */
@@ -296,7 +444,10 @@ const server = http.createServer(async (req, res) => {
 
   /* ---------- 内容层 ---------- */
   if (url.pathname === '/api/content') {
-    return json(res, { ok: true, ...(CONTENT || readAllContent()) });
+    // 2026-11-24：改成每次现读。这几个文件都很小（几十 KB），
+    // 比「返回过期缓存」强得多。CONTENT 仍保留给 status 用。
+    const fresh = url.searchParams.get('cached') ? CONTENT : readAllContent();
+    return json(res, { ok: true, ...(fresh || readAllContent()) });
   }
 
   /* ---------- 状态 ---------- */
@@ -366,6 +517,45 @@ const server = http.createServer(async (req, res) => {
   }
 
   /* ---------- 手动重载 ---------- */
+  /* ---------- 重导底图（前端「重导」按钮用） ----------
+     澄的建议：底图是从内容层推出来的投影，天生会旧。
+     与其让它俩「一致」，不如让人随时能一键重推。
+     这条会真的跑 export-graph.py（几秒到几分钟，看有多少新文本要算向量）。
+     跑完自动 reload 内存里的图。 */
+  if (url.pathname === '/api/reexport' && req.method === 'POST') {
+    if (REEXPORTING) return json(res, { ok: false, error: '已经在导了，等这次跑完' }, 429);
+    REEXPORTING = true;
+    const startedAt = Date.now();
+    try {
+      const { spawn } = await import('node:child_process');
+      const script = 'D:/大肥鱼工具/memory-graph/export-graph.py';
+      const child = spawn('python', [script], { cwd: 'D:/大肥鱼工具/memory-graph' });
+      let out = '', err = '';
+      child.stdout.on('data', d => { out += d.toString(); });
+      child.stderr.on('data', d => { err += d.toString(); });
+      const code = await new Promise((resolve) => child.on('close', resolve));
+      REEXPORTING = false;
+      const ms = Date.now() - startedAt;
+      if (code !== 0) {
+        return json(res, { ok: false, error: '导出失败', code, stderr: err.slice(-800) }, 500);
+      }
+      // 导出成功 → 清空重载（和 /api/reload 同一套，别造第二条路）
+      try {
+        GS.nodes.clear(); GS.adj.clear(); GS.edges.length = 0;
+        GS.edgeIdx.clear(); GS.timeline.length = 0;
+        GS.stats = { added: 0, deduped: 0, garbled: 0, heartbeat: 0, edges: 0 };
+        await loadFull();
+        sseBroadcast('reload', { reason: 'reexport', summary: GS.summary() });
+      } catch (e2) {
+        console.error('[重导] 重载失败:', e2.message);
+      }
+      return json(res, { ok: true, ms, tail: err.slice(-400) });
+    } catch (e) {
+      REEXPORTING = false;
+      return json(res, { ok: false, error: String(e.message || e) }, 500);
+    }
+  }
+
   if (url.pathname === '/api/reload' && req.method === 'POST') {
     try {
       // 清空图，重新载入
@@ -495,6 +685,10 @@ if (!NO_WATCH) {
 
 // 保活 Ollama（澄实测：bge-m3 只占 657MiB，跟 ComfyUI 不打架）
 GS.vectors.startKeepalive((m) => console.log(`[向量] ${m}`));
+
+// 内容层热重载：便条/作品/约定/日记 变了就重读（轮询 mtime，2 秒一次）
+watchContentFiles();
+console.log('[内容层] 热重载已启动（轮询 mtime，2s）');
 
 server.listen(PORT, HOST, () => {
   console.log('');

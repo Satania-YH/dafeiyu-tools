@@ -1,6 +1,6 @@
 
 # -*- coding: utf-8 -*-
-import json, re, os, sys, math, urllib.request, datetime
+import json, re, os, sys, math, urllib.request, datetime, hashlib
 
 EVENTS = r'D:/dsh-fish-home/dsh-fish/events.jsonl'
 DB     = r'C:/Users/14127/.mnemon/data/default/mnemon.db'
@@ -770,13 +770,73 @@ def l2(v):
     s=math.sqrt(sum(x*x for x in v)) or 1.0
     return [x/s for x in v]
 
-texts=[x['text'] for x in nodes]
-vecs=None
+# ════════════════════════════════════════════════════════════
+# 向量：先查缓存，只算新的
+#
+# 2026-11-24 澄指出的账：
+#   「现在 ③ 慢是因为要跑几分钟的向量——那是技术上慢，不是性质上慢。
+#     前者可以等，后者是欠着的账。别用『它该沉淀』给『向量还没缓存』打掩护。」
+#
+# 原来 embed_all 把 nodes 全文直接送 ollama，每次全量重算。
+# 但 vectors.json 里早就有缓存（key = sha1(text) 前16位），只是从来没人读回来过。
+#
+# 现在：有缓存的直接用，只把新文本送 ollama。
+# 实测效果：第一次还是几分钟，之后每次几秒。
+# ════════════════════════════════════════════════════════════
+
+def vkey(t):
+    return hashlib.sha1((t or '').encode('utf-8')).hexdigest()[:16]
+
+def load_vector_cache():
+    """读回上次的 vectors.json。读不到就返回空 dict（第一次跑）。"""
+    p = os.path.join(OUT, 'vectors.json')
+    try:
+        with open(p, 'r', encoding='utf-8') as f:
+            d = json.load(f)
+        v = d.get('vectors') or {}
+        # 只认维度对的（换了 embedding 模型的旧缓存不能用）
+        dim = d.get('dim')
+        if dim and v:
+            k0 = next(iter(v))
+            if len(v[k0]) != dim:
+                return {}
+        print('向量缓存命中池: %d 条' % len(v), file=sys.stderr)
+        return v
+    except Exception:
+        return {}
+
+texts = [x['text'] for x in nodes]
+vecs = None
 try:
-    raw=embed_all(texts)
-    vecs=[l2(v) for v in raw]
+    cache = load_vector_cache()
+    keys = [vkey(t) for t in texts]
+
+    # 分出「有缓存」和「要现算」的
+    need_idx = [i for i, k in enumerate(keys) if k not in cache]
+    hit = len(texts) - len(need_idx)
+    if need_idx:
+        print('向量: 命中缓存 %d 条，需现算 %d 条' % (hit, len(need_idx)), file=sys.stderr)
+        raw_new = embed_all([texts[i] for i in need_idx])
+        raw_new = [l2(v) for v in raw_new]
+        for n, i in enumerate(need_idx):
+            cache[keys[i]] = raw_new[n]
+    else:
+        print('向量: 全部命中缓存（%d 条），不用算' % hit, file=sys.stderr)
+
+    vecs = [cache[k] for k in keys]
+
+    # 顺手清掉失效的旧缓存（节点文字改了 / 节点删了，key 就对不上了）
+    # 澄提醒的：「sha1 失效的旧条目会一直留着，攒多了偶尔清一次」
+    live = set(keys)
+    stale = [k for k in cache if k not in live]
+    if stale and len(stale) > max(50, len(live) * 0.2):
+        for k in stale:
+            cache.pop(k, None)
+        print('向量: 清了 %d 条失效缓存' % len(stale), file=sys.stderr)
+    VEC_CACHE_OUT = cache        # 给下面写 vectors.json 用
 except Exception as ex:
     print('EMBED ERR', ex, file=sys.stderr)
+    VEC_CACHE_OUT = {}
 
 # ---------- vectors.json（2026-11-23 给 Alma 的增量服务用）----------
 # 独立文件，不塞进 graph.json 的节点里（250x1024 会把节点撑爆）。
@@ -789,6 +849,8 @@ def vkey(t):
 
 vectors={}
 if WRITE_VECTORS and vecs and len(vecs)==len(nodes):
+    # 写「全部缓存」而不是只写本次算的 —— 否则老条的缓存会丢，下次又得重算
+    vectors = dict(globals().get('VEC_CACHE_OUT') or {})
     for k,x in enumerate(nodes):
         vectors[vkey(x['text'])]=[round(v,6) for v in vecs[k]]
     vdoc={

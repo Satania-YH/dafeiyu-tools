@@ -98,7 +98,7 @@ function Repoint-QqIfStale([string]$sid, $hdata) {
   $known = @()
   try { $known = @($hdata.pressureRoomIds | ForEach-Object { [string]$_ }) } catch {}
   $need = @()
-  foreach ($k in @('group:798645175','private:781689870')) {
+  foreach ($k in @('group:798645175','private:781689870','group:1046921713')) {
     if (-not ($map.chats.PSObject.Properties.Name -contains $k)) { continue }
     $cur = [string]$map.chats.$k.sessionId
     if ($cur -eq $sid) { continue }
@@ -204,7 +204,7 @@ function Invoke-Check {
       Copy-Item -Path $SessionsJson -Destination ($SessionsJson + '.bak-roomsync-' + $stamp) -Force
       $map = ReadJsonFile $SessionsJson
       $changed = @()
-      foreach ($k in @('group:798645175','private:781689870')) {
+      foreach ($k in @('group:798645175','private:781689870','group:1046921713')) {
         if ($map.chats.PSObject.Properties.Name -contains $k) { $map.chats.$k.sessionId = $newSid; $changed += $k }
       }
       $json = $map | ConvertTo-Json -Depth 30

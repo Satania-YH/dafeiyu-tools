@@ -116,10 +116,16 @@ export function readNotes() {
       waiting: String(n.waiting || ''),
       doneNote: String(n.doneNote || ''),
       reason: String(n.reason || ''),
-      progress: String(n.progress || ''),
-      created: Number(n.created) || 0,
-      closedAt: Number(n.closedAt) || 0,
-      revisedAt: Number(n.revisedAt) || 0,
+      progress: Number(Array.isArray(n.progress) ? n.progress.length : 0) || 0,
+      /* ⚠️ 2026-11-24 修的坑：notes.json 里的时间是 ISO 字符串
+         （"2026-11-20T15:23:29.680Z"），不是毫秒数。
+         原来写 Number(n.created) 会变成 NaN → 0，
+         结果所有便条在时间轴和「快照差几条」里都显示成 1970 年。
+         改成保留原字符串，另给一份毫秒。 */
+      created: n.created || '',
+      closedAt: n.closedAt || '',
+      revisedAt: n.revisedAt || '',
+      createdMs: Date.parse(n.created) || 0,
       ts: n.created ? new Date(n.created).toISOString() : '',
       date: n.created ? localDateOf(n.created) : '',
       layer: 'content',                          // 只进时间轴
@@ -155,8 +161,10 @@ export function readAppointments() {
       agreed: a.agreed,
       outcome: String(a.outcome || ''),
       due: String(a.due || a.time || ''),
-      created: Number(a.created) || 0,
-      notifiedAt: Number(a.notifiedAt) || 0,
+      // 同 notes 的坑：appointments.json 的 created / notifiedAt 也是 ISO 字符串
+      created: a.created || '',
+      createdMs: Date.parse(a.created) || 0,
+      notifiedAt: a.notifiedAt || '',
       lateMinutes: Number(a.lateMinutes) || 0,
       ts: a.created ? new Date(a.created).toISOString() : '',
       date: String(a.due || '').slice(0, 10) || (a.created ? localDateOf(a.created) : ''),
