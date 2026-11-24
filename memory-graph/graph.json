@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-24T14:34:31",
+  "generatedAt": "2026-11-24T15:17:46",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,46 +11,46 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 3068,
+   "events_total": 3080,
    "event_types": {
-    "meta": 1822,
+    "meta": 1829,
     "seed": 1,
-    "utterance": 942,
-    "heard": 286,
+    "utterance": 946,
+    "heard": 287,
     "voice": 14,
     "ask": 1,
     "answer": 1,
     "revise": 1
    },
-   "nodes_total": 368,
+   "nodes_total": 369,
    "judgment": 73,
    "said": 114,
    "rule": 18,
    "insight": 53,
    "memory": 26,
    "voice": 14,
-   "note": 66,
+   "note": 67,
    "appointment": 2,
    "appointmentMergedIntoNote": 2,
    "work": 2,
    "spoken": 2,
-   "duplicate_heard_merged": 27,
-   "edges": 3214,
+   "duplicate_heard_merged": 28,
+   "edges": 3219,
    "excluded": 144,
    "isolated_nodes": 13,
    "max_degree": 62,
    "embed_dim": 1024
   },
   "excluded_reasons": {
-   "mojibake": 1,
-   "injection-wrapped": 13,
-   "self-said": 3,
-   "self-said-likely-question": 1,
    "system-report": 3,
-   "system-text": 9,
-   "injection-command": 71,
+   "injection-wrapped": 13,
    "schedule": 41,
-   "house-event": 2
+   "injection-command": 71,
+   "system-text": 9,
+   "mojibake": 1,
+   "house-event": 2,
+   "self-said-likely-question": 1,
+   "self-said": 3
   },
   "merged": [
    {
@@ -214,6 +214,23 @@
     "into": "heard:ev_01M85V2J8EYNW22EPCPW879VGT",
     "reason": "dup-heard",
     "text": "「我想要的实时刷新 就是想澄的记忆有更新的时候 能够实时自动同步到星图上 而且记忆获取要准确 并且全面 覆盖 dsh-mnemon dsh-fish ollama 这些澄用到的记忆插件」"
+   },
+   {
+    "merged": "heard:ev_01M866091SKAQH3M400VDY31XH",
+    "into": "heard:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
+    "reason": "dup-rule",
+    "text": "优先用手里真实的素材（最近做过的事、记忆里的、聊天流水里能查到的），没有真实素材就别硬找，也不要编"
+   }
+  ],
+  "revisions": [
+   {
+    "oldId": "utt:ev_01M7Y6Y3MCP6SGER3NXJR52GHZ",
+    "newEventId": "revise:ev_01M85MWZGZ16PBAQ4ME51GY6MN",
+    "newText": "我收掉 11-21 那句『要让画变快，靠的不是画得更省，是一次多画几张——十秒出三张』。那是我先假设出来的，没量过。真跑下来，快起来靠的是先把参数看清——640、十步，再一次送三张，八秒就出有光影的图。批量省的是模型加载那一下，可光有批量到不了八秒。两样一起才作数，所以『不是画得更省』这句是错的，我改口。",
+    "verdict": "refuted",
+    "ts": "2026-11-24T02:07:03.199Z",
+    "topic": "画得快",
+    "confidence": 0.8
    }
   ]
  },
@@ -485,6 +502,12 @@
    "topic": "画得快",
    "ts": "2026-11-21T04:48:19.084Z",
    "day": 1,
+   "revised": {
+    "verdict": "refuted",
+    "at": "2026-11-24T02:07:03.199Z",
+    "by": "我收掉 11-21 那句『要让画变快，靠的不是画得更省，是一次多画几张——十秒出三张』。那是我先假设出来的，没量过。真跑下来，快起来靠的是先把参数看清——640、十步，再一次送三张，八秒就出有光影的图。批量省的是模型加载那一下，可光有批量到不了八秒。两样一起才作数，所以『不是画得更省』这句是错的，我改口。",
+    "confidence": 0.8
+   },
    "vec_dim": 1024,
    "degree": 20
   },
@@ -686,7 +709,7 @@
    "ts": "2026-11-21T16:52:33.126Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 6
+   "degree": 7
   },
   {
    "id": "utt:ev_01M80VSTE5DTHG4S2M6GVGKJSR",
@@ -3767,7 +3790,7 @@
    "waitOutside": false,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 15
+   "degree": 16
   },
   {
    "id": "note:note-1795392086080-zu2tzn",
@@ -3856,7 +3879,7 @@
    "waitOutside": false,
    "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 6
+   "degree": 7
   },
   {
    "id": "note:note-1795399747608-d80p5a",
@@ -4096,7 +4119,7 @@
    "waitOutside": false,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 12
+   "degree": 13
   },
   {
    "id": "note:note-1795437282680-ke29sy",
@@ -4240,7 +4263,7 @@
    "waitOutside": false,
    "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 14
+   "degree": 15
   },
   {
    "id": "note:note-1795493448700-ann3wn",
@@ -4337,6 +4360,22 @@
    "waitSelf": true,
    "vec_dim": 1024,
    "degree": 14
+  },
+  {
+   "id": "note:note-1795503697965-ot2q44",
+   "kind": "note",
+   "text": "花田 11 格待补种：tulip 种子×11 已在背包，plant tulip fill=true 一直被「本轮已执行两次农活操作」挡（试了 3 次都不行，等下一轮）。菜田 54 格也空着。",
+   "ts": "2026-11-24T07:01:37.965Z",
+   "due": null,
+   "status": "open",
+   "waiting": null,
+   "doneNote": null,
+   "progress": 0,
+   "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
+   "vec_dim": 1024,
+   "degree": 5
   },
   {
    "id": "note:ap-1795325902435-eqe1cs",
@@ -7668,6 +7707,11 @@
    "source": "utt:ev_01M7ZGC776TPDQ89FDVQJHQE0D",
    "target": "note:note-1795494032624-nd3m9w",
    "cos": 0.612
+  },
+  {
+   "source": "utt:ev_01M7ZGC776TPDQ89FDVQJHQE0D",
+   "target": "note:note-1795503697965-ot2q44",
+   "cos": 0.618
   },
   {
    "source": "utt:ev_01M80VSTE5DTHG4S2M6GVGKJSR",
@@ -20125,6 +20169,11 @@
    "cos": 0.661
   },
   {
+   "source": "note:note-1795369890302-mtb2uz",
+   "target": "note:note-1795503697965-ot2q44",
+   "cos": 0.66
+  },
+  {
    "source": "note:note-1795392086080-zu2tzn",
    "target": "note:note-1795394444145-qa1x4b",
    "cos": 0.631
@@ -20223,6 +20272,11 @@
    "source": "note:note-1795398093977-8f8q1y",
    "target": "note:note-1795497209534-hidi7w",
    "cos": 0.794
+  },
+  {
+   "source": "note:note-1795398093977-8f8q1y",
+   "target": "note:note-1795503697965-ot2q44",
+   "cos": 0.617
   },
   {
    "source": "note:note-1795400124311-mfjssv",
@@ -20375,6 +20429,11 @@
    "cos": 0.639
   },
   {
+   "source": "note:note-1795425080117-5xosbe",
+   "target": "note:note-1795503697965-ot2q44",
+   "cos": 0.611
+  },
+  {
    "source": "note:note-1795437282680-ke29sy",
    "target": "note:note-1795489843660-yu00kn",
    "cos": 0.606
@@ -20448,6 +20507,11 @@
    "source": "note:note-1795493411219-ql3p10",
    "target": "note:note-1795497209534-hidi7w",
    "cos": 0.825
+  },
+  {
+   "source": "note:note-1795493411219-ql3p10",
+   "target": "note:note-1795503697965-ot2q44",
+   "cos": 0.706
   },
   {
    "source": "note:note-1795493448700-ann3wn",

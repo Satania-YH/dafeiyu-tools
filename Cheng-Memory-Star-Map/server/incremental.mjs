@@ -154,6 +154,7 @@ export class GraphState {
     if (n.statedBy) out.statedBy = String(n.statedBy);
     if (n.channel) out.channel = String(n.channel);
     if (n.sourceFile) out.sourceFile = String(n.sourceFile);
+    if (n.revised) out.revised = n.revised;
 
     // voice 单独一层
     if (kind === 'voice') out.layer = 'voice';
@@ -397,6 +398,7 @@ export class GraphState {
         ...(n.statedBy ? { statedBy: n.statedBy } : {}),
         ...(n.channel ? { channel: n.channel } : {}),
         ...(n.sourceFile ? { sourceFile: n.sourceFile } : {}),
+        ...(n.revised ? { revised: n.revised } : {}),
       });
     }
     // 边必须两端都在 nodes 里，否则前端按 id 找索引会落空
@@ -404,7 +406,7 @@ export class GraphState {
     return {
       nodes, edges,
       droppedEdges: this.edges.length - edges.length,
-      meta: this.exportMeta || null,      // 导出时的 meta（含 generatedAt）
+      meta: this.exportMeta || null,      // 导出时的 meta（含 generatedAt / revisions）
     };
   }
 

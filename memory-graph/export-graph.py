@@ -245,6 +245,52 @@ for e in events:
         utt_norms.append(norm(t))
 
 # ════════════════════════════════════════════════════════════
+# 改口（revise）：把「后来被我推翻的判断」标出来
+#
+# 2026-11-24 澄的判断，我认同：
+#   「先做旧判断标改口。连线没名字，他顶多是不知道这条线为什么在；
+#     旧判断没标，他会拿一句我早就不认的话当我现在想的。
+#     前者是他不懂图，后者是他认错我。」
+#   「这条好做——revise 本来就有 refs 指回原来那条，照着 refs 画一根
+#     『后来改了』的线，再把旧的压暗就行，不用新增字段。」
+#
+# revise 事件结构（实测）：
+#   {type:'revise', refs:['ev_xxx'(被改的那条)], verdict:'refuted',
+#    text:'……我改口……', ts, topic}
+# ════════════════════════════════════════════════════════════
+
+REVISIONS = []          # [{oldId, newText, verdict, ts, topic, newEventId}]
+_for_revision = set()   # 被改口的那条（旧的）
+
+for e in events:
+    if e.get('type') != 'revise': continue
+    refs = e.get('refs') or []
+    for r in refs:
+        oldId = 'utt:' + str(r)          # 被改的是 utterance（有 topic 才会成 judgment）
+        _for_revision.add(oldId)
+        REVISIONS.append({
+            'oldId': oldId,
+            'newEventId': 'revise:' + str(e.get('id') or ''),
+            'newText': (e.get('text') or '').strip(),
+            'verdict': e.get('verdict') or 'revised',
+            'ts': e.get('ts'),
+            'topic': e.get('topic') or '',
+            'confidence': e.get('confidence'),
+        })
+
+# 把「被改口」标到旧节点上。不删它（澄：「追溯」要留着），只标状态。
+for _n in utt_nodes:
+    if _n['id'] in _for_revision:
+        _rv = next((r for r in REVISIONS if r['oldId'] == _n['id']), None)
+        if _rv:
+            _n['revised'] = {
+                'verdict': _rv['verdict'],
+                'at': _rv['ts'],
+                'by': _rv['newText'][:300],
+                'confidence': _rv['confidence'],
+            }
+
+# ════════════════════════════════════════════════════════════
 # 清洗 heard（2026-11-24 按澄的复核意见重写）
 #
 # 澄看了 graph-excluded.json 里 self-said + suspect 9 条原文，指出两处判错：
@@ -917,6 +963,8 @@ meta={
  'excluded_reasons': {k:sum(1 for x in excluded if x['reason']==k) for k in set(x['reason'] for x in excluded)},
  # 重复合并是"合并问题"不是"真假问题"，单独记，可复核（澄的要求）
  'merged': merges,
+ # 改口记录：谁推翻了谁（澄：「照着 refs 画一根『后来改了』的线」）
+ 'revisions': REVISIONS,
 }
 graph={'meta':meta,'nodes':nodes,'edges':edges}
 # ════════════════════════════════════════════════════════════
