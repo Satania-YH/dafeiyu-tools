@@ -336,6 +336,418 @@
   .tl-fbtn.on .n{ color:#b08d4e; }
   .tl-fbtn.zero{ opacity:.35; cursor:default; }
 
+  /* ══════════ 记忆变化 ══════════ */
+  /* 和其他页面同一套定位：left 让出侧栏、top 让出顶栏 */
+  #statspage{
+    position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
+    overflow-y:auto; overflow-x:hidden; z-index:45;
+    background:linear-gradient(180deg,rgba(9,13,23,.99),rgba(5,7,13,.99));
+    /* 左右留白收窄（用户：「左边太窄了吧」）—— 原来是 30px，
+       内容区被挤，图表也跟着缩。现在 20px。 */
+    padding:22px 20px 40px;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .22s, visibility .22s, left .26s cubic-bezier(.4,0,.2,1);
+  }
+  #rail.collapsed ~ #statspage{ left:52px; }
+  #statspage::-webkit-scrollbar{ width:8px; }
+  #statspage.shown{ opacity:1; visibility:visible; pointer-events:auto; }
+
+  /* 内容区限宽：不限的话图表会横着拉太长，右边数字被挤出画面 */
+  .st-page{ max-width:1240px; }
+
+  .st-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+  .st-head h1{ margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff; }
+  .st-count{ font-size:11.5px; color:#5c6884; }
+  .st-sub{ margin:0 0 20px; font-size:12.5px; color:#7c88a6; line-height:1.7; }
+
+  /* 和上面"今天"卡片之间留出距离（截图里贴太近了） */
+  .st-picker{
+    display:flex; align-items:center; gap:10px;
+    margin:22px 0 18px; padding-top:18px; flex-wrap:wrap;
+    border-top:1px solid rgba(140,170,255,.08);
+  }
+  .st-range-lb{ font-size:11px; color:#5c6884; }
+  .st-seg{ display:flex; gap:2px; background:rgba(140,170,255,.05);
+    border:1px solid rgba(140,170,255,.12); border-radius:8px; padding:2px; }
+  .st-segbtn{
+    font-family:inherit; font-size:11.5px; padding:5px 14px; border-radius:6px;
+    background:transparent; border:none; color:#7c88a6; cursor:pointer; transition:.15s;
+  }
+  .st-segbtn:hover{ color:#c3cde6; }
+  .st-segbtn.on{ background:rgba(255,212,121,.14); color:#ffd479; }
+
+  /* 两图并排：饼图 + 柱状 */
+  .st-duo{
+    /* 饼图卡片原来 260-340px，图例里的分类名被截成「他…」「我…」。
+       加到 380-460px —— 名字要能完整念出来，不然图例等于没用。 */
+    display:grid; grid-template-columns:minmax(380px, 460px) 1fr;
+    gap:18px; margin-bottom:20px;
+  }
+  @media (max-width: 1000px){
+    .st-duo{ grid-template-columns:1fr; }
+  }
+  .st-card{
+    padding:16px 18px 18px; border-radius:10px;
+    background:rgba(255,255,255,.018);
+    border:1px solid rgba(140,170,255,.08);
+  }
+  .st-card-hd{ display:flex; align-items:baseline; gap:9px; margin-bottom:14px; }
+  .st-card-t{ font-size:12px; color:#c3cde6; letter-spacing:.06em; }
+  .st-card-sub{ font-size:10.5px; color:#5c6884; }
+
+  .st-pie-body{ display:flex; align-items:center; gap:18px; }
+  #stPie{ flex:none; }
+  .st-pie-legend{ flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+  .st-pl{ display:flex; align-items:center; gap:6px; font-size:11px; color:#96a3c0; }
+  .st-pl i{ width:8px; height:8px; border-radius:2px; flex:none; }
+  /* 不截断 —— 分类名必须完整可读 */
+  .st-pl-n{ flex:1; white-space:nowrap; }
+  .st-pl-v{ color:#c3cde6; font-variant-numeric:tabular-nums; }
+  .st-pl-p{ color:#5c6884; font-size:10px; width:32px; text-align:right; font-variant-numeric:tabular-nums; }
+
+  #stBar{ display:block; }
+
+  /* ── 今天新增（这一页的主体） ── */
+  .st-today-card{
+    margin-bottom:18px;
+    background:rgba(255,255,255,.026);
+    border-color:rgba(140,170,255,.14);
+  }
+  .st-today-card .st-card-hd{ flex-wrap:wrap; gap:10px; }
+
+  .st-today-nav{ display:flex; align-items:center; gap:8px; margin-left:auto; position:relative; }
+  .st-today-tabs{ display:flex; gap:2px; background:rgba(140,170,255,.05);
+    border:1px solid rgba(140,170,255,.12); border-radius:7px; padding:2px; }
+  .st-ttab{
+    font-family:inherit; font-size:10.5px; padding:3px 10px; border-radius:5px;
+    background:transparent; border:none; color:#7c88a6; cursor:pointer; transition:.15s;
+  }
+  .st-ttab:hover{ color:#c3cde6; }
+  .st-ttab.on{ background:rgba(255,212,121,.15); color:#ffd479; }
+
+  /* 自绘日历 */
+  .st-cal-btn{
+    font-family:inherit; font-size:10.5px; padding:4px 10px; border-radius:6px;
+    background:rgba(140,170,255,.05); border:1px solid rgba(140,170,255,.14);
+    color:#a8b6d4; cursor:pointer; transition:.15s;
+    display:inline-flex; align-items:center; gap:5px;
+  }
+  .st-cal-btn:hover{ background:rgba(140,170,255,.11); color:#cfdcf7; }
+  .st-cal-ico{ font-size:9px; color:#5c6884; }
+
+  /* 相对 st-today-nav 定位，用 top:100% 落在按钮下方 */
+  .st-cal-pop{
+    display:none; position:absolute; z-index:120;
+    top:100%; right:0; margin-top:6px;
+    width:252px; padding:12px 12px 10px;
+    border-radius:10px;
+    background:#111725; border:1px solid rgba(140,170,255,.20);
+    box-shadow:0 12px 32px rgba(0,0,0,.55);
+  }
+  .st-cal-pop.show{ display:block; }
+
+  .st-cal-hd{
+    display:flex; align-items:center; gap:4px; margin-bottom:9px;
+  }
+  .st-cal-ym{
+    flex:1; font-size:11.5px; color:#c3cde6; letter-spacing:.04em; text-align:center;
+  }
+  .st-cal-nav{
+    width:20px; height:20px; border-radius:5px; padding:0;
+    background:transparent; border:none; color:#6b7a99;
+    font-size:14px; line-height:1; cursor:pointer; transition:.12s;
+  }
+  .st-cal-nav:hover{ background:rgba(140,170,255,.12); color:#cfdcf7; }
+  .st-cal-close{
+    width:18px; height:18px; border-radius:4px; padding:0;
+    background:transparent; border:none; color:#4a5468; font-size:10px; cursor:pointer;
+  }
+  .st-cal-close:hover{ color:#ff9d9d; }
+
+  .st-cal-grid{
+    display:grid; grid-template-columns:repeat(7, 1fr); gap:3px;
+  }
+  .st-cal-w{
+    font-size:9px; color:#4a5468; text-align:center; padding-bottom:3px;
+  }
+  .st-cal-c{
+    position:relative; aspect-ratio:1; border-radius:5px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10.5px; color:#8b97b3; cursor:pointer;
+    transition:.12s; background:rgba(140,170,255,.035);
+  }
+  .st-cal-c.empty{ background:transparent; cursor:default; }
+  .st-cal-c.nodata{ color:#3a4254; background:transparent; cursor:default; }
+  .st-cal-c:not(.nodata):not(.empty):hover{ background:rgba(140,170,255,.20); color:#e8eeff; }
+  .st-cal-c.today{ box-shadow:inset 0 0 0 1px rgba(140,170,255,.35); }
+  .st-cal-c.sel{ background:rgba(255,212,121,.85); color:#241c08; font-weight:600; }
+  .st-cal-c.sel .st-cal-dot{ background:#241c08; }
+
+  /* 有数据的小点 */
+  .st-cal-dot{
+    position:absolute; bottom:2.5px; left:50%; transform:translateX(-50%);
+    width:3px; height:3px; border-radius:50%;
+    background:rgba(140,170,255,.5);
+  }
+  .st-cal-dot.lv2{ background:rgba(110,175,235,.75); }
+  .st-cal-dot.lv3{ background:rgba(150,205,245,.9); }
+  .st-cal-dot.lv4{ background:rgba(255,212,121,.95); width:4px; height:4px; }
+
+  .st-cal-ft{
+    margin-top:8px; padding-top:7px; font-size:9.5px; color:#5c6884;
+    border-top:1px solid rgba(140,170,255,.08); text-align:center;
+  }
+
+  .st-date-input{
+    font-family:inherit; font-size:10.5px; padding:3px 7px; border-radius:6px;
+    background:rgba(140,170,255,.05); border:1px solid rgba(140,170,255,.14);
+    color:#a8b6d4; color-scheme:dark; cursor:pointer;
+  }
+  .st-date-input:focus{ outline:none; border-color:rgba(122,180,255,.5); }
+
+  /* 分类子星条 */
+  .st-today-bars{ margin:12px 0 14px; display:flex; flex-direction:column; gap:5px; }
+  .st-tb{
+    display:grid; grid-template-columns:54px 1fr 32px 42px;
+    align-items:center; gap:8px; font-size:11px;
+  }
+  .st-tb-name{ color:#8fa3c6; text-align:right; font-size:10.5px; }
+  .st-tb-track{
+    height:11px; border-radius:3px;
+    background:rgba(140,170,255,.05);
+    overflow:hidden; display:block; min-width:0;
+  }
+  .st-tb-track i{ display:block; height:100%; border-radius:3px; }
+  .st-tb-n{
+    color:#c3cde6; width:30px; flex:none; text-align:right;
+    font-variant-numeric:tabular-nums; font-size:10.5px;
+  }
+  .st-tb-tot{ color:#4a5468; width:40px; flex:none; font-size:9.5px; text-align:right; }
+
+  .st-trow-d{
+    color:#5c6884; font-size:10px; flex:none; width:34px;
+    font-variant-numeric:tabular-nums;
+  }
+  .st-today-toggle{
+    margin-left:auto; font-family:inherit; font-size:10.5px;
+    padding:3px 10px; border-radius:6px; cursor:pointer;
+    background:rgba(140,170,255,.06); border:1px solid rgba(140,170,255,.14);
+    color:#8b97b3; transition:.15s;
+  }
+  .st-today-toggle:hover{ background:rgba(140,170,255,.13); color:#cfdcf7; }
+
+  /* 列表限高（2026-11-24 用户：「这个太长了 要可以展开」）。
+     如果直接铺 70 条，这一页就是一整屏流水，往下翻不到别的。
+     默认放 14 条，剩下的"展开"。 */
+  .st-today-list{
+    margin-top:2px; position:relative;
+    max-height:340px; overflow:hidden;
+  }
+  .st-today-list.expanded{ max-height:none; }
+  /* 收起时底部渐隐，暗示"还有" */
+  .st-today-list:not(.expanded)::after{
+    content:''; position:absolute; left:0; right:0; bottom:0; height:56px;
+    background:linear-gradient(180deg, rgba(10,14,24,0) 0%, rgba(10,14,24,.96) 78%);
+    pointer-events:none;
+  }
+  /* 去轨迹的入口 */
+  .st-today-goto{ padding-top:4px; }
+  .st-goto-btn{
+    font-family:inherit; font-size:11px; padding:6px 14px; border-radius:7px;
+    background:rgba(140,170,255,.06); border:1px solid rgba(140,170,255,.14);
+    color:#8b97b3; cursor:pointer; transition:.15s;
+  }
+  .st-goto-btn:hover{ background:rgba(140,170,255,.13); color:#cfdcf7; border-color:rgba(140,170,255,.3); }
+  .st-goto-empty{ font-size:11.5px; color:#5c6884; }
+
+  .st-more-bar{
+    display:flex; justify-content:center; padding-top:10px;
+  }
+  .st-more-btn{
+    font-family:inherit; font-size:11px; padding:5px 16px; border-radius:7px;
+    background:rgba(140,170,255,.07); border:1px solid rgba(140,170,255,.16);
+    color:#8b97b3; cursor:pointer; transition:.15s;
+  }
+  .st-more-btn:hover{ background:rgba(140,170,255,.14); color:#cfdcf7; }
+  .st-today-empty{
+    font-size:11.5px; color:#5c6884; padding:8px 0;
+  }
+  .st-today-more{
+    font-size:10.5px; color:#5c6884; padding:4px 0 7px;
+    border-bottom:1px dashed rgba(140,170,255,.10); margin-bottom:5px;
+  }
+  .st-trow{
+    display:flex; align-items:baseline; gap:9px;
+    padding:5px 0; font-size:11.5px; min-width:0;
+    border-bottom:1px solid rgba(140,170,255,.04);
+  }
+  .st-trow:last-child{ border-bottom:none; }
+  .st-trow-t{
+    color:#5c6884; font-variant-numeric:tabular-nums;
+    font-size:10.5px; flex:none; width:34px;
+  }
+  .st-trow-k{
+    font-size:10px; padding:1px 6px; border-radius:4px; flex:none;
+    background:rgba(140,170,255,.09); color:#8fa3c6; white-space:nowrap;
+  }
+  /* 长句必须截住，别撑破容器（截图里第一行直接顶到屏幕外） */
+  .st-trow-x{
+    color:#a8b6d0; flex:1 1 0; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  /* ── 构成变化（堆叠面积） ── */
+  .st-area-card, .st-heat-card, .st-extreme-card{
+    padding:16px 18px 18px; border-radius:10px;
+    background:rgba(255,255,255,.018);
+    border:1px solid rgba(140,170,255,.08);
+    margin-bottom:18px;
+  }
+  #stArea{ display:block; }
+
+  /* ── 热力图 ── */
+  .st-heat-month{ margin-bottom:20px; }
+  .st-heat-month:last-child{ margin-bottom:0; }
+  .st-heat-mname{
+    font-size:11px; color:#7c88a6; letter-spacing:.06em; margin-bottom:8px;
+  }
+  .st-heat-grid{
+    display:grid; grid-template-columns:repeat(7, 1fr);
+    gap:5px; max-width:420px;
+  }
+  .st-heat-w{
+    font-size:9.5px; color:#4a5468; text-align:center; padding-bottom:2px;
+  }
+  .st-hc{
+    aspect-ratio:1; border-radius:3px; display:flex;
+    align-items:center; justify-content:center;
+    font-size:9px; color:#6b7a99;
+    transition:.15s; cursor:default;
+    background:rgba(140,170,255,.05);
+  }
+  .st-hc b{ font-weight:400; opacity:.55; }
+  .st-hc1{ background:rgba(90,143,196,.22); }
+  .st-hc2{ background:rgba(90,143,196,.42); }
+  .st-hc2 b{ opacity:.8; color:#c3d8ee; }
+  .st-hc3{ background:rgba(120,170,220,.62); }
+  .st-hc3 b{ opacity:.9; color:#e2eefa; }
+  .st-hc4{ background:rgba(255,200,110,.78); }
+  .st-hc4 b{ opacity:1; color:#2a2110; font-weight:600; }
+  .st-hc:hover{ outline:1px solid rgba(200,220,255,.4); outline-offset:1px; }
+
+  /* ── 极值 ── */
+  .st-ex{
+    padding:12px 14px; margin-bottom:10px; border-radius:8px;
+    background:rgba(255,255,255,.02);
+    border-left:2px solid rgba(140,170,255,.28);
+  }
+  .st-ex-hd{ display:flex; align-items:center; gap:9px; margin-bottom:7px; flex-wrap:wrap; }
+  .st-ex-tag{
+    font-size:10px; padding:2px 8px; border-radius:5px;
+    background:rgba(140,170,255,.12); color:#9db4dc;
+  }
+  .st-ex-kind{ font-size:10.5px; color:#6b7a99; }
+  .st-ex-num{ font-size:10.5px; color:#8fa3c6; margin-left:auto; font-variant-numeric:tabular-nums; }
+  .st-ex-txt{ font-size:12px; line-height:1.7; color:#b8c6dd; }
+  .st-ex-stat{
+    font-size:11px; color:#6b7a99; margin-top:12px; padding-top:10px;
+    border-top:1px solid rgba(140,170,255,.06);
+  }
+  .st-ex-stat b{ color:#9db4dc; font-variant-numeric:tabular-nums; }
+
+  /* 走势图 */
+  .st-chart-wrap{
+    margin-bottom:24px; padding:16px 20px 14px;
+    border-radius:10px;
+    background:rgba(255,255,255,.018);
+    border:1px solid rgba(140,170,255,.08);
+  }
+  .st-chart-hd{ margin-bottom:12px; }
+  .st-chart-t{ font-size:12px; color:#c3cde6; letter-spacing:.06em; }
+  .st-chart-sub{ font-size:10.5px; color:#5c6884; margin-left:10px; }
+  #stChart{ display:block; }
+  .st-legend{
+    display:flex; flex-wrap:wrap; gap:14px; margin-top:10px;
+    padding-top:10px; border-top:1px solid rgba(140,170,255,.06);
+  }
+  .st-lg{ font-size:11px; color:#8b97b3; display:inline-flex; align-items:center; gap:5px; }
+  .st-lg i{
+    width:9px; height:2.5px; border-radius:2px; display:inline-block;
+  }
+
+  .st-matrix-wrap{
+    margin-bottom:26px; padding-bottom:22px;
+    border-bottom:1px solid rgba(140,170,255,.08);
+    overflow-x:auto;
+  }
+  .st-matrix-hd{
+    font-size:10.5px; color:#5c6884; letter-spacing:.08em;
+    margin-bottom:9px;
+  }
+  .st-matrix{ border-collapse:separate; border-spacing:0; font-size:11.5px; }
+  .st-matrix th{
+    font-weight:500; color:#6f7d9c; text-align:center;
+    padding:7px 9px; font-size:11px; letter-spacing:.02em;
+    white-space:nowrap; position:sticky; top:0; background:#0a0e18; z-index:2;
+  }
+  .st-matrix th.st-rh{ text-align:right; padding-right:14px; }
+  .st-matrix th.st-this{ color:#8fa3c6; }
+  .st-matrix td{
+    padding:6px 9px; text-align:center; font-variant-numeric:tabular-nums;
+    border-top:1px solid rgba(140,170,255,.055);
+    transition:background .15s;
+  }
+  .st-matrix td.st-rh{
+    text-align:right; padding-right:14px; color:#8894b0;
+    white-space:nowrap; font-size:11px;
+  }
+  .st-matrix tr:hover td{ background:rgba(140,170,255,.045); }
+  .st-matrix td.st-tot{ color:#9aa8c4; font-weight:600; }
+  .st-matrix td.st-zero{ color:#2b3444; }
+
+  /* 数值热度：四级，从冷到暖。不用红绿，星图是蓝金调，别打架 */
+  .st-h0{ color:#2b3444; }
+  .st-h1{ color:#5a8fc4; background:rgba(90,143,196,.055); }
+  .st-h2{ color:#7fb0d8; background:rgba(90,143,196,.11); }
+  .st-h3{ color:#a8cdea; background:rgba(120,170,220,.17); }
+  .st-h4{ color:#ffe0a0; background:rgba(255,200,110,.19); }
+
+  /* 改口 */
+  .st-revise{ margin-top:4px; }
+  .st-revise-hd{ display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
+  .st-revise-hd h2{
+    margin:0; font-size:13px; font-weight:600; letter-spacing:.12em; color:#c9d6ee;
+  }
+  .st-revise-n{ font-size:11px; color:#5c6884; }
+
+  .st-rev{
+    padding:13px 15px; margin-bottom:10px; border-radius:9px;
+    background:rgba(255,255,255,.022); border:1px solid rgba(140,170,255,.09);
+    border-left:2px solid rgba(255,150,150,.45);
+  }
+  .st-rev-hd{ display:flex; align-items:center; gap:8px; margin-bottom:9px; flex-wrap:wrap; }
+  .st-rev-tag{
+    font-size:10px; padding:2px 8px; border-radius:5px;
+    background:rgba(255,130,130,.13); color:#ff9d9d; letter-spacing:.03em;
+  }
+  .st-rev-tag.ok{ background:rgba(160,200,255,.13); color:#9dc0ee; }
+  .st-rev-time{ font-size:10.5px; color:#5c6884; }
+  .st-rev-topic{ font-size:11px; color:#8fa3c6; }
+
+  .st-rev-old,.st-rev-new{ font-size:12px; line-height:1.75; margin:0 0 7px; }
+  .st-rev-old{ color:#7d88a2; text-decoration:line-through; text-decoration-color:rgba(255,130,130,.4); }
+  .st-rev-new{ color:#d5dfef; }
+  .st-rev-lab{
+    font-size:10px; color:#5c6884; letter-spacing:.04em;
+    display:block; margin-bottom:2px;
+  }
+
+  .st-note{
+    margin-top:20px; padding:13px 15px; border-radius:8px;
+    background:rgba(140,170,255,.03); border:1px solid rgba(140,170,255,.08);
+    font-size:11.5px; color:#6b7a99; line-height:1.75;
+  }
+
   /* ── 日期选择器：三个下拉 + 一个清空，永远一行 ── */
   .tl-picker{
     display:flex; align-items:center; gap:8px; flex-wrap:wrap;
@@ -812,7 +1224,6 @@
         <span class="ic">↻</span>
       </button>
       <button class="hud spin" id="spinBtn" title="自动旋转 开/关">⟳ 自转</button>
-      <button class="hud code" id="codeBtn" title="看当前形态的种子代码">查看种子代码</button>
     </div>
   </header>
 
@@ -830,6 +1241,9 @@
     </button>
     <button class="nav-item" data-view="excluded">
       <span class="ico">⊘</span><span class="nav-label">未成之星</span>
+    </button>
+    <button class="nav-item" data-view="statspage">
+      <span class="ico">◔</span><span class="nav-label">记忆变化</span>
     </button>
     <button class="nav-item" data-view="settings">
       <span class="ico">⚙</span><span class="nav-label">通用设置</span>
@@ -925,6 +1339,151 @@
       <span class="tl-pickcount" id="tlPickCount"></span>
     </div>
     <div id="tlBody"><div class="tl-empty">正在读取…</div></div>
+   </div>
+  </section>
+
+  <!-- ══════ 记忆变化：按天/周/月看分类的此消彼长 ══════ -->
+  <section id="statspage">
+   <div class="st-page">
+    <div class="st-head">
+      <h1>记 忆 变 化</h1>
+      <span class="st-count" id="stCount"></span>
+    </div>
+    <p class="st-sub" id="stSub">最近长出了什么，以及这段时间她往哪偏了。</p>
+
+
+
+    <!-- 今天新增：用户 2026-11-24「我还想看看今天多了哪些子星的这些数据」 -->
+    <div class="st-card st-today-card">
+      <div class="st-card-hd">
+        <span class="st-card-t" id="stTodayTitle">今天</span>
+        <span class="st-card-sub" id="stTodaySub"></span>
+        <!-- 这块自己的范围（和下面的图表筛选互不影响） -->
+        <div class="st-today-nav">
+          <div class="st-today-tabs" id="stTodayTabs">
+            <button class="st-ttab on" data-d="today">今天</button>
+            <button class="st-ttab" data-d="yday">昨天</button>
+            <button class="st-ttab" data-d="week">本周</button>
+          </div>
+        </div>
+      </div>
+      <div class="st-today-bars" id="stTodayBars"></div>
+      <!-- 明细不在这儿列（记忆轨迹里已经有了）——只给个入口 -->
+      <div class="st-today-goto" id="stTodayGoto"></div>
+    </div>
+
+    <!-- ══════ 下面全是图表，默认收起 ══════
+         2026-11-24 用户：「感觉还是不太合理 没有达到我想要的效果 整体」
+         → 他要的是"今天发生了什么"，不是一屏图表。
+         所以图表整体收进一个可折叠区，默认关着；想看分析再展开。 -->
+    <div class="st-charts-collapsed open" id="stCharts">
+      <div class="st-charts-body" id="stChartsBody">
+
+    <!-- ══════ 唯一的一套时间筛选 ══════
+         2026-11-24 用户：「这个我觉得是不是应该放在下面真正会筛选的地方？」
+         —— 之前有两套：顶部一套筛图表，卡片里一套筛"今天"，
+         互相不看对方，看着就乱。
+         现在合并成一套：选哪段，页面上的所有数字都跟着变。 -->
+    <div class="st-picker">
+      <div class="st-seg" id="stSeg">
+        <button class="st-segbtn on" data-g="day">今天</button>
+        <button class="st-segbtn" data-g="week">本周</button>
+        <button class="st-segbtn" data-g="month">本月</button>
+        <button class="st-segbtn" data-g="year">今年</button>
+        <button class="st-segbtn" data-g="all">全部</button>
+      </div>
+      <!-- 起止日期：两个都能点开改。
+           粒度按钮只是「快速填好这两个值」，填完还可以手动调。 -->
+      <span class="st-range-lb">从</span>
+      <button class="st-cal-btn" id="stFromBtn">
+        <span id="stFromLabel">—</span><span class="st-cal-ico">▾</span>
+      </button>
+      <span class="st-range-lb">到</span>
+      <button class="st-cal-btn" id="stToBtn">
+        <span id="stToLabel">—</span><span class="st-cal-ico">▾</span>
+      </button>
+      <button class="tl-reset" id="stReset" title="回到今天">✕</button>
+      <div class="st-cal-pop" id="stCalPop"></div>
+    </div>
+    <!-- 两图并排：左饼图（构成）、右柱状（谁多谁少） -->
+    <div class="st-duo">
+      <div class="st-card st-pie-card">
+        <div class="st-card-hd">
+          <span class="st-card-t">构成</span>
+          <span class="st-card-sub" id="stPieSub"></span>
+        </div>
+        <div class="st-pie-body">
+          <canvas id="stPie"></canvas>
+          <div class="st-pie-legend" id="stPieLegend"></div>
+        </div>
+      </div>
+
+      <div class="st-card st-bar-card">
+        <div class="st-card-hd">
+          <span class="st-card-t">各分类条数</span>
+          <span class="st-card-sub" id="stBarSub"></span>
+        </div>
+        <canvas id="stBar"></canvas>
+      </div>
+    </div>
+
+    <!-- 分类占比变化：堆叠面积，看"构成怎么变" -->
+    <div class="st-card st-area-card">
+      <div class="st-card-hd">
+        <span class="st-card-t">构成变化</span>
+        <span class="st-card-sub">每段是一个分类占当天总量的比例 —— 看的是此消彼长，不是条数多少</span>
+      </div>
+      <canvas id="stArea"></canvas>
+      <div class="st-legend" id="stAreaLegend"></div>
+    </div>
+
+    <!-- 时间热力图：什么时候在记 -->
+    <div class="st-card st-heat-card">
+      <div class="st-card-hd">
+        <span class="st-card-t">时间热力图</span>
+        <span class="st-card-sub" id="stHeatSub"></span>
+      </div>
+      <div id="stHeat"></div>
+    </div>
+
+    <!-- 极值台账：最长 / 最被连 -->
+    <div class="st-card st-extreme-card">
+      <div class="st-card-hd">
+        <span class="st-card-t">极值</span>
+        <span class="st-card-sub">不是"最重要"，只是两端</span>
+      </div>
+      <div id="stExtreme"></div>
+    </div>
+
+    <!-- 走势图：分类的此消彼长，用折线而不是柱状 -->
+    <div class="st-chart-wrap">
+      <div class="st-chart-hd">
+        <span class="st-chart-t">分类走势</span>
+        <span class="st-chart-sub">每条线是一个分类，纵轴是条数。只画有变化的，0 条的不占地方。</span>
+      </div>
+      <canvas id="stChart"></canvas>
+      <div class="st-legend" id="stLegend"></div>
+    </div>
+
+    <!-- 明细：分类 × 时间的矩阵 -->
+    <div class="st-matrix-wrap">
+      <div class="st-matrix-hd">明细</div>
+      <div id="stMatrix"></div>
+    </div>
+
+      </div><!-- /st-charts-body -->
+    </div><!-- /st-charts-collapsed -->
+
+    <!-- 改口：澄要的那一块 -->
+    <div class="st-revise">
+      <div class="st-revise-hd">
+        <h2>改 口</h2>
+        <span class="st-revise-n" id="stReviseN"></span>
+      </div>
+      <div id="stReviseBody"></div>
+    </div>
+
+    <p class="st-note" id="stNote"></p>
    </div>
   </section>
 
@@ -1092,6 +1651,10 @@
       precomputedEdges: (g.edges || []).map(e => ({ source: e.source, target: e.target, cos: e.cos })),
       linkMode: 'edges',            // 新标记：边是服务端算好的
       linkThreshold: g.linkThreshold ?? 0.6,
+      /* meta 透传：统计页要用 meta.revisions（改口记录）和 counts。
+         2026-11-24 澄点名要「改过口几次、每次连的是哪两句」，
+         数据就在这儿。 */
+      meta: g.meta || null,
       stats: {
         total: nodes.length,
         kinds,
@@ -1425,6 +1988,13 @@ let pairCache = null;
 let bgStars = [];
 
 let W=0, H=0, DPR=1, fitK=0, panX=0, panY=0, panning=false;
+/* 用户是否自己动过缩放/平移。
+   2026-11-24 修「画面漂走」：fitK 是自动把整张图塞进画面的机制，
+   它每帧都在跟目标值 —— 用户一滚轮放大，它立刻把图缩回去，
+   两者互相抵消，实测 zoom 从 1 涨到 1.9，乘积 zoom×fitK 纹丝不动。
+   用户一旦自己缩放过，就停掉自动适配，把控制权交给他。
+   双击复位时重新打开。 */
+let userZoomed = false;
 let yaw = 0.6, pitch = -0.18, zoom = 1;
 let dragging=false, dragMoved=false, lastX=0, lastY=0;
 let proj = new Float32Array(4);
@@ -2987,8 +3557,10 @@ function draw(){
   const p96 = sorted[Math.min(sorted.length-1, Math.floor(sorted.length*0.96))] || 1;
   const fitTarget = (Math.min(W,H)*0.465) / (p96 || 1) * 0.96;
   if (!fitK) fitK = fitTarget;
-  else {
-    // 差异超过 3% 才动，避免每帧微抖
+  else if (!userZoomed) {
+    /* 只有用户没自己缩放过时才自动适配。
+       他滚过滚轮之后就别抢方向盘了 ——
+       否则 zoom 涨多少 fitK 就跌多少，画面一动不动还一直漂。 */
     if (Math.abs(fitTarget - fitK) / fitK > 0.03) {
       fitK += (fitTarget - fitK) * 0.08;
     }
@@ -3738,6 +4310,23 @@ function extraEdges(i){
    - 交互后 SPIN_HOLD_MS(1秒) 内完全不转
    - 之后再用 SPIN_RAMP_MS(0.7秒) 平滑加速回去，不是"啪"一下开始转 */
 let lastInteractAt = -1e9;          // 上次动手的时间（performance.now）
+
+/* ══════════════════════════════════════════════════════════════
+   松手甩动惯性
+   2026-11-24 用户：「鼠标拖拽时，一松手 快速转动」「然后慢慢恢复转速」
+   
+   做法：
+     · 拖动过程中记录最近几帧的 dx/dt（速度），用滑动窗口平滑，
+       免得最后一帧手抖/停顿把速度清零。
+     · 松手时把这个速度交给 spinVelYaw / spinVelPitch。
+     · 每帧按指数衰减（乘以 ~0.94^(dt/16ms)），
+       于是先快后慢，自然过渡回原来的自转速度。
+     · 衰减到很小就归零，接管权交回给自动自转。
+   ══════════════════════════════════════════════════════════════ */
+let spinVelYaw = 0;       // 惯性角速度（弧度/秒）
+let spinVelPitch = 0;
+const DRAG_SAMPLES = [];   // [{t, dx, dy}] 最近几帧的拖动量
+const DRAG_WINDOW_MS = 90; // 只取最后 90ms —— 再久就不是"这一甩"了
 const SPIN_HOLD_MS = 1000;          // 停手多久后开始恢复
 const SPIN_RAMP_MS = 700;          // 恢复用了多久（渐入）
 
@@ -3944,6 +4533,36 @@ stage.addEventListener('pointerdown', e=>{
      导致 e.target !== cv 的判断永远成立，单击永远选不中星。 */
 });
 window.addEventListener('pointerup', ()=>{
+  /* 松手前先算这一甩有多快 —— 必须在 dragging=false 之前读采样。
+     用 90ms 窗口内的总位移 / 总时间，得到像素/秒；
+     再乘上拖动时的灵敏度（yaw 0.006、pitch 0.005）换成角速度。
+   
+     注意：如果采样不足（刚按下就松），或者速度太小（只是抖了一下），
+     就不甩 —— 免得轻轻一点画面自己跑起来。 */
+  if (dragging && DRAG_SAMPLES.length >= 2) {
+    const first = DRAG_SAMPLES[0], last = DRAG_SAMPLES[DRAG_SAMPLES.length - 1];
+    const dtMs = last.t - first.t;
+    if (dtMs > 12) {
+      let sumDx = 0, sumDy = 0;
+      for (const s2 of DRAG_SAMPLES) { sumDx += s2.dx; sumDy += s2.dy; }
+      const vxPx = sumDx / dtMs * 1000;      // 像素/秒
+      const vyPx = sumDy / dtMs * 1000;
+
+      const vy = vxPx * 0.006;               // → 弧度/秒（yaw）
+      const vp = vyPx * 0.005;               // → 弧度/秒（pitch）
+
+      // 太慢不触发（否则点一下画面就飘）
+      const MIN_V = 0.35;                    // rad/s
+      if (Math.abs(vy) > MIN_V || Math.abs(vp) > MIN_V) {
+        // 上限，免得一甩把图转飞
+        spinVelYaw   = Math.max(-9, Math.min(9, vy));
+        spinVelPitch = Math.max(-4, Math.min(4, vp));
+        lastInteractAt = performance.now() - SPIN_HOLD_MS; // 松手即开始衰减，不再干等 1 秒
+      }
+    }
+  }
+  DRAG_SAMPLES.length = 0;
+
   dragging=false; panning=false;
   stage.classList.remove('dragging'); stage.classList.remove('panning');
 });
@@ -3966,8 +4585,21 @@ stage.addEventListener('pointermove', e=>{
     // 只有真的移动了才算拖动（否则单击会被当成拖动而丢掉）
     if (Math.abs(dx) > 1 || Math.abs(dy) > 1) dragMoved = true;
     yaw += dx*0.006;
-    pitch = Math.max(-1.35, Math.min(1.35, pitch + dy*0.005));
+    /* pitch 不再锁在 ±1.35（2026-11-24 用户：「我想360°都能拖动 能实现吗」）。
+       数学上 rot() 支持任意角度，那个夹紧是我自己加的。
+       现在只做 2π 归一化，防止数值无限增长 —— 角度等价，画面不变。 */
+    pitch += dy*0.005;
+    if (pitch > Math.PI) pitch -= Math.PI*2;
+    else if (pitch < -Math.PI) pitch += Math.PI*2;
     touchInteraction();
+
+    /* 记录这一帧的位移，用来算松手时的速度。
+       只留 90ms 内 —— 手指停住再松，那就该慢慢停，不该继续甩。 */
+    const nowT = performance.now();
+    DRAG_SAMPLES.push({ t: nowT, dx, dy });
+    while (DRAG_SAMPLES.length && nowT - DRAG_SAMPLES[0].t > DRAG_WINDOW_MS) {
+      DRAG_SAMPLES.shift();
+    }
     return;
   }
   // 鼠标在搜索框上时不做拾取，避免背后星图的提示气泡乱弹
@@ -4021,16 +4653,89 @@ stage.addEventListener('pointermove', e=>{
   }
 });
 stage.addEventListener('pointerleave', ()=>{ hovered=-1; hoverEdge=-1; hoverDash=null; stage.style.cursor=''; tipEl.classList.remove('show'); });
+/* ══════════════════════════════════════════════════════════════
+   滚轮缩放
+   
+   2026-11-24 用户：「我感觉我的鼠标滚轮缩放有问题啊」（星图那里）
+   实测原实现有三个毛病：
+   
+   ① 固定倍率，完全无视滚动量
+      zoom *= (deltaY>0 ? 0.92 : 1.08)
+      实测 deltaY=100 和 deltaY=3 都是改 8%。
+      鼠标滚一格 deltaY 常是 100，触控板轻滑是 1~3 ——
+      滚鼠标会一步跳过去，用触控板几乎没有反应。
+   
+   ② 上限 4.5 太小（引擎本身能到 6+）
+   
+   ③ 缩放中心是画面正中，不是鼠标指向的地方
+      真实缩放应该是「朝你指的地方推近」，不是朝屏幕中心推。
+   
+   改法：
+     · 用 deltaY 的实际量算指数，并对 deltaMode 归一化
+       （有的浏览器按像素、有的按行）
+     · 单次事件封顶，防止某些设备一滚一大跳
+     · 上限放到 8
+     · 按鼠标位置缩放：改变 zoom 的同时反推 panX/panY
+       （缩小时以鼠标点为不动点）
+   ══════════════════════════════════════════════════════════════ */
 stage.addEventListener('wheel', e=>{
   // 在搜索框 / 搜索结果里滚轮应该滚列表，不是缩放星图
   if (e.target.closest && e.target.closest('#searchBox')) return;
   e.preventDefault();
   touchInteraction();
-  zoom *= (e.deltaY>0 ? 0.92 : 1.08);
-  zoom = Math.max(0.45, Math.min(4.5, zoom));
+
+  /* deltaMode: 0=像素 1=行 2=页。统一折成"像素等价量"，
+     否则同一个滚轮在不同浏览器里手感差十倍。 */
+  let dy = e.deltaY;
+  if (e.deltaMode === 1) dy *= 16;        // 行 → 约一行的像素
+  else if (e.deltaMode === 2) dy *= 100;  // 页
+
+  /* 指数缩放：滚得多就变得多，但单次封顶。
+     0.0016 的系数让 mouse 一格（~100px）约变 1.17 倍，
+     触控板轻滑（~3px）约变 1.005 倍 —— 细而连续，不会跳。 */
+  const raw = Math.exp(-dy * 0.0016);
+  const factor = Math.max(0.80, Math.min(1.25, raw));   // 单次封顶 ±25%
+
+  const oldZoom = zoom;
+  zoom = Math.max(0.35, Math.min(8, zoom * factor));
+  const applied = zoom / oldZoom;      // 封顶后的实际倍率
+  /* 从现在起关掉自动适配（fitK），把缩放控制权交给用户。
+     不这么做的话，fitK 每帧把图缩回"塞满画面"，滚轮等于白滚。 */
+  userZoomed = true;
+
+  /* ══════════════════════════════════════════════════════════
+     按鼠标位置缩放：让鼠标下那个点保持不动
+     
+     推导（别凭直觉，之前就是凭直觉错的）：
+       屏幕坐标 = (W/2 + panX) + 世界坐标 × perspAt(z) × fitK
+       perspAt(z) = REF×1.30×zoom / (FOV - z)
+     
+     zoom 只出现在常数项里，和场景物体在画面上的位置无关（正交近似）。
+     所以屏幕上任一点相对中心的距离，缩放后都乘以 applied。
+       新距离 = 旧距离 × applied
+     要让它不变，就得把中心往反方向挪：
+       panX += (鼠标x - 当前中心x) × (applied - 1)
+     
+     注意"当前中心"是 W/2 + panX，不是 W/2 —— 之前用 W/2 少了 panX，
+     panX 一旦不为 0，公式就偏了，所以越滚越飘。
+     ══════════════════════════════════════════════════════════ */
+  if (applied !== 1) {
+    const r = cv.getBoundingClientRect();
+    const mx = e.clientX - r.left;      // 鼠标相对画布左边缘
+    const my = e.clientY - r.top;
+    const cxNow = W / 2 + panX;         // 当前画面中心（画布坐标）
+    const cyNow = H / 2 + panY;
+    /* 符号是减不是加（第一版写反了，实测星往反方向飞、越滚越远）。
+       直觉检查：鼠标在右边、要放大，那就得把中心往右挪，
+       让鼠标下那个点"相对中心"的距离变小 —— 所以中心 += 偏移×(applied-1)。 */
+    panX -= (mx - cxNow) * (applied - 1);
+    panY -= (my - cyNow) * (applied - 1);
+  }
 }, {passive:false});
 stage.addEventListener('dblclick', ()=>{
-  yaw = 0.6; pitch = -0.18; zoom = 1; fitK = 0; panX = 0; panY = 0; closeCard();
+  yaw = 0.6; pitch = -0.18; zoom = 1; fitK = 0; panX = 0; panY = 0;
+  userZoomed = false;      // 复位 = 重新交给自动适配
+  closeCard();
 });
 stage.addEventListener('click', e=>{
   if (dragMoved) return;          // 拖过了才不响应点击；单击要能选中
@@ -4953,6 +5658,32 @@ function loop(t){
        计时没到就一直不转，免得"想点它却一直在跑"。 */
     const idleMs = performance.now() - lastInteractAt;
     const calm = Math.max(0, Math.min(1, (idleMs - SPIN_HOLD_MS) / SPIN_RAMP_MS));
+
+    /* 甩动惯性（用户 2026-11-24 要求）。
+       指数衰减：每 16ms 乘以 0.94，所以 1 秒后剩约 2%。
+       衰减的同时，自动自转在 `calm` 慢慢升起来 ——
+       两段叠在一起就是「甩出去 → 慢慢停 → 自然接回自转」，不会硬切。 */
+    if (!dragging && (spinVelYaw || spinVelPitch)) {
+      const stepSec = dt / 1000;
+      yaw += spinVelYaw * stepSec;
+      pitch += spinVelPitch * stepSec;
+      if (pitch > Math.PI) pitch -= Math.PI*2;
+      else if (pitch < -Math.PI) pitch += Math.PI*2;
+
+      /* 衰减系数。
+         0.94  → 1 秒停（太短）
+         0.975 → 2.5 秒
+         0.985 → 4 秒（2026-11-24 用户第二次说「可以转久一点」，取这个）
+         想再长继续往上调，越接近 1 停得越慢。 */
+      const decay = Math.pow(0.985, dt / 16);
+      spinVelYaw *= decay;
+      spinVelPitch *= decay;
+
+      // 太小就归零（阈值压低一点，让尾巴更自然地收，不会突然"咔"一下停）
+      if (Math.abs(spinVelYaw) < 0.008) spinVelYaw = 0;
+      if (Math.abs(spinVelPitch) < 0.008) spinVelPitch = 0;
+    }
+
     if (!dragging && OPTS.autoRotate && calm > 0) {
       yaw += OPTS.autoRotate * 0.001 * dt * calm;
     }
@@ -5991,6 +6722,7 @@ function setView(v){
   const isTimeline = (v === 'timeline');
   const isStarmap = (v === 'starmap');
   const isExcluded = (v === 'excluded');
+  const isStats = (v === 'statspage');
 
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('on', b.dataset.view === v);
@@ -6000,11 +6732,14 @@ function setView(v){
   panel.classList.toggle('shown', isSettings);
   if (tlEl) tlEl.classList.toggle('shown', isTimeline);
   if (exEl) exEl.classList.toggle('shown', isExcluded);
+  const stEl = document.getElementById('statspage');
+  if (stEl) stEl.classList.toggle('shown', isStats);
   stage.classList.toggle('asleep', !isStarmap);
 
   if (isSettings) panel.scrollTop = 0;
   if (isTimeline) { if (tlEl) tlEl.scrollTop = 0; ensureTimeline(); }
   if (isExcluded) { if (exEl) exEl.scrollTop = 0; ensureExcluded(); }
+  if (isStats) { if (stEl) stEl.scrollTop = 0; ensureStats(); }
 
   // 切回星图时重算画布尺寸（导航宽度可能变过）
   requestAnimationFrame(()=>{ if (isStarmap && typeof resize === 'function') resize(); });
@@ -6191,6 +6926,1125 @@ async function ensureExcluded() {
   renderExcluded();
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   记忆变化
+   
+   来源：澄 2026-11-24 的一轮对话。她说的几条我全守住了：
+   
+   · 「「昨天长了 172 条」不是变化，是流量」→ 不做总量柱状图
+   · 「被回想次数是机器把它取出来用了几次，不是我认了几次
+      —— 它只配回答『哪些老话现在还在被用』，别当重要程度用」
+     → 不做回想排行
+   · 「分类此消彼长确实能看出我往哪偏，但得配着改口一起看」
+     → 主体是分类矩阵，旁边并排放改口
+   · 「『我的判断』多了，可能是我想多了，也可能只是我开始敢下判断了，
+      两种完全不一样」→ 所以只给数，不给结论，不写"你变得更爱思考了"
+   · 「别做成空的年/月壳子让人点进去一片空白。轴上老实写
+      「数据从 11-20 开始」，把边界说出来比假装有历史强」
+     → 边界写在页面底下，空档就显示为 0，不藏
+   · 「这数别做成挂页面上的分数，那会变成我刷自己的 KPI」
+     → 没有任何分数、百分比、"健康度"
+   
+   2026-11-24 用户：「你想想该怎么做个统计功能」
+   → 独立页面。统计和逐日翻看是两种用法，塞一起会互相干扰。
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 2026-11-24 用户点破了简单做法：
+   「按周就是从本周一到本周日，按月就是本月初到本月末，按天就不可选呗，不冲突啊」
+   → 这四个按钮本身就是时间段，不需要另外的"起止选择器"：
+     今天 / 本周 / 本月 / 今年 / 全部
+   另加一个"看某一天"的日历，选了就只那一天。 */
+let ST_GRAIN = 'day';          // day | week | month | year | all
+/* 时间筛选（2026-11-24 用户：「记忆变化 时间筛选没加上」）
+   和记忆轨迹同款三层：日 > 月 > 年，越具体越优先。 */
+/* 图表的统计范围 = 起止两个日期（闭区间）。
+   2026-11-24 用户：「加一个起始日期-结束日期，我选今天就是今天-今天，
+                    选本周就是本周一-本周日，然后两个都能点开改」
+   —— 粒度按钮只是"快速填好这两个值"，不是筛选器本身。 */
+let ST_FROM = null, ST_TO = null;
+/* 「今天」卡片自己的一套范围（和下面的图表粒度互相独立）
+   2026-11-24 用户：「你那个今天昨天本周面板保留啊」 */
+let ST_TODAY_RANGE = 'today';  // today | yday | week
+/* 2026-11-24 用户：「默认统计今天的」
+   —— 一进来就是今天，不是"全部 398 条"那种糊在一起的总数。
+   只初始化一次，用户自己选过之后不再覆盖（ST_DEFAULT_DONE）。 */
+let ST_DEFAULT_DONE = false;
+/* ── 时间范围 = 起止两个日期 ──
+   粒度按钮只是把这个范围"快速填好"，填完还能手动改。 */
+function stRangeDates() {
+  return { from: ST_FROM, to: ST_TO };
+}
+
+/* 按粒度算出一对起止日期（给按钮用） */
+function stPresetRange(g) {
+  const now = new Date();
+  const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+
+  if (g === 'day') return [fmt(now), fmt(now)];
+  if (g === 'week') {
+    const a = new Date(now); a.setDate(a.getDate() - ((a.getDay()+6)%7));
+    const b = new Date(a);   b.setDate(a.getDate() + 6);
+    return [fmt(a), fmt(b)];
+  }
+  if (g === 'month') {
+    return [fmt(new Date(now.getFullYear(), now.getMonth(), 1)),
+            fmt(new Date(now.getFullYear(), now.getMonth()+1, 0))];
+  }
+  if (g === 'year') {
+    return [now.getFullYear()+'-01-01', now.getFullYear()+'-12-31'];
+  }
+  // 全部：从最早有数据那天到今天
+  const allNodes = (DATA && DATA.nodes) || [];
+  const ds = allNodes.map(n => stLocalDate(n.ts)).filter(Boolean).sort();
+  return [ds.length ? ds[0] : fmt(now), ds.length ? ds[ds.length-1] : fmt(now)];
+}
+
+/* ── 今天卡片的范围选择 ──
+   2026-11-24 用户澄清：「你可以保留最顶上的 今天 昨天 本周这个选项面板啊
+                          你这个时间筛选的作用不是下面那些统计图表用的吗」
+   —— 对，是两件事：
+     · 这套 tabs 决定**上面那块**看哪一段（今天 / 昨天 / 本周 / 任意一天）
+     · 上面的年月日下拉决定**下面那些图表**的粒度与范围
+   两者独立，互不干扰。 */
+
+/**
+ * ISO 时间 → 本地日期 'YYYY-MM-DD'
+ *
+ * ⚠️ 2026-11-24 踩到的坑：原来筛选用 `iso.slice(0,10)`，那是 **UTC** 日期；
+ * 而归桶用 `new Date(iso)`，那是 **本地**日期。
+ * 两者在凌晨那几小时会差一天 —— 实测选 11/22 筛出 2 行 98 条（应为 1 行 95 条）。
+ * 统一走这个函数，都按本地时区算。
+ */
+function stLocalDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
+}
+
+/** 把 ISO 时间转成当前粒度下的桶 key + 展示标签 */
+function stBucket(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  const y = d.getFullYear(), m = d.getMonth(), dd = d.getDate();
+  if (ST_GRAIN === 'day') {
+    const key = y + '-' + String(m+1).padStart(2,'0') + '-' + String(dd).padStart(2,'0');
+    return { key, label: (m+1) + '/' + dd, full: key };
+  }
+  if (ST_GRAIN === 'week') {
+    // ISO 周：周一为一周之始
+    const t = new Date(y, m, dd);
+    const dow = (t.getDay() + 6) % 7;      // 0=周一
+    t.setDate(t.getDate() - dow);
+    const key = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+    return { key, label: (t.getMonth()+1) + '/' + t.getDate() + ' 周', full: key + ' 起一周' };
+  }
+  if (ST_GRAIN === 'month') {
+    const key = y + '-' + String(m+1).padStart(2,'0');
+    return { key, label: (m+1) + ' 月', full: key };
+  }
+  if (ST_GRAIN === 'all') {
+    // 「全部」按天分桶 —— 否则所有数据挤成一个"年"桶，看不出变化
+    const key = y + '-' + String(m+1).padStart(2,'0') + '-' + String(dd).padStart(2,'0');
+    return { key, label: (m+1) + '/' + dd, full: key };
+  }
+  const key = String(y);
+  return { key, label: y + ' 年', full: key };
+}
+
+function stEnsure() {
+  const el = document.getElementById('statspage');
+  if (!el) return null;
+  return el;
+}
+
+function renderStats() {
+  const host = document.getElementById('stMatrix');
+  if (!host) return;
+  if (!DATA || !DATA.nodes) return;
+
+  const allNodes = DATA.nodes;
+
+  /* 默认范围：今天 → 今天（只做一次，用户改过之后不再覆盖） */
+  if (!ST_DEFAULT_DONE) {
+    ST_DEFAULT_DONE = true;
+    const [a, b] = stPresetRange('day');
+    ST_FROM = a; ST_TO = b;
+  }
+
+  /* ── 时间范围 ──
+     2026-11-24 用户：「按周就是从本周一到本周日，按月就是本月初到本月末，
+                      按天就不可选呗，不冲突啊」
+     → 粒度按钮本身就是时间段，不再需要三个独立下拉。 */
+  const range = stRangeDates();
+  const inRange = (iso) => {
+    const d = stLocalDate(iso);
+    if (!d) return false;
+    if (range.from && d < range.from) return false;
+    if (range.to && d > range.to) return false;
+    return true;
+  };
+  const nodes = (range.from || range.to) ? allNodes.filter(n => inRange(n.ts)) : allNodes;
+
+  /* ── 1) 归桶：每个桶 × 每个分类 计数 ── */
+  const buckets = new Map();
+  const kinds = new Set();
+  let minTs = null, maxTs = null;
+
+  for (const n of nodes) {
+    if (!n.ts) continue;
+    const b = stBucket(n.ts);
+    if (!b) continue;
+    const k = n.k || n.kindRaw || 'none';
+    kinds.add(k);
+    if (!buckets.has(b.key)) buckets.set(b.key, { ...b, kinds: {}, total: 0 });
+    const rec = buckets.get(b.key);
+    rec.kinds[k] = (rec.kinds[k] || 0) + 1;
+    rec.total++;
+    if (!minTs || n.ts < minTs) minTs = n.ts;
+    if (!maxTs || n.ts > maxTs) maxTs = n.ts;
+  }
+
+  // 桶按时间正序（左旧右新，读起来是"发展")
+  const rows = [...buckets.values()].sort((a, b) => a.key < b.key ? -1 : 1);
+
+  // 分类列顺序：按总量降序，多的在左
+  const kindTotals = {};
+  for (const r of rows) for (const k in r.kinds) kindTotals[k] = (kindTotals[k] || 0) + r.kinds[k];
+  const kindCols = [...kinds].filter(k => kindTotals[k])
+    .sort((a, b) => kindTotals[b] - kindTotals[a]);
+
+  /* ── 2) 渲染矩阵 ── */
+  // 热度分层：按全局最大值分 4 档，不用红绿（星图是蓝金调，别打架）
+  let maxCell = 1;
+  for (const r of rows) for (const k of kindCols) maxCell = Math.max(maxCell, r.kinds[k] || 0);
+  const heat = (v) => {
+    if (!v) return 'st-h0';
+    const t = v / maxCell;
+    if (t > 0.60) return 'st-h4';
+    if (t > 0.32) return 'st-h3';
+    if (t > 0.12) return 'st-h2';
+    return 'st-h1';
+  };
+
+  const head = '<tr>'
+    + '<th class="st-rh">' + (ST_GRAIN === 'day' || ST_GRAIN === 'all' ? '日期' : ST_GRAIN === 'week' ? '周' : ST_GRAIN === 'month' ? '月份' : '年份') + '</th>'
+    + kindCols.map(k => '<th' + (KIND_CN[k] ? '' : '') + '>' + esc(KIND_CN[k] || k) + '</th>').join('')
+    + '<th>合计</th>'
+    + '</tr>';
+
+  const body = rows.map(r => '<tr>'
+    + '<td class="st-rh">' + esc(r.label) + '</td>'
+    + kindCols.map(k => {
+        const v = r.kinds[k] || 0;
+        return '<td class="' + heat(v) + '">' + (v || '<span class="st-h0">·</span>') + '</td>';
+      }).join('')
+    + '<td class="st-tot">' + r.total + '</td>'
+    + '</tr>').join('');
+
+  host.innerHTML = '<table class="st-matrix"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+
+  /* ── 走势图 ──
+     澄说过别画「总量柱状图」（那是流量），但没说不能画图。
+     分类的此消彼长正需要图 —— 表格读不出走势。
+     所以画折线：每条线一个分类，纵轴条数。 */
+  drawStatsPie(kindTotals);
+  drawStatsBar(kindTotals);
+  drawStatsArea(rows, kindCols);
+  drawStatsChart(rows, kindCols, kindTotals);
+  /* 热力图和极值用**全量**数据，不受时间筛选影响 ——
+     它们是"总览"，筛了就没意义了。 */
+  drawStatsHeat(allNodes);
+  drawStatsExtreme(allNodes);
+  drawStatsToday(allNodes);
+
+  /* 起止按钮上的日期 —— 每次渲染都刷（bindStatsUI 只跑一次，值会过期） */
+  const flEl = document.getElementById('stFromLabel');
+  const tlEl = document.getElementById('stToLabel');
+  if (flEl) flEl.textContent = ST_FROM ? ST_FROM.slice(5).replace('-', '/') : '—';
+  if (tlEl) tlEl.textContent = ST_TO ? ST_TO.slice(5).replace('-', '/') : '—';
+
+  /* ── 3) 头部计数 ── */
+  const cEl = document.getElementById('stCount');
+  if (cEl) {
+    const tot = rows.reduce((a, r) => a + r.total, 0);
+    cEl.textContent = tot + ' 条 · ' + rows.length + ' 个' +
+      (ST_GRAIN === 'day' || ST_GRAIN === 'all' ? '日期' : ST_GRAIN === 'week' ? '周' : ST_GRAIN === 'month' ? '月' : '年');
+  }
+
+  /* ── 4) 改口：澄要的那一块 ──
+     数据源：graph.json 的 meta.revisions（每条含 oldId / newText / topic / ts / verdict）
+     和节点上的 revised 字段。
+     只有 1 条也照实显示 —— 摆一条，不假装有统计。 */
+  const revs = [];
+  const metaRev = (DATA.meta && DATA.meta.revisions) || [];
+  for (const r of metaRev) revs.push(r);
+  // 节点上的 revised 字段也收进来（可能有导出没写进 meta 的）
+  for (const n of nodes) {
+    if (n.revised) {
+      const already = revs.some(x => x.ts === n.revised.at);
+      if (!already) revs.push({ oldId: n.id, newText: n.revised.by, ts: n.revised.at, verdict: n.revised.verdict, topic: n.topic });
+    }
+  }
+  revs.sort((a, b) => (b.ts || '') < (a.ts || '') ? -1 : 1);
+
+  const revN = document.getElementById('stReviseN');
+  if (revN) revN.textContent = revs.length ? revs.length + ' 条' : '';
+
+  const revBody = document.getElementById('stReviseBody');
+  if (revBody) {
+    if (!revs.length) {
+      revBody.innerHTML = '<div class="st-note" style="margin-top:0">还没有改口记录。</div>';
+    } else {
+      revBody.innerHTML = revs.map(r => {
+        // 找旧的原文
+        const oldNode = nodes.find(n => n.id === r.oldId);
+        const oldTxt = oldNode ? (oldNode.text || oldNode.t || '') : '';
+        const isRefuted = r.verdict === 'refuted';
+        return '<div class="st-rev">'
+          + '<div class="st-rev-hd">'
+            + '<span class="st-rev-tag' + (isRefuted ? '' : ' ok') + '">'
+              + (isRefuted ? '推翻了自己' : esc(r.verdict || '改口')) + '</span>'
+            + (r.topic ? '<span class="st-rev-topic">' + esc(r.topic) + '</span>' : '')
+            + '<span class="st-rev-time">' + esc(fmtLocalTs(r.ts, true)) + '</span>'
+          + '</div>'
+          + (oldTxt
+              ? '<div class="st-rev-old"><span class="st-rev-lab">原来的说法</span>' + esc(oldTxt) + '</div>'
+              : '<div class="st-rev-old"><span class="st-rev-lab">原来的说法</span>（原始那条已不在图里）</div>')
+          + '<div class="st-rev-new"><span class="st-rev-lab">后来的说法</span>' + esc(r.newText || '') + '</div>'
+        + '</div>';
+      }).join('');
+    }
+  }
+
+  /* ── 5) 边界：老实说数据从哪天开始 ──
+     澄：「把边界说出来比假装有历史强」 */
+  const noteEl = document.getElementById('stNote');
+  if (noteEl) {
+    /* 直接从 ISO 取日期部分（不受本地时区格式化影响），
+       之前用 fmtLocalTs(...).slice(0,10) 取到了「21:44」，是格式化串位置不对。 */
+    const d0 = stLocalDate(minTs) || '—';
+    const d1 = stLocalDate(maxTs) || '—';
+    noteEl.innerHTML = '数据从 <b>' + esc(d0) + '</b> 开始，到 <b>' + esc(d1) + '</b> 为止 —— '
+      + '在这之前没有记录，不是"没有记忆"，是这个库还没开始写。<br>'
+      + '这个页面只数<b>进了图的记忆</b>（' + nodes.length + ' 条）'
+      + '，没数的那些在「未成之星」里。<br>'
+      + '分类的此消彼长说明她往哪偏了，但说明不了为什么 —— '
+      + '「我的判断」变多，可能是想多了，也可能只是敢下判断了，两种完全不一样。';
+  }
+}
+
+/* ── 取一套分类配色（和星图主题一致）── */
+function stKindColor(k) {
+  const th = (THEMES[OPTS.theme] || THEMES.dusk);
+  const c = th.kinds[k];
+  if (Array.isArray(c)) return 'rgb(' + c.join(',') + ')';
+  return c || '#7fb0ff';
+}
+function stKindColorArr(k) {
+  const th = (THEMES[OPTS.theme] || THEMES.dusk);
+  const c = th.kinds[k];
+  if (Array.isArray(c)) return c.slice();
+  // 'rgb(r,g,b)' / '#rrggbb' 都解析一下
+  if (typeof c === 'string') {
+    const m = c.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (m) return [+m[1], +m[2], +m[3]];
+    const h = c.match(/^#([0-9a-f]{6})$/i);
+    if (h) {
+      const n = parseInt(h[1], 16);
+      return [(n>>16)&255, (n>>8)&255, n&255];
+    }
+  }
+  return [127, 176, 255];
+}
+
+/**
+ * 圆环图：看整体构成。
+ * 用环形不用实心饼 —— 中间留空能放总数，也更好看。
+ */
+function drawStatsPie(kindTotals) {
+  const cvs = document.getElementById('stPie');
+  if (!cvs) return;
+  const items = Object.entries(kindTotals).filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const total = items.reduce((a, [, v]) => a + v, 0);
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const SIZE = 168;
+  cvs.style.width = SIZE + 'px';
+  cvs.style.height = SIZE + 'px';
+  cvs.width = Math.round(SIZE * dpr);
+  cvs.height = Math.round(SIZE * dpr);
+  const ctx = cvs.getContext('2d');
+  /* ⚠️ 必须先重置变换再清全尺寸。
+     之前 cvs.width 被重设时，有些浏览器不会自动清画布，
+     导致旧图形叠在新图形上（用户的「没反应」其实是新旧糊在一起）。
+     这里显式设 identity 再清整块物理像素，然后才设 dpr 变换。 */
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const cx = SIZE/2, cy = SIZE/2, R = SIZE/2 - 8, r = R * 0.60;
+  let a0 = -Math.PI/2;
+
+  items.forEach(([k, v]) => {
+    const span = (v / total) * Math.PI * 2;
+    const a1 = a0 + span;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, a0, a1);
+    ctx.arc(cx, cy, r, a1, a0, true);
+    ctx.closePath();
+    ctx.fillStyle = stKindColor(k);
+    ctx.globalAlpha = 0.85;
+    ctx.fill();
+    // 扇区之间留一条细缝，深色底上更清楚
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(8,12,20,.9)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    a0 = a1;
+  });
+
+  // 中间总数
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(228,238,255,.95)';
+  ctx.font = '600 22px ui-sans-serif, system-ui, sans-serif';
+  ctx.fillText(String(total), cx, cy - 6);
+  ctx.fillStyle = 'rgba(120,135,165,.85)';
+  ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+  ctx.fillText('条记忆', cx, cy + 16);
+
+  // 图例（带条数 + 百分比）
+  const lg = document.getElementById('stPieLegend');
+  if (lg) {
+    lg.innerHTML = items.map(([k, v]) =>
+      '<div class="st-pl">'
+        + '<i style="background:' + stKindColor(k) + '"></i>'
+        + '<span class="st-pl-n">' + esc(KIND_CN[k] || k) + '</span>'
+        + '<span class="st-pl-v">' + v + '</span>'
+        + '<span class="st-pl-p">' + Math.round(v / total * 100) + '%</span>'
+      + '</div>'
+    ).join('');
+  }
+  const sub = document.getElementById('stPieSub');
+  if (sub) sub.textContent = items.length + ' 类';
+}
+
+/**
+ * 柱状图：各分类条数横向比较。
+ *
+ * 注意为什么是"按分类"而不是"按天"：
+ * 澄说过「「昨天长了 172 条」不是变化，是流量」——
+ * 按天的柱子就是在数流量，摆出来会变成她刷自己的 KPI。
+ * 按分类的柱子回答的是"她主要由什么构成"，这个才有意义。
+ */
+function drawStatsBar(kindTotals) {
+  const cvs = document.getElementById('stBar');
+  if (!cvs) return;
+  const items = Object.entries(kindTotals).filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (!items.length) return;
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const CSSW = cvs.parentElement.clientWidth - 40;
+  const ROW = 26;
+  const CSSH = items.length * ROW + 26;
+  cvs.style.width = CSSW + 'px';
+  cvs.style.height = CSSH + 'px';
+  cvs.width = Math.round(CSSW * dpr);
+  cvs.height = Math.round(CSSH * dpr);
+  const ctx = cvs.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const PADL = 76, PADR = 46;      // 左边留分类名，右边留数字
+  const W = CSSW - PADL - PADR;
+  const maxV = items[0][1];
+
+  items.forEach(([k, v], i) => {
+    const y = 10 + i * ROW;
+    const bh = 15;
+    const bw = Math.max(3, (v / maxV) * W);
+
+    // 分类名
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(160,175,200,.9)';
+    ctx.font = '11.5px "Microsoft YaHei", sans-serif';
+    ctx.fillText(KIND_CN[k] || k, PADL - 10, y + bh/2);
+
+    // 轨道
+    ctx.fillStyle = 'rgba(140,170,255,.055)';
+    roundRect(ctx, PADL, y, W, bh, 3);
+    ctx.fill();
+
+    // 柱：横向渐变，右端亮
+    const rgb = stKindColorArr(k);
+    const g = ctx.createLinearGradient(PADL, 0, PADL + bw, 0);
+    g.addColorStop(0, 'rgba(' + rgb.join(',') + ',.45)');
+    g.addColorStop(1, 'rgba(' + rgb.join(',') + ',.92)');
+    ctx.fillStyle = g;
+    roundRect(ctx, PADL, y, bw, bh, 3);
+    ctx.fill();
+
+    // 数值
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(200,215,240,.85)';
+    ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillText(String(v), PADL + W + 8, y + bh/2);
+  });
+
+  const sub = document.getElementById('stBarSub');
+  if (sub) sub.textContent = '共 ' + items.reduce((a, [, v]) => a + v, 0) + ' 条';
+}
+
+/**
+ * 堆叠面积图：分类占比变化。
+ *
+ * 为什么不画绝对条数：那会变成"每天长了多少"，澄说那是流量。
+ * 画占比，看的是「她现在主要由什么构成」怎么变 ——
+ * 「我的判断」从 39% 涨到 19% 再跌回 5%，这才是"往哪偏"。
+ */
+function drawStatsArea(rows, kindCols) {
+  const cvs = document.getElementById('stArea');
+  if (!cvs) return;
+  const legend = document.getElementById('stAreaLegend');
+
+  if (rows.length < 2) {
+    cvs.style.display = 'none';
+    if (legend) legend.innerHTML = '<span style="font-size:11px;color:#5c6884">只有一段数据，画不出变化</span>';
+    return;
+  }
+  cvs.style.display = 'block';
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const CSSW = cvs.parentElement.clientWidth - 40;
+  const CSSH = 190;
+  cvs.style.width = CSSW + 'px';
+  cvs.style.height = CSSH + 'px';
+  cvs.width = Math.round(CSSW * dpr);
+  cvs.height = Math.round(CSSH * dpr);
+  const ctx = cvs.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, CSSW, CSSH);
+
+  // 只画占比够大的分类（<2% 的合并进"其他"，否则细条看不清）
+  const totals = rows.map(r => r.total || 1);
+  const kindAvg = kindCols.map(k => ({
+    k,
+    avg: rows.reduce((a, r) => a + (r.kinds[k] || 0) / (r.total || 1), 0) / rows.length
+  })).sort((a, b) => b.avg - a.avg);
+
+  const main = [], other = [];
+  for (const x of kindAvg) {
+    if (x.avg >= 0.02 && main.length < 6) main.push(x.k); else other.push(x.k);
+  }
+
+  const PADL = 36, PADR = 12, PADT = 10, PADB = 26;
+  const W = CSSW - PADL - PADR, H = CSSH - PADT - PADB;
+  const X = (i) => PADL + (i / (rows.length - 1)) * W;
+  const Y = (v) => PADT + H - v * H;      // v 是 0..1 的占比
+
+  // 每行归一化成占比
+  const segs = rows.map(r => {
+    const t = r.total || 1;
+    const out = main.map(k => (r.kinds[k] || 0) / t);
+    const otherSum = other.reduce((a, k) => a + (r.kinds[k] || 0), 0) / t;
+    out.push(otherSum);
+    return out;
+  });
+
+  const colors = main.map(k => stKindColorArr(k)).concat([[110, 122, 145]]);
+  const labels = main.map(k => KIND_CN[k] || k).concat(['其他']);
+
+  // 从下往上堆
+  const base = new Array(rows.length).fill(0);
+  for (let si = 0; si < colors.length; si++) {
+    ctx.beginPath();
+    // 上边
+    for (let i = 0; i < rows.length; i++) {
+      const y = Y(base[i] + segs[i][si]);
+      if (i === 0) ctx.moveTo(X(i), y); else ctx.lineTo(X(i), y);
+    }
+    // 下边（反向）
+    for (let i = rows.length - 1; i >= 0; i--) {
+      ctx.lineTo(X(i), Y(base[i]));
+    }
+    ctx.closePath();
+    const c = colors[si];
+    ctx.fillStyle = 'rgba(' + c.join(',') + ',.55)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(' + c.join(',') + ',.9)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    for (let i = 0; i < rows.length; i++) base[i] += segs[i][si];
+  }
+
+  // 横轴
+  ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(110,125,155,.75)';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const stepX = Math.ceil(rows.length / 8);
+  rows.forEach((r, i) => {
+    if (i % stepX !== 0 && i !== rows.length - 1) return;
+    ctx.fillText(r.label, X(i), PADT + H + 8);
+  });
+
+  // 纵轴：0/50/100%
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const pct of [0, 50, 100]) {
+    const y = Y(pct / 100);
+    ctx.strokeStyle = pct === 0 ? 'rgba(140,170,255,.18)' : 'rgba(140,170,255,.07)';
+    ctx.beginPath(); ctx.moveTo(PADL, y); ctx.lineTo(PADL + W, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(110,125,155,.7)';
+    ctx.fillText(pct + '%', PADL - 7, y);
+  }
+
+  if (legend) {
+    legend.innerHTML = labels.map((lab, i) =>
+      '<span class="st-lg"><i style="background:rgba(' + colors[i].join(',') + ',.8)"></i>' + esc(lab) + '</span>'
+    ).join('');
+  }
+}
+
+/**
+ * 时间热力图：什么时候在记。
+ * 按月排成周网格，一格一天，颜色深浅 = 当天条数。
+ */
+function drawStatsHeat(allNodes) {
+  const host = document.getElementById('stHeat');
+  if (!host) return;
+
+  // 收集每天的条数（本地时区）
+  const perDay = new Map();
+  for (const n of allNodes) {
+    const d = stLocalDate(n.ts);
+    if (!d) continue;
+    perDay.set(d, (perDay.get(d) || 0) + 1);
+  }
+  if (!perDay.size) { host.innerHTML = ''; return; }
+
+  const days = [...perDay.keys()].sort();
+  const first = new Date(days[0] + 'T00:00:00');
+  const last  = new Date(days[days.length-1] + 'T00:00:00');
+
+  // 按"月"分组，每月一个网格
+  const months = [];
+  let cur = new Date(first.getFullYear(), first.getMonth(), 1);
+  while (cur <= last) {
+    const y = cur.getFullYear(), m = cur.getMonth();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const cells = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      cells.push({ key, day: d, n: perDay.get(key) || 0 });
+    }
+    months.push({ y, m, cells });
+    cur = new Date(y, m+1, 1);
+  }
+
+  let maxN = 1;
+  for (const v of perDay.values()) maxN = Math.max(maxN, v);
+
+  const heatCls = (n) => {
+    if (!n) return 'st-hc st-hc0';
+    const t = n / maxN;
+    if (t > 0.7) return 'st-hc st-hc4';
+    if (t > 0.42) return 'st-hc st-hc3';
+    if (t > 0.18) return 'st-hc st-hc2';
+    return 'st-hc st-hc1';
+  };
+
+  const monthName = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+  let html = '';
+  for (const mo of months) {
+    // 这个月第一天是周几（0=周日），用来对齐
+    const firstDow = new Date(mo.y, mo.m, 1).getDay();
+    html += '<div class="st-heat-month">'
+      + '<div class="st-heat-mname">' + mo.y + ' 年 ' + monthName[mo.m] + ' 月</div>'
+      + '<div class="st-heat-grid">';
+    // 星期表头
+    for (const w of ['日','一','二','三','四','五','六']) {
+      html += '<span class="st-heat-w">' + w + '</span>';
+    }
+    for (let i = 0; i < firstDow; i++) html += '<span class="st-hc st-hc0" style="visibility:hidden"></span>';
+    for (const c of mo.cells) {
+      html += '<span class="' + heatCls(c.n) + '" title="' + c.key + ' · ' + c.n + ' 条">'
+        + '<b>' + c.day + '</b></span>';
+    }
+    html += '</div></div>';
+  }
+  host.innerHTML = html;
+
+  const sub = document.getElementById('stHeatSub');
+  if (sub) {
+    const d0 = days[0], d1 = days[days.length-1];
+    sub.textContent = d0 + ' → ' + d1 + ' · 最多一天 ' + maxN + ' 条';
+  }
+}
+
+/**
+ * 极值：最长 / 最被连。
+ * 2026-11-24 用户：「都做」。
+ * 注意这不是"很重要"，只是两头 —— 标题里说清楚。
+ */
+function drawStatsExtreme(nodes) {
+  const host = document.getElementById('stExtreme');
+  if (!host || !nodes.length) return;
+
+  const withTxt = nodes.filter(n => n.t && n.t.length);
+  const longest = withTxt.slice().sort((a,b) => (b.t.length) - (a.t.length))[0];
+  const mostLinked = nodes.slice().sort((a,b) => (b.degree||0) - (a.degree||0))[0];
+  const totalChars = withTxt.reduce((a,n) => a + n.t.length, 0);
+
+  const card = (label, n, extra) => {
+    if (!n) return '';
+    const txt = (n.t || '').replace(/\s+/g,' ').trim();
+    return '<div class="st-ex">'
+      + '<div class="st-ex-hd"><span class="st-ex-tag">' + esc(label) + '</span>'
+      + '<span class="st-ex-kind">' + esc(KIND_CN[n.k] || n.k) + '</span>'
+      + (extra ? '<span class="st-ex-num">' + esc(extra) + '</span>' : '')
+      + '</div>'
+      + '<div class="st-ex-txt">' + esc(txt.slice(0, 130)) + (txt.length > 130 ? '…' : '') + '</div>'
+      + '</div>';
+  };
+
+  host.innerHTML =
+    card('最长', longest, longest ? longest.t.length + ' 字' : '')
+    + card('连得最多', mostLinked, mostLinked ? (mostLinked.degree||0) + ' 条线' : '')
+    + '<div class="st-ex-stat">这些记忆加起来约 <b>' + totalChars.toLocaleString() + '</b> 字'
+    + '，平均一条 <b>' + Math.round(totalChars / Math.max(1, withTxt.length)) + '</b> 字</div>';
+}
+
+/**
+ * 今天新增了什么。
+ * 2026-11-24 用户：「我还想看看今天多了哪些子星的这些数据呢」
+ *
+ * 只列清单，不做柱状图、不给分数 ——
+ * 澄说过「昨天长了 172 条」是流量不是变化。
+ * 但"今天新增了哪些具体的东西"是事实，列出来不冒犯任何人。
+ */
+/* 今天面板看的是哪天/哪一段。
+   2026-11-24 用户：「并且也可以看到任意一天的」。
+     mode='today'  → 今天
+     mode='yday'   → 昨天
+     mode='days7'  → 近 7 天
+     mode='pick'   → 指定的某一天（day 字段）
+*/
+
+
+function drawStatsToday(allNodes) {
+  const subEl = document.getElementById('stTodaySub');
+  const barEl = document.getElementById('stTodayBars');
+  if (!barEl) return;
+
+  /* ── 1) 这块用自己的"今天/昨天/本周"（和下面的图表筛选独立）──
+     2026-11-24 用户：「你那个今天昨天本周面板保留啊」 */
+  const now0 = new Date();
+  const todayStr0 = stLocalDate(now0.toISOString());
+  const ydayStr0 = (() => { const d = new Date(now0); d.setDate(d.getDate()-1); return stLocalDate(d.toISOString()); })();
+  const weekStart0 = (() => {
+    const d = new Date(now0);
+    d.setDate(d.getDate() - ((d.getDay()+6)%7));
+    return stLocalDate(d.toISOString());
+  })();
+
+  let days = [], label = '';
+  if (ST_TODAY_RANGE === 'yday') { days = [ydayStr0]; label = '昨天'; }
+  else if (ST_TODAY_RANGE === 'week') {
+    days = [...new Set(allNodes.map(n => stLocalDate(n.ts))
+      .filter(d => d && d >= weekStart0 && d <= todayStr0))].sort();
+    label = '本周';
+  } else { days = [todayStr0]; label = '今天'; }
+  if (!days.length) days = [todayStr0];
+
+
+  const daySet = new Set(days);
+  const mine = allNodes.filter(n => daySet.has(stLocalDate(n.ts)));
+
+  /* ── 2) 副标题：条数 + 和前一天比 ──
+     只比"相邻一天"，不做累计增长 —— 澄说过规模变化是流量。 */
+  const prevDay = (() => {
+    const last = days[days.length-1];
+    const d = new Date(last + 'T00:00:00'); d.setDate(d.getDate() - 1);
+    return stLocalDate(d.toISOString());
+  })();
+  const prev = allNodes.filter(n => stLocalDate(n.ts) === prevDay);
+
+  const titleEl = document.getElementById('stTodayTitle');
+  if (titleEl) titleEl.textContent = label;
+
+  if (subEl) {
+    if (days.length > 1) {
+      subEl.textContent = mine.length + ' 条 · 覆盖 ' + new Set(mine.map(n => stLocalDate(n.ts))).size + ' 天';
+    } else {
+      const diff = mine.length - prev.length;
+      const diffTxt = prev.length
+        ? (diff > 0 ? '比前一天多 ' + diff : diff < 0 ? '比前一天少 ' + (-diff) : '和前一天一样')
+        : '前一天没有记录';
+      subEl.textContent = mine.length + ' 条 · ' + diffTxt;
+    }
+  }
+
+  /* ── 3) 分类星 / 子星统计 ──
+     2026-11-24 用户：「包括有没有新增在、分类星 子星 等等」
+     这里按分类列出新增了几颗子星，一眼看出"长在哪"。 */
+  if (barEl) {
+    const byKind = {};
+    for (const n of mine) byKind[n.k || 'none'] = (byKind[n.k || 'none'] || 0) + 1;
+    const entries = Object.entries(byKind).sort((a, b) => b[1] - a[1]);
+
+    if (!entries.length) {
+      barEl.innerHTML = '';
+    } else {
+      const maxN = entries[0][1];
+      // 每类的"这一类总数"，用来显示"新增 / 总计"
+      const totals = {};
+      for (const n of allNodes) totals[n.k || 'none'] = (totals[n.k || 'none'] || 0) + 1;
+
+      barEl.innerHTML = entries.map(([k, v]) => {
+        const pct = Math.round(v / maxN * 100);
+        const rgb = stKindColorArr(k).join(',');
+        const tot = totals[k] || v;
+        return '<div class="st-tb">'
+          + '<span class="st-tb-name">' + esc(KIND_CN[k] || k) + '</span>'
+          + '<span class="st-tb-track"><i style="width:' + pct + '%;background:linear-gradient(90deg,rgba(' + rgb + ',.45),rgba(' + rgb + ',.92))"></i></span>'
+          + '<span class="st-tb-n">+' + v + '</span>'
+          + '<span class="st-tb-tot">共 ' + tot + '</span>'
+        + '</div>';
+      }).join('');
+    }
+  }
+
+  /* ── 4) 明细不在这儿列 ──
+     2026-11-24 用户：「记忆变化的重点不是把当天所有的都展示 重点是统计变化
+                       因为记忆轨迹里面不久有当天的吗」
+     —— 对，我把两页搞重了。这里只给条数统计 + 一个去轨迹的入口。 */
+  const gotoEl = document.getElementById('stTodayGoto');
+  if (gotoEl) {
+    if (!mine.length) {
+      gotoEl.innerHTML = '<span class="st-goto-empty">' + esc(label) + '没有新记忆</span>';
+    } else {
+      const day = days.length === 1 ? days[0] : '';
+      gotoEl.innerHTML = '<button class="st-goto-btn" id="stGotoBtn">'
+        + (day ? '去「记忆轨迹」看 ' + esc(day.slice(5)) + ' 的全部记录 →' : '去「记忆轨迹」看这几天的全部记录 →')
+        + '</button>';
+      const gb = document.getElementById('stGotoBtn');
+      if (gb) gb.onclick = () => {
+        // 跳到轨迹页，并把它切到对应日期
+        if (day) {
+          TL_DATE_SET.clear();
+          TL_DATE_SET.add(day);
+          TL_YEAR_SEL = null; TL_MONTH_SEL = null; TL_DEFAULT_DONE = true;
+        }
+        setView('timeline');
+      };
+    }
+  }
+}
+
+/** 分类走势折线图。原生 canvas，不引库。 */
+function drawStatsChart(rows, kindCols, kindTotals) {
+  const cvs = document.getElementById('stChart');
+  const legend = document.getElementById('stLegend');
+  if (!cvs) return;
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const CSSW = cvs.parentElement.clientWidth - 40;
+  const CSSH = 220;
+  cvs.style.width = CSSW + 'px';
+  cvs.style.height = CSSH + 'px';
+  cvs.width = Math.round(CSSW * dpr);
+  cvs.height = Math.round(CSSH * dpr);
+  const ctx = cvs.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, CSSW, CSSH);
+
+  // 只画"有起伏"的分类：全程平的不画，省得十几条线糊成一团
+  const showKinds = kindCols.filter(k => {
+    const vals = rows.map(r => r.kinds[k] || 0);
+    const mx = Math.max(...vals), mn = Math.min(...vals);
+    return mx > 0 && (mx !== mn);
+  }).slice(0, 6);          // 最多 6 条，再多就分不清
+
+  if (!showKinds.length || rows.length < 2) {
+    ctx.fillStyle = 'rgba(120,135,165,.5)';
+    ctx.font = '12px "Microsoft YaHei",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(rows.length < 2 ? '只有一段数据，画不出走势' : '这几个分类没有起伏', CSSW/2, CSSH/2);
+    if (legend) legend.innerHTML = '';
+    return;
+  }
+
+  const PADL = 46, PADR = 16, PADT = 14, PADB = 30;
+  const W = CSSW - PADL - PADR, H = CSSH - PADT - PADB;
+
+  // 纵轴上限
+  let maxV = 1;
+  for (const k of showKinds) for (const r of rows) maxV = Math.max(maxV, r.kinds[k] || 0);
+  // 取整到好读的刻度
+  const step = Math.max(1, Math.ceil(maxV / 4 / 5) * 5);
+  const top = Math.ceil(maxV / step) * step;
+
+  const X = (i) => PADL + (rows.length === 1 ? W/2 : (i / (rows.length - 1)) * W);
+  const Y = (v) => PADT + H - (v / top) * H;
+
+  // 网格 + 纵轴刻度
+  ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let v = 0; v <= top; v += step) {
+    const y = Y(v);
+    ctx.strokeStyle = v === 0 ? 'rgba(140,170,255,.18)' : 'rgba(140,170,255,.07)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PADL, y); ctx.lineTo(PADL + W, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(110,125,155,.75)';
+    ctx.fillText(String(v), PADL - 9, y);
+  }
+
+  // 分类配色：从星图主题里取，保持一致
+  const th = (THEMES[OPTS.theme] || THEMES.dusk);
+  const palette = showKinds.map(k => {
+    const c = th.kinds[k];
+    if (Array.isArray(c)) return 'rgb(' + c.join(',') + ')';
+    return c || '#7fb0ff';
+  });
+
+  // 横轴标签
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(110,125,155,.75)';
+  const stepX = Math.ceil(rows.length / 8);      // 标签太挤就隔几个画一个
+  rows.forEach((r, i) => {
+    if (i % stepX !== 0 && i !== rows.length - 1) return;
+    ctx.fillText(r.label, X(i), PADT + H + 9);
+  });
+
+  // 折线
+  showKinds.forEach((k, ki) => {
+    const col = palette[ki];
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.8;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.9;
+
+    ctx.beginPath();
+    rows.forEach((r, i) => {
+      const x = X(i), y = Y(r.kinds[k] || 0);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // 点
+    ctx.globalAlpha = 1;
+    rows.forEach((r, i) => {
+      const v = r.kinds[k] || 0;
+      if (!v) return;
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(X(i), Y(v), 2.6, 0, 7); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  });
+
+  // 图例
+  if (legend) {
+    legend.innerHTML = showKinds.map((k, ki) =>
+      '<span class="st-lg"><i style="background:' + palette[ki] + '"></i>'
+      + esc(KIND_CN[k] || k) + '</span>'
+    ).join('');
+  }
+}
+
+function ensureStats() {
+  renderStats();
+  bindStatsUI();
+}
+
+let ST_UI_BOUND = false;
+function bindStatsUI() {
+  if (ST_UI_BOUND) return;
+  ST_UI_BOUND = true;
+
+  const seg = document.getElementById('stSeg');
+  if (seg) {
+    seg.addEventListener('click', (e) => {
+      const b = e.target.closest('.st-segbtn');
+      if (!b) return;
+      ST_GRAIN = b.dataset.g;
+      const [a, z] = stPresetRange(ST_GRAIN);
+      ST_FROM = a; ST_TO = z;
+      [...seg.querySelectorAll('.st-segbtn')].forEach(x => x.classList.toggle('on', x === b));
+      renderStats();
+    });
+  }
+
+
+  /* 今天卡片：今天 / 昨天 / 本周 */
+  const tTabs = document.getElementById('stTodayTabs');
+  if (tTabs && !tTabs.dataset.bound) {
+    tTabs.dataset.bound = '1';
+    tTabs.addEventListener('click', (ev) => {
+      const b = ev.target.closest('.st-ttab');
+      if (!b || !b.dataset.d) return;
+      ST_TODAY_RANGE = b.dataset.d;
+      [...tTabs.querySelectorAll('.st-ttab')].forEach(x => x.classList.toggle('on', x === b));
+      renderStats();
+    });
+  }
+
+  // 起止两个按钮：各自打开日历改自己那一头
+  const fromBtn = document.getElementById('stFromBtn');
+  const toBtn = document.getElementById('stToBtn');
+  if (fromBtn) fromBtn.onclick = (ev) => { ev.stopPropagation(); openStatsCal('from'); };
+  if (toBtn)   toBtn.onclick   = (ev) => { ev.stopPropagation(); openStatsCal('to'); };
+
+
+  // 回到今天
+  const rst = document.getElementById('stReset');
+  if (rst) rst.onclick = () => {
+    const [a, z] = stPresetRange('day');
+    ST_FROM = a; ST_TO = z; ST_GRAIN = 'day';
+    const sg = document.getElementById('stSeg');
+    if (sg) [...sg.querySelectorAll('.st-segbtn')].forEach((x, i) => x.classList.toggle('on', i === 0));
+    renderStats();
+  };
+  // 点别处关掉
+  if (!window.__stCalOutside) {
+    window.__stCalOutside = true;
+    document.addEventListener('click', (ev) => {
+      const pop = document.getElementById('stCalPop');
+      if (!pop || !pop.classList.contains('show')) return;
+      if (pop.contains(ev.target) || ev.target.closest('#stCalBtn')) return;
+      pop.classList.remove('show');
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   自绘日历
+   2026-11-24 用户：「这个年月日控件不好看 而且要显示有的天」
+   —— 原生 input[type=date] 的弹层是浏览器画的，样式改不了，
+      也没法在格子上标"哪天有数据"。所以自己画一个：
+        · 有数据的天：格子亮 + 底下一个小点 + 右上角条数
+        · 没数据的天：暗，可点但没意义（点了会说"这天没有记录"）
+   ══════════════════════════════════════════════════════════════ */
+let ST_CAL_YM = null;      // 当前显示的月份 'YYYY-MM'
+let ST_CAL_TARGET = 'from'; // 'from' | 'to' —— 这次在改哪一头
+
+function openStatsCal(target) {
+  ST_CAL_TARGET = target || 'from';
+  const pop = document.getElementById('stCalPop');
+  if (!pop) return;
+  const open = pop.classList.contains('show');
+  if (open) { pop.classList.remove('show'); return; }
+
+  // 初始显示：选中那天所在月，或最新有数据的月
+  const allNodes = DATA && DATA.nodes ? DATA.nodes : [];
+  const dates = allNodes.map(n => stLocalDate(n.ts)).filter(Boolean);
+  const sel = (ST_CAL_TARGET === 'to' ? ST_TO : ST_FROM) || '';
+  ST_CAL_YM = sel ? sel.slice(0,7)
+    : (dates.length ? dates.sort()[dates.length-1].slice(0,7) : stLocalDate(new Date().toISOString()).slice(0,7));
+
+  renderStatsCal(dates);
+  pop.classList.add('show');
+}
+
+function renderStatsCal(dates) {
+  const pop = document.getElementById('stCalPop');
+  if (!pop || !ST_CAL_YM) return;
+
+  const [yy, mm] = ST_CAL_YM.split('-').map(Number);
+  const firstDow = new Date(yy, mm-1, 1).getDay();        // 0=周日
+  const daysInMonth = new Date(yy, mm, 0).getDate();
+
+  // 每天的条数
+  const perDay = new Map();
+  for (const d of dates) {
+    if (d.startsWith(ST_CAL_YM)) perDay.set(d, (perDay.get(d)||0)+1);
+  }
+  let maxN = 1;
+  for (const v of perDay.values()) maxN = Math.max(maxN, v);
+
+  const todayStr = stLocalDate(new Date().toISOString());
+  const selStr = (ST_CAL_TARGET === 'to' ? ST_TO : ST_FROM) || '';
+
+  const monthNames = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+  let html = '<div class="st-cal-hd">'
+    + '<button class="st-cal-nav" data-nav="-1">‹</button>'
+    + '<span class="st-cal-ym">' + yy + ' 年 ' + monthNames[mm-1] + ' 月</span>'
+    + '<button class="st-cal-nav" data-nav="1">›</button>'
+    + '<button class="st-cal-close" id="stCalClose">✕</button>'
+    + '</div>';
+
+  html += '<div class="st-cal-grid">';
+  for (const w of ['日','一','二','三','四','五','六']) {
+    html += '<span class="st-cal-w">' + w + '</span>';
+  }
+  for (let i = 0; i < firstDow; i++) html += '<span class="st-cal-c empty"></span>';
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = ST_CAL_YM + '-' + String(d).padStart(2,'0');
+    const n = perDay.get(key) || 0;
+    const cls = ['st-cal-c'];
+    if (!n) cls.push('nodata');
+    if (key === todayStr) cls.push('today');
+    if (key === selStr) cls.push('sel');
+    const level = n ? Math.min(4, Math.ceil(n / maxN * 4)) : 0;
+    html += '<span class="' + cls.join(' ') + '" data-day="' + key + '"'
+      + (n ? ' title="' + key + ' · ' + n + ' 条"' : ' title="' + key + ' · 没有记录"')
+      + '>' + d
+      + (n ? '<i class="st-cal-dot lv' + level + '"></i>' : '')
+      + '</span>';
+  }
+  html += '</div>';
+
+  // 底部：这个月有几天有数据
+  const daysWith = [...perDay.keys()].length;
+  html += '<div class="st-cal-ft">'
+    + '本月 ' + daysWith + ' 天有记录，共 ' + [...perDay.values()].reduce((a,b)=>a+b,0) + ' 条'
+    + '</div>';
+
+  pop.innerHTML = html;
+
+  // 绑定：翻月
+  pop.querySelectorAll('.st-cal-nav').forEach(b => {
+    b.onclick = (ev) => {
+      ev.stopPropagation();
+      const delta = Number(b.dataset.nav);
+      const [y2, m2] = ST_CAL_YM.split('-').map(Number);
+      const nd = new Date(y2, m2-1+delta, 1);
+      ST_CAL_YM = nd.getFullYear() + '-' + String(nd.getMonth()+1).padStart(2,'0');
+      renderStatsCal(dates);
+    };
+  });
+  const cl = document.getElementById('stCalClose');
+  if (cl) cl.onclick = () => pop.classList.remove('show');
+
+  // 绑定：点日期
+  pop.querySelectorAll('.st-cal-c[data-day]').forEach(cell => {
+    cell.onclick = () => {
+      const d = cell.dataset.day;
+      if (ST_CAL_TARGET === 'to') {
+        ST_TO = d;
+        if (ST_FROM && ST_TO < ST_FROM) ST_FROM = d;   // 终点不能早于起点
+      } else {
+        ST_FROM = d;
+        if (ST_TO && ST_FROM > ST_TO) ST_TO = d;       // 起点不能晚于终点
+      }
+      pop.classList.remove('show');
+      // 手改了日期就不再属于任何预设粒度
+      const seg2 = document.getElementById('stSeg');
+      if (seg2) [...seg2.querySelectorAll('.st-segbtn')].forEach(x => x.classList.remove('on'));
+      renderStats();
+    };
+  });
+}
+
 function renderExcluded() {
   const body = document.getElementById('exBody');
   const fEl = document.getElementById('exFilter');
@@ -6235,7 +8089,11 @@ function renderExcluded() {
       allD.set(d, (allD.get(d) || 0) + 1);
     }
 
-    const curY = selY.value, curM = selM.value, curD = selD.value;
+    /* 初值从状态读，不从 DOM 读 ——
+       否则默认筛选设了 ST_*，下拉还显示"全部年份"，界面和实际不一致。 */
+    const curY = EX_YEAR_SEL || '';
+    const curM = EX_MONTH_SEL || '';
+    const curD = EX_DAY_SEL || '';
 
     selY.innerHTML = '<option value="">全部年份</option>';
     for (const y of [...byY.keys()].sort().reverse()) {
@@ -6344,29 +8202,6 @@ function renderTimeline(days) {
   }
 
   const { all, out } = tlRegroup(days);
-
-  // ── 筛选条：每个分类显示条数，0 条的淡出但还在 ──
-  const counts = {};
-  for (const it of all) { const c = tlCatOf(it); counts[c] = (counts[c] || 0) + 1; }
-  const fEl = document.getElementById('tlFilter');
-  if (fEl) {
-    fEl.innerHTML = '';
-    for (const c of TL_CATS) {
-      const n = c.key === 'all' ? all.length : (counts[c.key] || 0);
-      const b = document.createElement('button');
-      b.className = 'tl-fbtn' + (TL_FILTER === (c.key === 'all' ? null : c.key) ? ' on' : '')
-        + (n === 0 ? ' zero' : '');
-      b.innerHTML = esc(c.label) + `<span class="n">${n}</span>`;
-      if (n > 0) {
-        b.onclick = () => {
-          const next = (c.key === 'all') ? null : c.key;
-          TL_FILTER = (TL_FILTER === next) ? null : next;
-          renderTimeline(days);
-        };
-      }
-      fEl.appendChild(b);
-    }
-  }
 
   /* ══════════════════════════════════════════════════════════
      日期筛选：三个下拉选择器（年 / 月 / 日）
@@ -6480,6 +8315,44 @@ function renderTimeline(days) {
       else if (TL_MONTH_SEL)    pickCount.textContent = '只看 ' + TL_MONTH_SEL;
       else if (TL_YEAR_SEL)     pickCount.textContent = '只看 ' + TL_YEAR_SEL + ' 年';
       else                      pickCount.textContent = '';
+    }
+  }
+
+  /* ── 分类筛选条 ──
+     ⚠️ 2026-11-24 用户：「明明有个 2 却没有东西」
+     —— 选中「作品 2」之后一片空白。
+     原因：这些数字是从**全量**（all）数的，没考虑日期筛选。
+     11/24 那天一条作品都没有，但按钮上还写着 2，
+     点了当然空。数字必须跟着当前时间范围走，否则就是在骗人点。 */
+  const inRange = (it) => {
+    const d = localDateOfTs(it.ts);
+    if (!d) return !TL_DATE_SET.size && !TL_MONTH_SEL && !TL_YEAR_SEL;
+    if (TL_DATE_SET.size) return TL_DATE_SET.has(d);
+    if (TL_MONTH_SEL) return d.startsWith(TL_MONTH_SEL);
+    if (TL_YEAR_SEL) return d.startsWith(TL_YEAR_SEL);
+    return true;
+  };
+  const ranged = all.filter(inRange);
+
+  const counts = {};
+  for (const it of ranged) { const c = tlCatOf(it); counts[c] = (counts[c] || 0) + 1; }
+  const fEl = document.getElementById('tlFilter');
+  if (fEl) {
+    fEl.innerHTML = '';
+    for (const c of TL_CATS) {
+      const n = c.key === 'all' ? ranged.length : (counts[c.key] || 0);
+      const b = document.createElement('button');
+      b.className = 'tl-fbtn' + (TL_FILTER === (c.key === 'all' ? null : c.key) ? ' on' : '')
+        + (n === 0 ? ' zero' : '');
+      b.innerHTML = esc(c.label) + `<span class="n">${n}</span>`;
+      if (n > 0) {
+        b.onclick = () => {
+          const next = (c.key === 'all') ? null : c.key;
+          TL_FILTER = (TL_FILTER === next) ? null : next;
+          renderTimeline(days);
+        };
+      }
+      fEl.appendChild(b);
     }
   }
 
