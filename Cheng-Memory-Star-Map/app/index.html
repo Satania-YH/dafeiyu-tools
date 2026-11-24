@@ -1382,6 +1382,12 @@ let yaw = 0.6, pitch = -0.18, zoom = 1;
 let dragging=false, dragMoved=false, lastX=0, lastY=0;
 let proj = new Float32Array(4);
 let selected = -1, hovered = -1;
+/* 鼠标当前悬浮在哪条线上（-1 = 没有）。
+   2026-11-24 用户纠正：「不是说线上的字平时不显示吗 我点击子星后
+   鼠标悬浮到线上再显示字 你不是这样改的吗」
+   —— 原来我做的是「选中星 → 它那几条线全标字」，一圈挂着十几块文字，还是乱。
+   正确的：平时一条都不显示；悬浮到哪条线，才显示那一条。 */
+let hoverEdge = -1;
 let labelsCv = [];
 let focusCache = { i:-1, list:[] };
 
@@ -2369,7 +2375,14 @@ function drawCoreStar(ctx){
   /* 亮度到"绷紧"的程度：峰值附近才明显，平时几乎没有 */
   const taut = Math.max(0, Math.min(1, (bi - 0.55) / 0.45));
 
-  const R = Math.max(74, Math.min(190, REF * 0.29 * Math.sqrt(zoom)));  // 日面半径
+  /* 日面半径。
+     2026-11-24 用户：「为什么我滚轮放大之后这么亮啊」
+     原来是 REF*0.29*Math.sqrt(zoom) —— 中心这颗跟着 zoom 一起长大，
+     放大到 4 倍时它就是一颗糊满半个屏幕的白球，周围的东西全被它吃掉。
+     核心该是"定住的锚"，看周围时才放大。所以这里把 zoom 的影响几乎去掉：
+     只在 zoom<1（缩小）时略微收一点，放大时完全不变。 */
+  const zoomCalm = Math.min(1, Math.max(0.72, Math.pow(zoom, 0.18)));
+  const R = Math.max(58, Math.min(108, REF * 0.20 * zoomCalm));  // 日面半径
   /* 涨缩跟亮度走得更明显：平时缩着，炸开时才撑起来 */
   const scale = 0.84 + 0.30 * bi;
 
@@ -2956,8 +2969,9 @@ function draw(){
   /* 连线名牌：只在「点中某颗星」时显示（C 方案）。
      平时不显示 —— 3235 条线全标名字会糊成一片。
      但可以一键关掉（OPTS.showLinkLabel = false），给嫌烦的人。 */
-  const labelLinks = (focus >= 0) && (OPTS.showLinkLabel !== false);
-  const placedLabels = [];      // 本帧已画的名牌框，用来防重叠
+  /* 一次只显示一条 —— 悬浮到哪条线，才显示那条。
+     平时一条都不显示（3235 条全标名字会糊成一片）。 */
+  const labelLinks = (hoverEdge >= 0) && (OPTS.showLinkLabel !== false);
 
   const focusSet = new Set();
   if (focus>=0) for (const ei of adj[focus]) { const e=edges[ei]; focusSet.add(e.a===focus?e.b:e.a); }
@@ -2966,7 +2980,8 @@ function draw(){
   const focusKind = focus>=0 ? nodes[focus].k : null;
   const focusColor = (focusKind && themeRGB.kinds[focusKind]) || themeRGB.link;
 
-  for (const e of edges){
+  for (let eiHover = 0; eiHover < edges.length; eiHover++){
+    const e = edges[eiHover];
     // 时间滑条：两端只要有一头还没"长出来"，这条线就不该存在
     const ev = Math.min(tbV(e.a), tbV(e.b));
     if (ev <= 0.004) continue;
@@ -3000,38 +3015,37 @@ function draw(){
        标什么：相似度 + 对面那颗星的一句话标题。
        为什么不是「因为文字相似 0.87」这种长句 —— 太长会盖住星点，
        数字（0.87）+ 对方标题已经够读出「哦是跟那条像」。 */
-    if (isF && labelLinks && OPTS.showLinkLabel !== false){
-      const other = (e.a === focus) ? e.b : e.a;
+    /* 只画鼠标正悬浮着的那一条（hoverEdge）。一次一块文字，绝不叠。 */
+    if (labelLinks && eiHover === hoverEdge){
+      const other = (e.a === selected) ? e.b : (e.b === selected ? e.a : e.b);
       const on = nodes[other];
       if (on){
         const mx = (ax + bx) / 2, my = (ay + by) / 2;
-        const ttl = linkLabelOf(on.t, 10);      // 标题截短一点，字号小了不需要那么长
-        const txt = e.w.toFixed(2) + (ttl ? ' ' + ttl : '');
-        ctx.font = '500 8.5px ui-sans-serif, system-ui, "Microsoft YaHei", sans-serif';
+        const ttl = linkLabelOf(on.t, 16);
+        const txt = e.w.toFixed(2) + (ttl ? '  ' + ttl : '');
+        ctx.font = '500 11px ui-sans-serif, system-ui, "Microsoft YaHei", sans-serif';
         const tw = ctx.measureText(txt).width;
-        const pw = tw + 8, ph = 13;
-        // 防重叠：跟已经画过的名牌撞了就往下挪
-        let px = mx - tw / 2 - 4, py = my - 6.5;
-        for (let guard = 0; guard < 8; guard++) {
-          let hit = false;
-          for (const r of placedLabels) {
-            if (px < r.x + r.w && px + pw > r.x && py < r.y + r.h && py + ph > r.y) { hit = true; break; }
-          }
-          if (!hit) break;
-          py += ph + 2;
-        }
-        placedLabels.push({ x: px, y: py, w: pw, h: ph });
+        const pw = tw + 14, ph = 19;
+        /* 往上挪，别压在星点上 —— 截过一版，0.633 的「0.」被星点盖住，
+           只剩「1.63」，能读成另一个数。 */
+        const px = mx - pw / 2, py = my - ph / 2 - 11;
 
-        ctx.globalAlpha = 0.66;
-        ctx.fillStyle = 'rgba(8,12,22,.82)';
-        roundRect(ctx, px, py, pw, ph, 3.5);
+        /* 底要实。半透明的底下面有星点、有其他线的名牌，会透上来打架。
+           这是「一次性只出现一块」的东西，实底不会挡什么，反而读得清。 */
+        ctx.globalAlpha = 0.94;
+        ctx.fillStyle = 'rgba(10,14,26,.92)';
+        roundRect(ctx, px, py, pw, ph, 4);
         ctx.fill();
-        ctx.globalAlpha = 0.9;
-        ctx.fillStyle = 'rgba(200,215,245,.9)';
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = rgbStr(focusColor, .5);
+        ctx.lineWidth = 1;
+        roundRect(ctx, px, py, pw, ph, 4);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(226,236,255,.96)';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(txt, px + 4, py + ph / 2 + 0.5);
-        ctx.globalAlpha = 1;
+        ctx.fillText(txt, px + 7, py + ph / 2 + 0.5);
       }
     }
   }
@@ -3107,9 +3121,23 @@ function draw(){
     const imp = (n.imp == null || !Number.isFinite(n.imp)) ? 0.45 : Math.max(0.05, n.imp);
     // n.use 可能没有（服务端没给这条字段），别让 Math.log 吃 undefined 变 NaN
     const useBoost = 1 + 0.16*Math.log(1 + (Number(n.use) || 0));
-    let size = OPTS.sizeBase * Math.pow(imp, OPTS.sizePower) * useBoost * (persp/(REF/2.6)) * 1.70;
+
+    /* ══════ 放大时星点不该跟着无限变大 ══════
+       2026-11-24 用户截图：「为什么我滚轮放大之后这么亮啊」
+       根因：原来是 `persp/(REF/2.6)` —— persp ∝ zoom，size 随 zoom 线性增长。
+       而光晕又是 `size * 3.6`，两层叠加 → 放大 4 倍时星点面积变 16 倍，
+       十几颗星的光晕糊成一片白。
+
+       真实相机不会这样：放大是把东西拉近，不是把东西本身变大。
+       所以这里把「随 zoom 增长的幅度」压下来 —— 用 sqrt 而不是线性，
+       再封一个绝对上限。放大还是有"更近"的感觉，但不会糊。 */
+    const zoomBoost = Math.sqrt(Math.max(0.3, persp / (REF / 2.6)));
+    let size = OPTS.sizeBase * Math.pow(imp, OPTS.sizePower) * useBoost * zoomBoost * 1.70;
     if (n.bh) size *= 0.34;
-    if (n.ball) size *= 1.65;
+    /* 「澄」本体：固定是核心，不该跟着 zoom 长大。
+       用 zoomBoost=1 时的基准尺寸，让它永远那么大 ——
+       放大是看它周围的东西，不是把核心放大成一团糊。 */
+    if (n.ball) size *= 1.65 * (1 / Math.max(0.6, zoomBoost));
     if (n.disk) size *= 0.78;
 
     /* 小类保底尺寸。
@@ -3655,11 +3683,26 @@ stage.addEventListener('pointermove', e=>{
   // 鼠标在搜索框上时不做拾取，避免背后星图的提示气泡乱弹
   if (e.target.closest && e.target.closest('#searchBox')) {
     hovered = -1;
+    hoverEdge = -1;
     tipEl.classList.remove('show');
     return;
   }
   const i = pick(e.clientX, e.clientY);
   hovered = i;
+
+  /* 悬浮到线上 → 记下是哪条，渲染时只给这一条标名字。
+     只在「已选中某颗星」时才做 —— 平时满屏都是线，随便一动就不停出字，更乱。
+
+     ⚠️ 这里和点击时一样，必须先判线再判星。
+     实测：同一点上 pick 返回星 5、pickEdge 返回线 733 —— 线中点经常
+     正好落在某颗小星上。若先判星，鼠标永远停在"星"上，线永远 hover 不到。 */
+  hoverEdge = -1;
+  if (selected >= 0) {
+    hoverEdge = pickEdge(e.clientX, e.clientY);
+  }
+  // 悬浮在线上时给个手型光标，让人知道"这条能点"
+  if (hoverEdge >= 0) stage.style.cursor = 'pointer';
+  else if (i < 0) stage.style.cursor = '';
   if (i >= 0 || i === -2) touchInteraction();   // 悬停到星星上：先停下，好点
   // 气泡是 fixed 定位，边界要用视口宽高来夹，不能用画布的 W/H
   const VW = window.innerWidth, VH = window.innerHeight;
@@ -3682,7 +3725,7 @@ stage.addEventListener('pointermove', e=>{
     tipEl.classList.remove('show');
   }
 });
-stage.addEventListener('pointerleave', ()=>{ hovered=-1; tipEl.classList.remove('show'); });
+stage.addEventListener('pointerleave', ()=>{ hovered=-1; hoverEdge=-1; stage.style.cursor=''; tipEl.classList.remove('show'); });
 stage.addEventListener('wheel', e=>{
   // 在搜索框 / 搜索结果里滚轮应该滚列表，不是缩放星图
   if (e.target.closest && e.target.closest('#searchBox')) return;
@@ -4486,6 +4529,7 @@ function openCard(i){
 function closeCard(){
   selected = -1;
   selectedEdge = -1;
+  hoverEdge = -1;
   cardEl.classList.remove('show');
 }
 
