@@ -1501,6 +1501,25 @@ function buildPairsText(){
   return out;
 }
 
+/* 圆角矩形（画连线名牌的底） */
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
+}
+
+/* 连线名牌上用的短标题：取前 14 个字，去掉换行 */
+function linkLabelOf(t, maxLen) {
+  const s = String(t || '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  const n = maxLen || 14;
+  return s.length > n ? s.slice(0, n) + '…' : s;
+}
+
 function buildEdges(){
   // 服务端已经算好边了：拿到后按下面的 linkTopK / linkThreshold 再剪一次
   if (DATA.linkMode === 'edges' && Array.isArray(DATA.precomputedEdges)) {
@@ -2934,6 +2953,12 @@ function draw(){
   // —— 连线
   ctx.lineCap='round';
   const focus = selected>=0 ? selected : hovered;
+  /* 连线名牌：只在「点中某颗星」时显示（C 方案）。
+     平时不显示 —— 3235 条线全标名字会糊成一片。
+     但可以一键关掉（OPTS.showLinkLabel = false），给嫌烦的人。 */
+  const labelLinks = (focus >= 0) && (OPTS.showLinkLabel !== false);
+  const placedLabels = [];      // 本帧已画的名牌框，用来防重叠
+
   const focusSet = new Set();
   if (focus>=0) for (const ei of adj[focus]) { const e=edges[ei]; focusSet.add(e.a===focus?e.b:e.a); }
   const extra = focus>=0 ? extraEdges(focus) : [];
@@ -2966,6 +2991,49 @@ function draw(){
     if (isF){ ctx.shadowBlur = 10; ctx.shadowColor = rgbStr(col, .9); }
     ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
     if (isF){ ctx.shadowBlur = 0; }
+
+    /* ══════ 聚焦时给连线「加名字」══════
+       2026-11-24 澄：「线没有名字……普通人一眼就把它读成『这两件事有关』，
+         其实只是『文字像』。这不用懂技术就会误解。」
+       C 方案（用户选定）：点一颗星 → 只给它那几条线标名字。一次最多 6 条，绝不会乱。
+
+       标什么：相似度 + 对面那颗星的一句话标题。
+       为什么不是「因为文字相似 0.87」这种长句 —— 太长会盖住星点，
+       数字（0.87）+ 对方标题已经够读出「哦是跟那条像」。 */
+    if (isF && labelLinks && OPTS.showLinkLabel !== false){
+      const other = (e.a === focus) ? e.b : e.a;
+      const on = nodes[other];
+      if (on){
+        const mx = (ax + bx) / 2, my = (ay + by) / 2;
+        const ttl = linkLabelOf(on.t, 10);      // 标题截短一点，字号小了不需要那么长
+        const txt = e.w.toFixed(2) + (ttl ? ' ' + ttl : '');
+        ctx.font = '500 8.5px ui-sans-serif, system-ui, "Microsoft YaHei", sans-serif';
+        const tw = ctx.measureText(txt).width;
+        const pw = tw + 8, ph = 13;
+        // 防重叠：跟已经画过的名牌撞了就往下挪
+        let px = mx - tw / 2 - 4, py = my - 6.5;
+        for (let guard = 0; guard < 8; guard++) {
+          let hit = false;
+          for (const r of placedLabels) {
+            if (px < r.x + r.w && px + pw > r.x && py < r.y + r.h && py + ph > r.y) { hit = true; break; }
+          }
+          if (!hit) break;
+          py += ph + 2;
+        }
+        placedLabels.push({ x: px, y: py, w: pw, h: ph });
+
+        ctx.globalAlpha = 0.66;
+        ctx.fillStyle = 'rgba(8,12,22,.82)';
+        roundRect(ctx, px, py, pw, ph, 3.5);
+        ctx.fill();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = 'rgba(200,215,245,.9)';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(txt, px + 4, py + ph / 2 + 0.5);
+        ctx.globalAlpha = 1;
+      }
+    }
   }
 
   if (focus>=0 && extra.length){
@@ -3450,6 +3518,95 @@ function pick(clientX, clientY){
   return best;
 }
 
+/* ════════════════════════════════════════════════════════════
+   点线看详情（2026-11-24 用户的要求）
+   
+   交互流程（用户设计的）：
+     点星     → 锁定选中，鼠标移开不取消
+     此时点线 → 显示这条线的信息（相似度 + 两边原文）
+     点空白   → 取消
+     右键     → 取消
+   
+   平时线不显示文字（只有选中某颗星时才在聚焦的那几条上标数字）。
+   ════════════════════════════════════════════════════════════ */
+
+let selectedEdge = -1;      // 选中的边下标（-1 = 没选）
+
+/**
+ * 找离点击点最近的边。
+ * 只在「已经选中某颗星」时才用 —— 平时点线不该有反应，
+ * 否则用户想点空白取消，会被附近的线拦下来。
+ * @returns 边在 edges 里的下标，找不到返回 -1
+ */
+function pickEdge(clientX, clientY) {
+  if (edges.length === 0 || N === 0) return -1;
+  const r = cv.getBoundingClientRect();
+  const mx = clientX - r.left;
+  const my = clientY - r.top;
+  let best = -1, bestD = 7;            // 7px 以内算点中（线很细，给宽松点）
+
+  for (let i = 0; i < edges.length; i++) {
+    const e = edges[i];
+    const ax = proj[e.a*4], ay = proj[e.a*4+1];
+    const bx = proj[e.b*4], by = proj[e.b*4+1];
+    if (!isFinite(ax) || !isFinite(ay) || !isFinite(bx) || !isFinite(by)) continue;
+
+    // 点到线段的距离
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx*dx + dy*dy;
+    let t = len2 > 0 ? ((mx - ax)*dx + (my - ay)*dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const px = ax + dx*t, py = ay + dy*t;
+    const d = Math.hypot(mx - px, my - py);
+
+    // 只认「聚焦时高亮的那几条」—— 其他线太淡，点中也没意义
+    const isFocusEdge = (selected >= 0) && (e.a === selected || e.b === selected);
+    if (!isFocusEdge) continue;
+
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+
+/** 边详情卡：说清「凭什么连」，以及这不是「有关系」 */
+function openEdgeCard(ei) {
+  if (!cardEl || ei < 0 || ei >= edges.length) return;
+  const e = edges[ei];
+  const A = nodes[e.a], B = nodes[e.b];
+  if (!A || !B) return;
+
+  selectedEdge = ei;
+  selected = -1;               // 让焦点转到这条线上
+
+  /* ══════ 措辞：按澄 2026-11-24 定的 ══════
+     她否定了我原来那套「很像 / 比较像 / 有点像 / 勉强算像」：
+       「这四个词我都不太想要，连分档都可以不要。因为一条线写『很像』，
+         人就会读成『这俩有关系』；可它算的只是两句话用词像不像
+         ——词像 ≠ 讲同一件事 ≠ 有因果。」
+       「0.6 这个门槛是我们自己划的，给它起名字是在假装它有意义。」
+       「『像』这个词本身就带滑梯 —— 像→同类→有关。
+         要不被误读，就别用『像』，用『字面接近』。」
+     所以：不写形容词，只给数。用「字面接近度」，不用「相似/像」。 */
+  const pct = (e.w * 100).toFixed(0);
+  const raw = e.w.toFixed(3);
+
+  cardEl.innerHTML =
+    '<div class="row1">'
+      + '<span class="badge" style="background:#7fb0ff1f;color:#9fc4ff">连线 · 字面接近</span>'
+      + '<span class="close" id="cx">✕</span>'
+    + '</div>'
+    + '<div class="meta">'
+      + '<div class="lab">字面接近度</div><div class="val">' + raw + '（' + pct + '%，门槛 0.60）</div>'
+      + '<div class="lab">A 方</div><div class="val">' + esc((A.t || '').slice(0, 90)) + '</div>'
+      + '<div class="lab">B 方</div><div class="val">' + esc((B.t || '').slice(0, 90)) + '</div>'
+    + '</div>'
+    + '<div class="feel">这条线只说明这两句用了相近的词。'
+    + '是不是一回事、有没有因果，得回去看这两句原本在说什么、什么时候说的。</div>';
+
+  cardEl.classList.add('show');
+  setTimeout(() => { const c2 = document.getElementById('cx'); if (c2) c2.onclick = closeCard; }, 0);
+}
+
 stage.addEventListener('pointerdown', e=>{
   if (e.target !== cv) return;
   touchInteraction();                 // 一按下就停转，别让它边转边被拖
@@ -3543,11 +3700,35 @@ stage.addEventListener('click', e=>{
   const r = cv.getBoundingClientRect();
   if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
   touchInteraction();
+
+  /* 顺序很重要（2026-11-24 实测踩到）：
+     已经选中某颗星时，**先判线、再判星**。
+     因为线很细，点线时很容易落在旁边某颗星上 ——
+     先判星的话就变成"换了一颗星"，永远点不到线。
+     只有在没选中任何星的时候，才按原来的顺序（只判星）。 */
+  if (selected >= 0) {
+    const ei = pickEdge(e.clientX, e.clientY);
+    if (ei >= 0) { openEdgeCard(ei); return; }
+  }
+
   const i = pick(e.clientX, e.clientY);
-  if (i >= 0 || i === -2) openCard(i); else closeCard();
+  if (i >= 0 || i === -2) {
+    selectedEdge = -1;
+    openCard(i);
+    return;
+  }
+  closeCard();
 });
 window.addEventListener('keydown', e=>{
   if (e.key === 'Escape'){ closeCard(); }
+});
+/* 右键取消选中（用户要求：「鼠标右击单击就取消点的选中」）
+   注意：右键按住拖动是平移，不能一按就取消 —— 所以只在「没有拖动」时取消。 */
+stage.addEventListener('contextmenu', e=>{
+  if (e.target !== cv) return;
+  e.preventDefault();
+  if (dragMoved) return;          // 拖过就是平移操作，不算取消
+  closeCard();
 });
 
 /* ══════════ 搜索 ══════════ */
@@ -4302,7 +4483,11 @@ function openCard(i){
   cardEl.classList.add('show');
   setTimeout(()=>{ const c2=document.getElementById('cx'); if(c2) c2.onclick=closeCard; },0);
 }
-function closeCard(){ selected = -1; cardEl.classList.remove('show'); }
+function closeCard(){
+  selected = -1;
+  selectedEdge = -1;
+  cardEl.classList.remove('show');
+}
 
 /* ---------------- HUD ---------------- */
 function updateHud(){
@@ -4448,7 +4633,9 @@ function loop(t){
 /* ---------------- 面板 UI ---------------- */
 const SLIDERS = [
   { key:'sizeBase',      label:'节点大小', min:4,   max:26,  step:0.5, fmt:v=>v.toFixed(1) },
-  { key:'linkThreshold', label:'连线阈值', min:0.35,max:0.92,step:0.01, fmt:v=>v.toFixed(2) },
+  /* 2026-11-24 澄：「别用『相似/像』，用『字面接近』。」
+     「相似」和「像」都自带滑梯：像 → 同类 → 有关。 */
+  { key:'linkThreshold', label:'字面接近度门槛', min:0.35,max:0.92,step:0.01, fmt:v=>v.toFixed(2) },
   { key:'linkTopK',      label:'每颗连线数',min:1,  max:8,   step:1,   fmt:v=>String(v|0) },
   { key:'linkAlpha',     label:'连线亮度', min:0.15,max:3,   step:0.05,fmt:v=>v.toFixed(2) },
   { key:'glow',          label:'发光强度', min:0,   max:1.6, step:0.05, fmt:v=>v.toFixed(2) },
