@@ -365,6 +365,10 @@
     display:flex; align-items:center; gap:10px;
     margin:22px 0 18px; padding-top:18px; flex-wrap:wrap;
     border-top:1px solid rgba(140,170,255,.08);
+    /* 定位上下文：日历弹层靠它定位。没有这行的话
+       .st-cal-pop 的 top:100% 会相对整页算，弹到屏幕外面去
+       （实测 x=1447 y=915，用户「点不了」其实是弹在看不见的地方） */
+    position:relative;
   }
   .st-range-lb{ font-size:11px; color:#5c6884; }
   .st-seg{ display:flex; gap:2px; background:rgba(140,170,255,.05);
@@ -435,10 +439,11 @@
   .st-cal-btn:hover{ background:rgba(140,170,255,.11); color:#cfdcf7; }
   .st-cal-ico{ font-size:9px; color:#5c6884; }
 
-  /* 相对 st-today-nav 定位，用 top:100% 落在按钮下方 */
+  /* 相对 .st-picker 定位，对齐到起止按钮那一带（不是贴着卡片左边缘）。
+     2026-11-24 用户：「位置往右靠」——之前 left:0 会盖住左边的饼图。 */
   .st-cal-pop{
     display:none; position:absolute; z-index:120;
-    top:100%; right:0; margin-top:6px;
+    top:100%; left:300px; margin-top:6px;
     width:252px; padding:12px 12px 10px;
     border-radius:10px;
     background:#111725; border:1px solid rgba(140,170,255,.20);
@@ -481,6 +486,23 @@
   .st-cal-c:not(.nodata):not(.empty):hover{ background:rgba(140,170,255,.20); color:#e8eeff; }
   .st-cal-c.today{ box-shadow:inset 0 0 0 1px rgba(140,170,255,.35); }
   .st-cal-c.sel{ background:rgba(255,212,121,.85); color:#241c08; font-weight:600; }
+  /* 拖选时中间那段 */
+  .st-cal-c.inrange{
+    background:rgba(255,212,121,.20);
+    color:#e8d9a8;
+  }
+  .st-cal-c.inrange.nodata{ color:#3a4254; background:rgba(255,212,121,.07); }
+  /* 两端和中间要能分开看：
+     中间是淡黄底，两端是实心金色 + 一圈光，读起来才像"从这到那" */
+  .st-cal-c.edge-a, .st-cal-c.edge-b{
+    background:rgba(255,212,121,.92); color:#241c08; font-weight:700;
+    box-shadow:0 0 0 1.5px rgba(255,225,160,.75), 0 0 10px rgba(255,200,110,.35);
+  }
+  .st-cal-c.inrange{ border-radius:0; }
+  .st-cal-c.inrange.edge-a{ border-radius:5px 0 0 5px; }
+  .st-cal-c.inrange.edge-b{ border-radius:0 5px 5px 0; }
+  .st-cal-c.inrange.edge-a.edge-b{ border-radius:5px; }
+  .st-cal-c{ user-select:none; touch-action:none; }
   .st-cal-c.sel .st-cal-dot{ background:#241c08; }
 
   /* 有数据的小点 */
@@ -493,6 +515,10 @@
   .st-cal-dot.lv3{ background:rgba(150,205,245,.9); }
   .st-cal-dot.lv4{ background:rgba(255,212,121,.95); width:4px; height:4px; }
 
+  .st-cal-hint{
+    margin-top:8px; font-size:9.5px; color:#4a5468; text-align:center;
+    letter-spacing:.02em;
+  }
   .st-cal-ft{
     margin-top:8px; padding-top:7px; font-size:9.5px; color:#5c6884;
     border-top:1px solid rgba(140,170,255,.08); text-align:center;
@@ -8005,6 +8031,7 @@ function renderStatsCal(dates) {
 
   // 底部：这个月有几天有数据
   const daysWith = [...perDay.keys()].length;
+  html += '<div class="st-cal-hint">按住从起点拖到终点，松手就选这一段</div>';
   html += '<div class="st-cal-ft">'
     + '本月 ' + daysWith + ' 天有记录，共 ' + [...perDay.values()].reduce((a,b)=>a+b,0) + ' 条'
     + '</div>';
@@ -8025,24 +8052,84 @@ function renderStatsCal(dates) {
   const cl = document.getElementById('stCalClose');
   if (cl) cl.onclick = () => pop.classList.remove('show');
 
-  // 绑定：点日期
-  pop.querySelectorAll('.st-cal-c[data-day]').forEach(cell => {
-    cell.onclick = () => {
-      const d = cell.dataset.day;
-      if (ST_CAL_TARGET === 'to') {
-        ST_TO = d;
-        if (ST_FROM && ST_TO < ST_FROM) ST_FROM = d;   // 终点不能早于起点
-      } else {
-        ST_FROM = d;
-        if (ST_TO && ST_FROM > ST_TO) ST_TO = d;       // 起点不能晚于终点
-      }
-      pop.classList.remove('show');
-      // 手改了日期就不再属于任何预设粒度
-      const seg2 = document.getElementById('stSeg');
-      if (seg2) [...seg2.querySelectorAll('.st-segbtn')].forEach(x => x.classList.remove('on'));
-      renderStats();
-    };
-  });
+  /* ══════ 拖选一段范围 ══════
+     2026-11-24 用户：「我想做成那种起始终止联动的选择器」「拖选一段」
+     —— 在日历上按住鼠标从起点拖到终点，松手就定下来。
+
+     ⚠️ 第一版用每个格子的 pointerenter 检测"拖过哪"，结果不灵：
+     setPointerCapture 之后，所有指针事件都锁在起始元素上，
+     后面的 pointerenter 根本不会触发（实测拖动中 inrange 恒为 1）。
+     改为在 document 上听 pointermove，用 elementFromPoint 手动命中最稳妥。 */
+
+  const allCells = [...pop.querySelectorAll('.st-cal-c[data-day]')];
+  let dragAnchor = null;
+
+  const paintRange = (a, b) => {
+    if (!a || !b) return;
+    const lo = a < b ? a : b;
+    const hi = a < b ? b : a;
+    for (const c of allCells) {
+      const d = c.dataset.day;
+      c.classList.toggle('inrange', d >= lo && d <= hi);
+      c.classList.toggle('edge-a', d === a);
+      c.classList.toggle('edge-b', d === b);
+    }
+  };
+
+  const clearPaint = () => {
+    for (const c of allCells) c.classList.remove('inrange', 'edge-a', 'edge-b');
+  };
+
+  const dayAt = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    const c = el && el.closest ? el.closest('.st-cal-c[data-day]') : null;
+    return c ? c.dataset.day : null;
+  };
+
+  const commit = (a, b) => {
+    const lo = a < b ? a : b;
+    const hi = a < b ? b : a;
+    ST_FROM = lo; ST_TO = hi;
+    const seg2 = document.getElementById('stSeg');
+    if (seg2) [...seg2.querySelectorAll('.st-segbtn')].forEach(x => x.classList.remove('on'));
+    renderStats();
+  };
+
+  for (const c of allCells) {
+    c.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      dragAnchor = c.dataset.day;
+      clearPaint();
+      paintRange(dragAnchor, dragAnchor);
+    });
+  }
+
+  /* 全局监听：拖动中实时刷新区间，松手就提交 */
+  const onMove = (ev) => {
+    if (!dragAnchor) return;
+    const d = dayAt(ev.clientX, ev.clientY);
+    if (d) paintRange(dragAnchor, d);
+  };
+
+  const onUp = (ev) => {
+    if (!dragAnchor) return;
+    const anchor = dragAnchor;
+    dragAnchor = null;
+    const d = dayAt(ev.clientX, ev.clientY) || anchor;
+    pop.classList.remove('show');
+    commit(anchor, d);
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+  };
+
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  // 重新渲染时清掉上轮的监听，避免堆积
+  if (pop.__dragCleanup) pop.__dragCleanup();
+  pop.__dragCleanup = () => {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+  };
 }
 
 function renderExcluded() {
