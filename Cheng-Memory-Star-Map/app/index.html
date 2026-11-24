@@ -1987,6 +1987,17 @@ function applyShape(){
       n.tz = (n.z*0.44 + c.z*0.56) * OPTS.spread;
     }
   }
+
+  /* ══════ 团心的目标位置 ══════
+     上面几条分支只在"新建团"时设了 x/y/z，没设 tx/ty/tz。
+     于是主循环的平滑追 `c.x += (c.tx-c.x)*k` 会算成 NaN ——
+     表现就是团心不动、团之间没有排斥。
+
+     2026-11-24 补：布局结束后统一过一遍 relayoutAllClusters，
+     让它把 tx/ty/tz 补齐（含团间排斥）。x/y/z 已经有的不覆盖。 */
+  if (clusterInfo.length && typeof relayoutAllClusters === 'function') {
+    relayoutAllClusters();
+  }
 }
 
 /* ---------------- 相机 ---------------- */
@@ -2099,8 +2110,17 @@ function makeHollowSprite(rgb, a){
   return c;
 }
 
+/* 每个 kind 有几颗 —— 小类保底尺寸要用 */
+let KIND_TOTALS = {};
+function recountKinds(){
+  const m = {};
+  for (const n of nodes) if (n && n.k) m[n.k] = (m[n.k] || 0) + 1;
+  KIND_TOTALS = m;
+}
+
 function initSprites(){
   sprites = {}; spritesDim = {};
+  recountKinds();
 
   /* 先给主题里定义好的类别造精灵 */
   for (const k in themeRGB.kinds){
@@ -2819,10 +2839,24 @@ function draw(){
     radii.push(Math.hypot(x-cx, y-cy));
     order.push(i);
   }
+  /* ══════ 自适应缩放 ══════
+     2026-11-24 改：原来只在第一次算（!fitK）之后就锁死。
+     结果团间排斥把图撑大后，最外圈的分类直接被挤出视野
+     （实测「常驻记忆」「我的判断」跑出画外，看不见了）。
+
+     现在每帧都算目标值，但 fitK 用平滑追（走 8% 一步），
+     这样布局变化时是"缓缓缩放"，不是突然跳一下。
+     而且留 4% 余量，别让边缘的团贴着画框。 */
   const sorted = radii.slice().sort((a,b)=>a-b);
   const p96 = sorted[Math.min(sorted.length-1, Math.floor(sorted.length*0.96))] || 1;
-  const fitTarget = (Math.min(W,H)*0.465) / (p96 || 1);
+  const fitTarget = (Math.min(W,H)*0.465) / (p96 || 1) * 0.96;
   if (!fitK) fitK = fitTarget;
+  else {
+    // 差异超过 3% 才动，避免每帧微抖
+    if (Math.abs(fitTarget - fitK) / fitK > 0.03) {
+      fitK += (fitTarget - fitK) * 0.08;
+    }
+  }
   for (let i=0;i<N;i++){
     proj[i*4]   = cx + (proj[i*4]  -cx)*fitK;
     proj[i*4+1] = cy + (proj[i*4+1]-cy)*fitK;
@@ -2959,6 +2993,14 @@ function draw(){
     if (n.bh) size *= 0.34;
     if (n.ball) size *= 1.65;
     if (n.disk) size *= 0.78;
+
+    /* 小类保底尺寸。
+       2026-11-24：spoken（说出去的）只有 2 颗，"实心+开口环"这套画法在小尺寸下
+       根本看不出来 —— 等于白设计了。凡是一类里少于 4 颗的，给个下限，
+       让它的形状能被看清（不是放大重要性，是保证"形状可读"）。 */
+    const KIND_COUNT = (typeof KIND_TOTALS !== 'undefined' && KIND_TOTALS[n.k]) || 0;
+    const isSmallKind = KIND_COUNT > 0 && KIND_COUNT <= 4;
+    if (isSmallKind) size = Math.max(size, 9.5);
     /* 便条：「还开着的」是还欠着的事，「已了结的」只是记录。
        2026-11-23 澄说「约定和作品不该当日常噪音剔出去，它俩是唯一两种
        『还在等』的东西」——所以还开着的要明显比了结的重。 */
@@ -5944,14 +5986,90 @@ function relayoutAllClusters() {
     list[k].ty = uy * rr * 0.72;                 // y 压扁，像星系盘
     list[k].tz = Math.sin(ang) * ring * rr;
 
-    // 首次没有实际位置时直接落位，避免从 (0,0,0) 飞出来
-    if (!list[k].x && !list[k].y && !list[k].z) {
-      list[k].x = list[k].tx;
-      list[k].y = list[k].ty;
-      list[k].z = list[k].tz;
+  }
+
+  /* ══════ 团与团之间的排斥 ══════
+     斐波那契球面保证方向均匀，但保证不了"够远"——
+     两个挨得近的团（比如便条和读到的话）会在屏幕上糊成一片。
+
+     做法：迭代推开。每个团按自己的半径 + 对方的半径设一个最小间距，
+     不够就沿连线方向互推；同时加一点向外的力，别全挤进球心。
+
+     为什么不用强斥力：星图是"星系"，不是分子模拟。
+     推太狠会让整张图散成孤岛，失去"它们都属于同一个人"的感觉。
+     所以力度克制（REPEL_K），迭代次数也少（REPEL_ITERS）。 */
+  const REPEL_ITERS = 26;
+  const REPEL_K = 0.55;
+
+  // 每个团的"占地半径"：团心 + 子星散布范围
+  const radOf = (c) => Math.max(0.16, (c.rad || 0.1) + 0.06);
+
+  for (let it = 0; it < REPEL_ITERS; it++) {
+    let moved = false;
+    for (let a = 0; a < n; a++) {
+      for (let b = a + 1; b < n; b++) {
+        const A = list[a], B = list[b];
+        let dx = B.tx - A.tx, dy = B.ty - A.ty, dz = B.tz - A.tz;
+        let dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        if (dist < 1e-6) {
+          // 完全重合：随便挑个方向分开（用下标保证确定性，不用随机）
+          const th = a * 2.399963 + b * 1.618034;
+          dx = Math.cos(th); dy = Math.sin(th * 0.7) * 0.5; dz = Math.sin(th);
+          dist = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1;
+        }
+        const minD = (radOf(A) + radOf(B)) * 1.15;
+        if (dist < minD) {
+          const push = (minD - dist) * 0.5 * REPEL_K;
+          const ux = dx / dist, uy = dy / dist, uz = dz / dist;
+          A.tx -= ux * push; A.ty -= uy * push; A.tz -= uz * push;
+          B.tx += ux * push; B.ty += uy * push; B.tz += uz * push;
+          moved = true;
+        }
+      }
+    }
+    // 每轮轻微往壳面上拉一次，避免被推到球心或飞出去
+    for (let k = 0; k < n; k++) {
+      const c = list[k];
+      const r = Math.sqrt(c.tx*c.tx + c.ty*c.ty + c.tz*c.tz) || 1e-6;
+      const want = shell * 0.95;
+      if (r < want * 0.55) {
+        // 太靠里了：往外推
+        const f = (want * 0.55 - r) / r * 0.35;
+        c.tx += c.tx * f; c.ty += c.ty * f; c.tz += c.tz * f;
+        moved = true;
+      }
+    }
+    if (!moved) break;      // 已经分开了，不用继续
+  }
+
+  /* ══════ 排斥之后：把整体半径拉回壳内 ══════
+     排斥会把图撑大（实测最远的那几个团会挤出视野，左边的常驻记忆看不见了）。
+     所以推完再归一化一次：算出现在最远的团有多远，等比缩回壳的尺寸。
+
+     等比缩放而不是逐个夹紧 —— 逐个夹会破坏刚推好的相对位置。 */
+  let maxR = 0;
+  for (let k = 0; k < n; k++) {
+    const c = list[k];
+    maxR = Math.max(maxR, Math.sqrt(c.tx*c.tx + c.ty*c.ty + c.tz*c.tz));
+  }
+  const LIMIT = shell * 1.02;
+  if (maxR > LIMIT) {
+    const f = LIMIT / maxR;
+    for (let k = 0; k < n; k++) {
+      list[k].tx *= f; list[k].ty *= f; list[k].tz *= f;
+    }
+  }
+
+  // 排斥完再落位（首次）
+  for (let k = 0; k < n; k++) {
+    const c = list[k];
+    if (!c.x && !c.y && !c.z) {
+      c.x = c.tx; c.y = c.ty; c.z = c.tz;
     }
   }
 }
+
+
 
 function registerNewNodeToCluster(i) {
   const n = nodes[i];

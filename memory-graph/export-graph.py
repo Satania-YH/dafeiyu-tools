@@ -482,11 +482,15 @@ import sqlite3
 ins_nodes=[]
 try:
     con=sqlite3.connect(DB); con.row_factory=sqlite3.Row; cur=con.cursor()
-    for r in cur.execute("select id,content,category,importance,effective_importance from insights where deleted_at is null"):
+    for r in cur.execute("select id,content,category,importance,effective_importance,created_at from insights where deleted_at is null"):
         c=(r['content'] or '').strip()
         if not c: continue
+        # 2026-11-24：insight 之前没带 ts，导致 46 条 insight 在时间滑条上全是"无日期"。
+        # mnemon.db 里 created_at 是有值的，补上。重路由成 rule/memory 的也跟着有日期了。
+        _ts = (r['created_at'] or '').strip() or None
         ins_nodes.append({'id':'ins:'+r['id'],'kind':'insight','text':c,'category':r['category'],
-                          'importance':r['importance'],'eff_importance':r['effective_importance']})
+                          'importance':r['importance'],'eff_importance':r['effective_importance'],
+                          'ts':_ts, 'day':(_ts[:10] if _ts else None)})
     con.close()
 except Exception as ex:
     print('DB ERR', ex, file=sys.stderr)
@@ -526,8 +530,12 @@ try:
         # 改用 created_at（实测 7 条被编辑过、created_at 不变，稳定）压成 20261121T034252Z 这种形态。
         created=(en.get('created_at') or '').strip()
         cid=re.sub(r'[-:.]','',created).replace('Z','Z') or ('idx%d'%i)
+        # 2026-11-24：memory 之前只有 created_at（字符串，被前端当 id 用了），没有 ts。
+        # 结果 24 条常驻记忆在时间滑条上全是"无日期"。补 ts / day。
         mem_nodes.append({'id':'mem:'+cid,'kind':'memory','text':c,'target':en.get('target'),
-                          'importance':en.get('importance'),'created_at':created})
+                          'importance':en.get('importance'),'created_at':created,
+                          'ts': created or None,
+                          'day': (created[:10] if created else None)})
 except Exception as ex:
     print('MEM ERR', ex, file=sys.stderr)
 
