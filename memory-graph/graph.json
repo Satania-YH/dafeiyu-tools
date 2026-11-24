@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-24T23:31:49",
+  "generatedAt": "2026-11-24T23:34:36",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,9 +11,9 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 3367,
+   "events_total": 3368,
    "event_types": {
-    "meta": 1988,
+    "meta": 1989,
     "seed": 1,
     "utterance": 1043,
     "heard": 317,
@@ -43,14 +43,14 @@
   },
   "excluded_reasons": {
    "self-said-likely-question": 1,
-   "injection-command": 71,
-   "injection-wrapped": 20,
    "self-said": 4,
-   "system-report": 3,
-   "schedule": 41,
    "house-event": 2,
+   "schedule": 41,
+   "injection-command": 71,
    "mojibake": 1,
-   "system-text": 9
+   "system-report": 3,
+   "system-text": 9,
+   "injection-wrapped": 20
   },
   "merged": [
    {

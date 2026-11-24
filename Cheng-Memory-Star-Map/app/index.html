@@ -300,16 +300,17 @@
   #timeline::-webkit-scrollbar{ width:8px; }
   #timeline::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.18); border-radius:4px; }
 
-  #timeline .tl-page{ max-width:980px; margin:0 auto; }
+  /* 记忆轨迹 和 星图轨迹 共用同一套版式（2026-11-24 用户：「布局和记忆轨迹对齐」） */
+  #timeline .tl-page, #startrack .tl-page{ max-width:980px; margin:0 auto; }
 
-  #timeline .tl-head{
+  #timeline .tl-head, #startrack .tl-head{
     display:flex; align-items:baseline; gap:12px; margin-bottom:6px;
   }
-  #timeline .tl-head h1{
+  #timeline .tl-head h1, #startrack .tl-head h1{
     margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff;
   }
-  #timeline .tl-head .tl-count{ font-size:11.5px; color:#5c6884; }
-  #timeline .tl-sub{ font-size:11.5px; color:#65718c; margin:4px 0 16px; letter-spacing:.05em; }
+  #timeline .tl-head .tl-count, #startrack .tl-head .tl-count{ font-size:11.5px; color:#5c6884; }
+  #timeline .tl-sub, #startrack .tl-sub{ font-size:11.5px; color:#65718c; margin:4px 0 16px; letter-spacing:.05em; }
 
   /* 分类筛选条 */
   .tl-filter{
@@ -338,6 +339,19 @@
 
   /* ══════════ 记忆变化 ══════════ */
   /* 和其他页面同一套定位：left 让出侧栏、top 让出顶栏 */
+  #startrack{
+    position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
+    overflow-y:auto; overflow-x:hidden; z-index:45;
+    background:linear-gradient(180deg,rgba(9,13,23,.99),rgba(5,7,13,.99));
+    /* 和 #timeline 完全一致：22 30 40 */
+    padding:22px 30px 40px;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .22s, visibility .22s, left .26s cubic-bezier(.4,0,.2,1);
+  }
+  #rail.collapsed ~ #startrack{ left:52px; }
+  #startrack::-webkit-scrollbar{ width:8px; }
+  #startrack.shown{ opacity:1; visibility:visible; pointer-events:auto; }
+
   #statspage{
     position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
     overflow-y:auto; overflow-x:hidden; z-index:45;
@@ -530,6 +544,28 @@
     color:#a8b6d4; color-scheme:dark; cursor:pointer;
   }
   .st-date-input:focus{ outline:none; border-color:rgba(122,180,255,.5); }
+
+  /* 分类星空 */
+  .st-starfield{
+    margin:6px 0 10px; border-radius:8px; overflow:hidden;
+    background:radial-gradient(ellipse at 50% 40%, rgba(30,45,75,.28) 0%, rgba(8,11,18,0) 70%);
+  }
+  #stStarCv{ display:block; }
+
+  /* 星空分页 */
+  .st-sf-pager{
+    display:flex; align-items:center; gap:5px; justify-content:center;
+    padding:8px 0 12px;
+  }
+  .st-sf-pg{
+    min-width:24px; height:22px; padding:0 7px; border-radius:6px;
+    font-family:inherit; font-size:11px; cursor:pointer;
+    background:rgba(140,170,255,.05); border:1px solid rgba(140,170,255,.12);
+    color:#7c88a6; transition:.14s;
+  }
+  .st-sf-pg:hover{ background:rgba(140,170,255,.13); color:#cfdcf7; }
+  .st-sf-pg.on{ background:rgba(255,212,121,.16); border-color:rgba(255,212,121,.42); color:#ffd479; }
+  .st-sf-pgtxt{ font-size:10px; color:#4a5468; margin-left:8px; }
 
   /* 分类子星条 */
   .st-today-bars{ margin:12px 0 14px; display:flex; flex-direction:column; gap:5px; }
@@ -1265,6 +1301,9 @@
     <button class="nav-item" data-view="timeline">
       <span class="ico">☰</span><span class="nav-label">记忆轨迹</span>
     </button>
+    <button class="nav-item" data-view="startrack">
+      <span class="ico">✧</span><span class="nav-label">星图轨迹</span>
+    </button>
     <button class="nav-item" data-view="excluded">
       <span class="ico">⊘</span><span class="nav-label">未成之星</span>
     </button>
@@ -1368,6 +1407,28 @@
    </div>
   </section>
 
+  <!-- ══════ 星图轨迹：只看星图里这 400 多颗星的出生记录 ══════
+       2026-11-24 用户：「左边再加一项叫星图轨迹 专门统计星图变化的
+                        和记忆轨迹一样 也要带分类和时间选择」 -->
+  <section id="startrack">
+   <div class="tl-page">
+    <div class="tl-head">
+      <h1>星 图 轨 迹</h1>
+      <span class="tl-count" id="srtCount"></span>
+    </div>
+    <p class="tl-sub">按时间倒序 · 每天点开看当天成了哪些星</p>
+    <div class="tl-filter" id="srtFilter"></div>
+    <div class="tl-picker" id="srtPicker">
+      <select class="tl-sel" id="srtSelYear"><option value="">全部年份</option></select>
+      <select class="tl-sel" id="srtSelMonth"><option value="">全部月份</option></select>
+      <select class="tl-sel" id="srtSelDay"><option value="">全部日期</option></select>
+      <button class="tl-reset" id="srtReset" title="清空">✕</button>
+      <span class="tl-pickcount" id="srtPickCount"></span>
+    </div>
+    <div id="srtBody"><div class="tl-empty">正在读取…</div></div>
+   </div>
+  </section>
+
   <!-- ══════ 记忆变化：按天/周/月看分类的此消彼长 ══════ -->
   <section id="statspage">
    <div class="st-page">
@@ -1393,6 +1454,12 @@
           </div>
         </div>
       </div>
+      <!-- 分类星空：大类一颗大星，新增的子星挂在它周围 -->
+      <div class="st-starfield" id="stStarfield">
+        <canvas id="stStarCv"></canvas>
+        <div class="st-star-tip" id="stStarTip"></div>
+      </div>
+      <div class="st-sf-pager" id="stSfPager"></div>
       <div class="st-today-bars" id="stTodayBars"></div>
       <!-- 明细不在这儿列（记忆轨迹里已经有了）——只给个入口 -->
       <div class="st-today-goto" id="stTodayGoto"></div>
@@ -6749,6 +6816,7 @@ function setView(v){
   const isStarmap = (v === 'starmap');
   const isExcluded = (v === 'excluded');
   const isStats = (v === 'statspage');
+  const isStartrack = (v === 'startrack');
 
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('on', b.dataset.view === v);
@@ -6760,12 +6828,15 @@ function setView(v){
   if (exEl) exEl.classList.toggle('shown', isExcluded);
   const stEl = document.getElementById('statspage');
   if (stEl) stEl.classList.toggle('shown', isStats);
+  const srtEl = document.getElementById('startrack');
+  if (srtEl) srtEl.classList.toggle('shown', isStartrack);
   stage.classList.toggle('asleep', !isStarmap);
 
   if (isSettings) panel.scrollTop = 0;
   if (isTimeline) { if (tlEl) tlEl.scrollTop = 0; ensureTimeline(); }
   if (isExcluded) { if (exEl) exEl.scrollTop = 0; ensureExcluded(); }
   if (isStats) { if (stEl) stEl.scrollTop = 0; ensureStats(); }
+  if (isStartrack) { if (srtEl) srtEl.scrollTop = 0; ensureStartrack(); }
 
   // 切回星图时重算画布尺寸（导航宽度可能变过）
   requestAnimationFrame(()=>{ if (isStarmap && typeof resize === 'function') resize(); });
@@ -7178,6 +7249,10 @@ function renderStats() {
      所以画折线：每条线一个分类，纵轴条数。 */
   drawStatsPie(kindTotals);
   drawStatsBar(kindTotals);
+  /* 分类星空：大星 = 这类总量，周围小星 = 这段时间新增 */
+  const addedByKind = {};
+  for (const n of nodes) addedByKind[n.k || 'none'] = (addedByKind[n.k || 'none'] || 0) + 1;
+  drawStatsStarfield(allNodes, addedByKind);
   drawStatsArea(rows, kindCols);
   drawStatsChart(rows, kindCols, kindTotals);
   /* 热力图和极值用**全量**数据，不受时间筛选影响 ——
@@ -7773,6 +7848,202 @@ function drawStatsToday(allNodes) {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   分类星空
+   2026-11-24 用户：「我还想看到分类星的新增和子星的增加数据面板
+                    可以做炫酷一点 分类星就是大一点的动态闪烁的星星
+                    子星稍微小一点」
+   设计：
+     · 每个分类一颗大星，大小按这类累计总量
+     · 大星外面绕一圈小星，颗数按这段时间新增
+     · 大星缓慢闪烁（相位不同，不整齐划一）
+     · 小星慢慢公转、各自眨眼，出生时有亮起过程
+   ══════════════════════════════════════════════════════════════════ */
+
+let ST_SF_ANIM = null;
+let ST_SF_DATA = [];
+let ST_SF_PAGE = 0;         // 星空当前第几页（每页 7 颗）
+let ST_SF_T0 = 0;
+
+function drawStatsStarfield(allNodes, byKindAdded) {
+  const cv = document.getElementById('stStarCv');
+  const host = document.getElementById('stStarfield');
+  if (!cv || !host) return;
+
+  if (ST_SF_ANIM) { cancelAnimationFrame(ST_SF_ANIM); ST_SF_ANIM = null; }
+
+  const totalOf = {};
+  for (const n of allNodes) totalOf[n.k || 'none'] = (totalOf[n.k || 'none'] || 0) + 1;
+
+  const kinds = Object.keys(byKindAdded).filter(k => byKindAdded[k] > 0);
+  if (!kinds.length) { host.style.display = 'none'; return; }
+  host.style.display = 'block';
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const CSSW = Math.max(320, host.clientWidth - 2);
+  const CSSH = 260;
+  cv.style.width = CSSW + 'px';
+  cv.style.height = CSSH + 'px';
+  cv.width = Math.round(CSSW * dpr);
+  cv.height = Math.round(CSSH * dpr);
+  const ctx = cv.getContext('2d');
+
+  const maxTotal = Math.max(...kinds.map(k => totalOf[k] || 1));
+  const items = kinds.map((k, i) => {
+    const t = totalOf[k] || 1;
+    const r = 9 + 24 * Math.pow(t / maxTotal, 0.55);
+    return { k, name: KIND_CN[k] || k, total: t, added: byKindAdded[k], r };
+  }).sort((p, q) => q.total - p.total);
+
+  /* 一页固定放 7 颗（单排），超出的分页。
+     2026-11-24 用户：「做个分页不就行了」
+     —— 比换行好：高度固定，不会因为分类变多把页面拉长。 */
+  const PAGE = 7;
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE));
+  if (ST_SF_PAGE >= pageCount) ST_SF_PAGE = 0;
+  const pageItems = items.slice(ST_SF_PAGE * PAGE, ST_SF_PAGE * PAGE + PAGE);
+
+  /* ── 布局：自动换行，分类再多也不会挤 ──
+     2026-11-24 用户：「如果有新的分类星会往后追加吗」
+     会。但要保证追加之后不挤 —— 所以按每排能放几颗来折行。
+     每颗占位 ≈ 大星直径 + 子星环，按当前最大半径算。 */
+  const n = pageItems.length;
+  const maxR = Math.max(...items.map(it => it.r));
+  const cell = Math.max(120, maxR * 2 + 90);
+  pageItems.forEach((it, i) => {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    const pad = Math.max(70, (CSSW - n * cell) / 2 + cell / 2);
+    it.x = pad + t * (CSSW - pad * 2);
+    it.y = CSSH * 0.44 + Math.sin(i * 1.7) * 10;
+    it.hue = stKindColorArr(it.k);
+    it.phase = (i * 1.31) % (Math.PI * 2);
+    it.subs = [];
+    const cnt = Math.min(20, it.added);
+    for (let j = 0; j < cnt; j++) {
+      const ang = (j / cnt) * Math.PI * 2 + i * 0.9;
+      const dist = it.r + 13 + (j % 3) * 6;
+      it.subs.push({
+        ang, dist,
+        r: 1.5 + (j % 4) * 0.45,
+        ph: (j * 2.17) % (Math.PI * 2),
+        delay: (j / cnt) * 1.1,
+      });
+    }
+    it.overflow = Math.max(0, it.added - 20);
+  });
+
+  ST_SF_DATA = items;
+  ST_SF_T0 = performance.now();
+
+  /* 分页按钮：只有超过一页才显示 */
+  const pager = document.getElementById('stSfPager');
+  if (pager) {
+    if (pageCount <= 1) {
+      pager.innerHTML = '';
+    } else {
+      let ph = '<button class="st-sf-pg" data-pg="-1">‹</button>';
+      for (let i = 0; i < pageCount; i++) {
+        ph += '<button class="st-sf-pg' + (i === ST_SF_PAGE ? ' on' : '') + '" data-pg="' + i + '">' + (i+1) + '</button>';
+      }
+      ph += '<button class="st-sf-pg" data-pg="1">›</button>';
+      ph += '<span class="st-sf-pgtxt">共 ' + items.length + ' 类 · 第 ' + (ST_SF_PAGE+1) + '/' + pageCount + ' 页</span>';
+      pager.innerHTML = ph;
+      pager.querySelectorAll('.st-sf-pg').forEach(b => {
+        b.onclick = () => {
+          const v = Number(b.dataset.pg);
+          if (v === -1) ST_SF_PAGE = (ST_SF_PAGE - 1 + pageCount) % pageCount;
+          else if (v === 1 && b.textContent === '›') ST_SF_PAGE = (ST_SF_PAGE + 1) % pageCount;
+          else ST_SF_PAGE = v;
+          renderStats();
+        };
+      });
+    }
+  }
+
+  const loop = (now) => {
+    const T = (now - ST_SF_T0) / 1000;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const bg = ctx.createRadialGradient(CSSW/2, CSSH*0.42, 0, CSSW/2, CSSH*0.42, CSSW*0.6);
+    bg.addColorStop(0, 'rgba(52,72,112,.11)');
+    bg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, CSSW, CSSH);
+
+    for (const it of pageItems) {
+      const breath = 0.72 + 0.28 * Math.sin(T * 0.85 + it.phase);
+      const R = it.r * (0.96 + 0.07 * breath);
+      const c = it.hue;
+      const cs = c[0] + ',' + c[1] + ',' + c[2];
+
+      const halo = ctx.createRadialGradient(it.x, it.y, 0, it.x, it.y, R * 3.1);
+      halo.addColorStop(0, 'rgba(' + cs + ',' + (0.28 * breath) + ')');
+      halo.addColorStop(0.45, 'rgba(' + cs + ',' + (0.09 * breath) + ')');
+      halo.addColorStop(1, 'rgba(' + cs + ',0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(it.x, it.y, R * 3.1, 0, 7); ctx.fill();
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(' + cs + ',' + (0.30 * breath) + ')';
+      ctx.lineWidth = 1;
+      for (let k2 = 0; k2 < 4; k2++) {
+        const a = k2 * Math.PI / 2 + T * 0.1;
+        const len = R * (2.0 + 0.6 * Math.sin(T * 1.2 + it.phase + k2));
+        ctx.beginPath();
+        ctx.moveTo(it.x + Math.cos(a) * R * 0.95, it.y + Math.sin(a) * R * 0.95);
+        ctx.lineTo(it.x + Math.cos(a) * len, it.y + Math.sin(a) * len);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const core = ctx.createRadialGradient(it.x, it.y, 0, it.x, it.y, R);
+      core.addColorStop(0, 'rgba(255,255,255,' + (0.82 * breath) + ')');
+      core.addColorStop(0.35, 'rgba(' + cs + ',' + (0.90 * breath) + ')');
+      core.addColorStop(1, 'rgba(' + cs + ',0.12)');
+      ctx.fillStyle = core;
+      ctx.beginPath(); ctx.arc(it.x, it.y, R, 0, 7); ctx.fill();
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const sb of it.subs) {
+        const a = sb.ang + T * 0.20;
+        const sx = it.x + Math.cos(a) * sb.dist;
+        const sy = it.y + Math.sin(a) * sb.dist * 0.60;
+        const born = Math.max(0, Math.min(1, (T - sb.delay) * 1.6));
+        if (born <= 0) continue;
+        const tw = 0.55 + 0.45 * Math.sin(T * 2.4 + sb.ph);
+        const alpha = born * tw;
+        const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, sb.r * 4);
+        g.addColorStop(0, 'rgba(255,255,255,' + (0.55 * alpha) + ')');
+        g.addColorStop(0.4, 'rgba(' + cs + ',' + (0.62 * alpha) + ')');
+        g.addColorStop(1, 'rgba(' + cs + ',0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(sx, sy, sb.r * 4, 0, 7); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * alpha) + ')';
+        ctx.beginPath(); ctx.arc(sx, sy, sb.r * 0.55, 0, 7); ctx.fill();
+      }
+      ctx.restore();
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.font = '600 11px "Microsoft YaHei", sans-serif';
+      ctx.fillStyle = 'rgba(' + cs + ',.95)';
+      ctx.fillText(it.name, it.x, it.y + R + 13);
+
+      ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(158,176,204,.72)';
+      const extra = it.overflow ? ' (+' + it.overflow + ')' : '';
+      ctx.fillText('+' + it.added + ' / ' + it.total + extra, it.x, it.y + R + 29);
+    }
+
+    ST_SF_ANIM = requestAnimationFrame(loop);
+  };
+  ST_SF_ANIM = requestAnimationFrame(loop);
+}
+
 /** 分类走势折线图。原生 canvas，不引库。 */
 function drawStatsChart(rows, kindCols, kindTotals) {
   const cvs = document.getElementById('stChart');
@@ -8130,6 +8401,208 @@ function renderStatsCal(dates) {
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup', onUp);
   };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   星图轨迹
+   2026-11-24 用户：「左边再加一项叫星图轨迹 专门统计星图变化的
+                    和记忆轨迹一样 也要带分类和时间选择」
+   
+   和「记忆轨迹」的区别：
+     记忆轨迹 = events.jsonl 原始事件（1136 条，含 meta/heartbeat/重复 utterance）
+     星图轨迹 = graph.json 里真正成了星的（413 颗）
+   两者数字不同是正常的，这里是"只数进了图的"。
+   ══════════════════════════════════════════════════════════════════ */
+
+let SRT_FILTER = null;              // 分类筛选
+let SRT_Y = null, SRT_M = null, SRT_D = null;   // 日期筛选
+let SRT_LOADED = false;
+
+function ensureStartrack() {
+  if (!SRT_LOADED) SRT_LOADED = true;
+  renderStartrack();
+}
+
+function srtDays() {
+  const allNodes = (DATA && DATA.nodes) ? DATA.nodes : [];
+  const byDay = new Map();
+  for (const n of allNodes) {
+    const d = stLocalDate(n.ts);
+    if (!d) continue;
+    if (!byDay.has(d)) byDay.set(d, []);
+    byDay.get(d).push(n);
+  }
+  return [...byDay.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))     // 倒序，新的在上
+    .map(([date, items]) => ({
+      date,
+      count: items.length,
+      items: items.sort((x, y) => (y.ts || '').localeCompare(x.ts || '')),
+    }));
+}
+
+function renderStartrack() {
+  const body = document.getElementById('srtBody');
+  if (!body) return;
+
+  const allNodes = (DATA && DATA.nodes) ? DATA.nodes : [];
+  if (!allNodes.length) {
+    body.innerHTML = '<div class="tl-empty">星图数据还没加载</div>';
+    return;
+  }
+
+  const days = srtDays();
+
+  /* ── 日期筛选（先算，分类计数要跟着它）── */
+  const dateOk = (d) => {
+    if (!d) return false;
+    if (SRT_D) return d === SRT_D;
+    if (SRT_M) return d.startsWith(SRT_M);
+    if (SRT_Y) return d.startsWith(SRT_Y);
+    return true;
+  };
+  const shownDays = days.filter(g => dateOk(g.date));
+
+  /* ── 日期下拉 ── */
+  const selY = document.getElementById('srtSelYear');
+  const selM = document.getElementById('srtSelMonth');
+  const selD = document.getElementById('srtSelDay');
+  if (selY && selM && selD) {
+    const byY = new Map(), byM = new Map(), byD = new Map();
+    for (const g of days) {
+      const d = g.date;
+      byY.set(d.slice(0,4), (byY.get(d.slice(0,4)) || 0) + g.count);
+      byM.set(d.slice(0,7), (byM.get(d.slice(0,7)) || 0) + g.count);
+      byD.set(d, g.count);
+    }
+
+    selY.innerHTML = '<option value="">全部年份</option>';
+    for (const y of [...byY.keys()].sort().reverse()) {
+      const o = document.createElement('option');
+      o.value = y; o.textContent = y + ' 年（' + byY.get(y) + '）';
+      selY.appendChild(o);
+    }
+    selY.value = SRT_Y && byY.has(SRT_Y) ? SRT_Y : '';
+
+    selM.innerHTML = '<option value="">全部月份</option>';
+    for (const ym of [...byM.keys()].sort().reverse()) {
+      if (selY.value && !ym.startsWith(selY.value)) continue;
+      const o = document.createElement('option');
+      o.value = ym;
+      o.textContent = ym.slice(5).replace(/^0/,'') + ' 月（' + byM.get(ym) + '）';
+      selM.appendChild(o);
+    }
+    selM.value = SRT_M && [...selM.options].some(o => o.value === SRT_M) ? SRT_M : '';
+
+    selD.innerHTML = '<option value="">全部日期</option>';
+    const dKeys = [...byD.keys()].filter(d =>
+      (selM.value && d.startsWith(selM.value)) ||
+      (!selM.value && selY.value && d.startsWith(selY.value)) ||
+      (!selM.value && !selY.value)
+    ).sort().reverse();
+    for (const d of dKeys) {
+      const o = document.createElement('option');
+      o.value = d;
+      o.textContent = d.slice(5).replace('-','/') + '（' + byD.get(d) + '）';
+      selD.appendChild(o);
+    }
+    selD.value = SRT_D && dKeys.indexOf(SRT_D) >= 0 ? SRT_D : '';
+
+    selY.onchange = () => { SRT_Y = selY.value || null; SRT_M = null; SRT_D = null; renderStartrack(); };
+    selM.onchange = () => { SRT_M = selM.value || null; SRT_D = null; renderStartrack(); };
+    selD.onchange = () => { SRT_D = selD.value || null; renderStartrack(); };
+    const rb = document.getElementById('srtReset');
+    if (rb) rb.onclick = () => { SRT_Y = SRT_M = SRT_D = null; renderStartrack(); };
+
+    const pc = document.getElementById('srtPickCount');
+    if (pc) {
+      if (SRT_D) pc.textContent = '只看 ' + SRT_D;
+      else if (SRT_M) pc.textContent = '只看 ' + SRT_M;
+      else if (SRT_Y) pc.textContent = '只看 ' + SRT_Y + ' 年';
+      else pc.textContent = '';
+    }
+  }
+
+  /* ── 分类筛选（数字跟着日期走）── */
+  const ranged = [];
+  for (const g of shownDays) for (const n of g.items) ranged.push(n);
+
+  const counts = {};
+  for (const n of ranged) counts[n.k || 'none'] = (counts[n.k || 'none'] || 0) + 1;
+
+  const fEl = document.getElementById('srtFilter');
+  if (fEl) {
+    fEl.innerHTML = '';
+    // 分类顺序固定，跟星图一致（多的在前）
+    const order = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    const mk = (key, label, n) => {
+      const b = document.createElement('button');
+      b.className = 'tl-fbtn' + (SRT_FILTER === key ? ' on' : '') + (n === 0 ? ' zero' : '');
+      b.innerHTML = esc(label) + '<span class="n">' + n + '</span>';
+      if (n > 0) b.onclick = () => { SRT_FILTER = (SRT_FILTER === key) ? null : key; renderStartrack(); };
+      fEl.appendChild(b);
+    };
+    mk(null, '全部', ranged.length);
+    for (const k of order) mk(k, KIND_CN[k] || k, counts[k]);
+  }
+
+  /* ── 列表 ── */
+  const groups = shownDays.map(g => {
+    const items = SRT_FILTER ? g.items.filter(n => (n.k || 'none') === SRT_FILTER) : g.items;
+    return { date: g.date, count: items.length, items };
+  }).filter(g => g.items.length > 0);
+
+  const cntEl = document.getElementById('srtCount');
+  if (cntEl) {
+    const tot = groups.reduce((a, g) => a + g.count, 0);
+    const fb = [];
+    if (SRT_FILTER) fb.push(KIND_CN[SRT_FILTER] || SRT_FILTER);
+    if (SRT_D) fb.push(SRT_D); else if (SRT_M) fb.push(SRT_M); else if (SRT_Y) fb.push(SRT_Y + ' 年');
+    cntEl.textContent = tot + ' 条 · ' + groups.length + ' 天' + (fb.length ? '（' + fb.join(' + ') + '）' : '');
+  }
+
+  if (!groups.length) {
+    body.innerHTML = '<div class="tl-empty">这个筛选条件下没有星</div>';
+    return;
+  }
+
+  const WEEK = ['周日','周一','周二','周三','周四','周五','周六'];
+  const frag = document.createDocumentFragment();
+
+  groups.forEach((day, di) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'tl-day' + (di === 0 ? ' open' : '');
+
+    const hd = document.createElement('div');
+    hd.className = 'tl-day-hd';
+    const dt = new Date(day.date + 'T00:00:00');
+    hd.innerHTML = '<span class="tl-date">' + esc(day.date) + '</span>'
+      + '<span class="tl-weekday">' + WEEK[dt.getDay()] + '</span>'
+      + '<span class="tl-n">' + day.count + ' 颗</span>'
+      + '<span class="tl-arrow">▶</span>';
+    hd.onclick = () => wrap.classList.toggle('open');
+    wrap.appendChild(hd);
+
+    const items = document.createElement('div');
+    items.className = 'tl-items';
+    for (const n of day.items) {
+      const el = document.createElement('div');
+      el.className = 'tl-item';
+      const t = (n.ts || '').slice(11, 16);
+      const txt = (n.t || '').replace(/\s+/g, ' ').trim();
+      el.innerHTML = '<div class="tl-time">' + esc(t) + '</div>'
+        + '<div class="tl-body"><div class="tl-meta">'
+        + '<span class="tl-kind k-' + esc(n.k || '') + '">' + esc(KIND_CN[n.k] || n.k || '') + '</span>'
+        + '</div><div class="tl-text">' + esc(txt) + '</div></div>';
+      el.onclick = () => { selected = -1; openCard(-1, n); };
+      items.appendChild(el);
+    }
+    wrap.appendChild(items);
+    frag.appendChild(wrap);
+  });
+
+  body.innerHTML = '';
+  body.appendChild(frag);
 }
 
 function renderExcluded() {
