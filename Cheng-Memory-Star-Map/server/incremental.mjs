@@ -153,6 +153,7 @@ export class GraphState {
     if (n.source) out.source = String(n.source);
     if (n.statedBy) out.statedBy = String(n.statedBy);
     if (n.channel) out.channel = String(n.channel);
+    if (n.sourceFile) out.sourceFile = String(n.sourceFile);
 
     // voice 单独一层
     if (kind === 'voice') out.layer = 'voice';
@@ -395,6 +396,7 @@ export class GraphState {
         ...(n.source ? { source: n.source } : {}),
         ...(n.statedBy ? { statedBy: n.statedBy } : {}),
         ...(n.channel ? { channel: n.channel } : {}),
+        ...(n.sourceFile ? { sourceFile: n.sourceFile } : {}),
       });
     }
     // 边必须两端都在 nodes 里，否则前端按 id 找索引会落空

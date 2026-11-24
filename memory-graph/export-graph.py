@@ -679,9 +679,17 @@ for x in load_json(APPT, []):
     if not isinstance(x, dict): continue
     t=(x.get('what') or '').strip()
     if not t: continue
-    # 按澄的要求：并进 note，不再自成一类
+    # 按澄 11-24 的要求：并进 note，不再自成一类（「类名在说谎，撤掉」）
+    #
+    # ⚠️ 2026-11-24 她抓到的 bug：
+    #   「66 是 notes.json 64 + appointments.json 2，那 2 条 id 是 ap: 前缀
+    #     但 kind 记成 note，meta 里 appointment 还是 0 —— 这是 bug，类名又说谎了。」
+    #
+    # 问题：id 写 ap:（约定）却标 kind=note（便条），身份和归属不一致。
+    # 修法：id 前缀也改成 note:，用 sourceFile 标明真正出处。
+    #   这样「它现在是便条」和「它原本来自约定簿」两件事都说得清，不互相打架。
     note_nodes.append({
-        'id': 'ap:'+str(x.get('id') or ''),
+        'id': 'note:'+str(x.get('id') or ''),
         'kind': 'note',
         'text': t,
         'ts': x.get('created'),
@@ -689,6 +697,7 @@ for x in load_json(APPT, []):
         'status': x.get('status') or None,
         'open': (x.get('status') == 'open'),
         'fromAppointment': True,
+        'sourceFile': 'appointments.json',      # 出处，面板里显示
     })
     continue
     appt_nodes.append({
@@ -891,7 +900,12 @@ meta={
    'nodes_total': len(nodes),
    'judgment': len(utt_nodes), 'said': len(said_nodes), 'rule': len(rule_nodes),
    'insight': len(ins_nodes), 'memory': len(mem_nodes), 'voice': len(voice_nodes),
-   'note': len(note_nodes), 'appointment': len(appt_nodes), 'work': len(work_nodes),
+   'note': len(note_nodes),
+   # appointment 类已撤（澄：类名在说谎）。这里报「已并入 note 的约定条数」，
+   # 不再是 0 —— 0 会让人以为一条都没有，实际上有 2 条在 note 里。
+   'appointment': sum(1 for n in note_nodes if n.get('fromAppointment')),
+   'appointmentMergedIntoNote': sum(1 for n in note_nodes if n.get('fromAppointment')),
+   'work': len(work_nodes),
    'spoken': len(spoke_dedup),
    'duplicate_heard_merged': dup_heard,
    'edges': len(edges),

@@ -1006,6 +1006,7 @@
       source: n.source || '',                // 'cheng-stated' = 澄口述的现行规矩
       statedBy: n.statedBy || '',
       channel: n.channel || '',              // 「说出去的」发布在哪
+      sourceFile: n.sourceFile || '',        // 出处文件（约定簿并进便条那种要标）
     }));
 
     const kinds = {};
@@ -4050,6 +4051,8 @@ function openCard(i){
     push('在等', n.waiting || '—');
     push('推进', (n.progress || 0) + ' 次');
     if (n.doneNote) push('怎么算完的', n.doneNote);
+    /* 原本来自约定簿的便条：说清出处，别让它显得"凭空是便条" */
+    if (n.sourceFile === 'appointments.json') push('出处', '约定簿（已并入便条）');
   }
   // 约定：有没有对过口 + 结果
   else if (n.k === 'appointment'){
