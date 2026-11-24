@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-24T14:29:54",
+  "generatedAt": "2026-11-24T14:34:31",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -42,15 +42,15 @@
    "embed_dim": 1024
   },
   "excluded_reasons": {
-   "house-event": 2,
-   "injection-command": 71,
    "mojibake": 1,
-   "schedule": 41,
-   "system-report": 3,
-   "system-text": 9,
    "injection-wrapped": 13,
    "self-said": 3,
-   "self-said-likely-question": 1
+   "self-said-likely-question": 1,
+   "system-report": 3,
+   "system-text": 9,
+   "injection-command": 71,
+   "schedule": 41,
+   "house-event": 2
   },
   "merged": [
    {

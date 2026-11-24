@@ -708,6 +708,10 @@
   #topbar .hud.code{ font-family:"Consolas",monospace; }
   /* 顶部同步按钮：只在 header 里，不在画布上 */
   #topbar .hud.sync{
+    /* ⚠️ .hud 是画布装饰层的基类，自带 pointer-events:none（不挡鼠标）。
+       这个按钮是可点的，必须显式覆盖回来 —— 不然点不动（实测点下去命中
+       的是 header .right，不是按钮）。 */
+    pointer-events:auto;
     position:static; width:28px; height:28px; padding:0;
     display:inline-flex; align-items:center; justify-content:center;
     border-radius:8px; cursor:pointer;
