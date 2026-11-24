@@ -1177,5 +1177,23 @@
   "detail": "said 101 / judgment 68 / insight 68 / note 54 / voice 14 / memory 13 / rule 6 / work 2 / spoken 2",
   "why": "整句几乎是 ASCII（中文占比极低），是系统文本或代码",
   "by": "classify_not_said"
+ },
+ {
+  "id": "heard:ev_01M85DZAQ03CXDV0MQZ1T0SKMG",
+  "ts": "2026-11-24T00:06:00.160Z",
+  "raw": "【鱼鱼窝】作物已成熟：草莓×45、巨型草莓×1、郁金香×10、巨型郁金香×1",
+  "reason": "schedule",
+  "detail": "【鱼鱼窝】作物已成熟：草莓×45、巨型草莓×1、郁金香×10、巨型郁金香×1",
+  "why": "开头是【鱼鱼窝】，是定时提醒不是话",
+  "by": "SCHEDULE_RE"
+ },
+ {
+  "id": "heard:ev_01M85HCD7A79J5Z1BSMHJ1A3CQ",
+  "ts": "2026-11-24T01:05:34.442Z",
+  "raw": "【鱼鱼窝】作物已成熟：郁金香×10、巨型郁金香×1",
+  "reason": "schedule",
+  "detail": "【鱼鱼窝】作物已成熟：郁金香×10、巨型郁金香×1",
+  "why": "开头是【鱼鱼窝】，是定时提醒不是话",
+  "by": "SCHEDULE_RE"
  }
 ]
