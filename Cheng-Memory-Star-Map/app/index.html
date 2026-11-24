@@ -162,6 +162,25 @@
   .sb-hits::-webkit-scrollbar{ width:6px; }
   .sb-hits::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.18); border-radius:3px; }
 
+  /* 搜索分段标题 */
+  .sb-group{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 12px 5px; margin-top:2px;
+    font-size:10.5px; color:#5a6a88; letter-spacing:.04em;
+    border-top:1px solid rgba(140,170,255,.10);
+  }
+  .sb-group:first-child{ border-top:0; margin-top:0; padding-top:4px; }
+  .sb-group .sg-t{ flex:1; }
+  .sb-group .sg-n{ font-size:10px; opacity:.7; }
+  .sb-group.flow{ color:#6b7a96; }
+
+  .sb-hit.flow{ opacity:.86; }
+  .sb-hit.flow:hover{ opacity:1; }
+  .sb-hit .h-kind.flow{
+    background:rgba(140,170,255,.08); color:#7f93b3;
+    font-size:9.5px; padding:1px 5px;
+  }
+
   .sb-hit{
     display:flex; gap:9px; padding:8px 12px; cursor:pointer;
     border-bottom:1px solid rgba(140,170,255,.06);
@@ -3536,12 +3555,63 @@ function sbNorm(s) {
 }
 
 /** 执行搜索 */
+/* ════════════════════════════════════════════════════════════
+   搜索：分三段
+   
+   2026-11-24 澄的判断（我认同）：
+     「该覆盖流水，而且流水比图更该能搜。图里是『我下的结论』，
+       流水里是『发生过什么』——结论可以少，发生过的事一件都不能丢。
+       搜『我』出来几百条没关系，按『我说的 / 他说的 / 我做的』分三段显示就行。」
+   
+     「语义搜先别做。子串搜不到是明摆着的『没搜到』，我知道该换个词；
+       语义搜悄悄给你几条『差不多』的，我会以为那就是全部。
+       宁可搜不到，别给我一个听起来对的错答案。」
+   
+   所以：纯子串匹配，不碰向量。但范围从「只有图」扩到「图 + 全部流水」。
+   ════════════════════════════════════════════════════════════ */
+
+/* 流水缓存：第一次搜索时拉一次，之后增量更新（有 SSE 新事件时清掉重拉） */
+let SB_FLOW = null;          // [{kind, text, ts, id, ...}]
+let SB_FLOW_LOADING = false;
+
+async function sbLoadFlow() {
+  if (SB_FLOW || SB_FLOW_LOADING) return;
+  SB_FLOW_LOADING = true;
+  try {
+    const d = await window.starmap.timeline();
+    if (d && d.ok) {
+      const all = [];
+      for (const day of (d.days || [])) {
+        for (const it of (day.items || [])) all.push(it);
+      }
+      SB_FLOW = all;
+    }
+  } catch (e) {
+    SB_FLOW = [];      // 拉失败就只搜图，别让搜索整个崩掉
+  } finally {
+    SB_FLOW_LOADING = false;
+  }
+}
+
+/* 流水按「谁」分三段 */
+function sbFlowBucket(it) {
+  const k = it.kind || '';
+  if (k === 'heard') return 'him';                      // 他说的
+  if (k === 'utterance') {
+    // 有 topic 的是「我的判断」，但那种已经在图里了；这里按原话算「我说的」
+    return 'me';
+  }
+  if (k === 'voice') return 'him';                      // 读到的话（别人的）
+  return 'did';                                          // 便条/日记/作品/约定/meta/其它 = 我做的
+}
+
 function sbSearch(q) {
   const raw = String(q || '').trim();
   SB.q = raw;
 
   if (!raw) {
     SB.hits = [];
+    SB.groups = null;
     sbBox.classList.remove('hit');
     sbCount.textContent = '';
     sbHits.classList.remove('show');
@@ -3552,14 +3622,21 @@ function sbSearch(q) {
   const needle = sbNorm(raw);
   if (!needle) { SB.hits = []; return; }
 
+  // 流水还没拉到 → 先拉（不阻塞，拉完自动重搜一次）
+  if (SB_FLOW === null) {
+    sbLoadFlow().then(() => { if (SB.q === raw) sbSearch(raw); });
+  }
+
+  /* ── 第一段：图里的（结论）── */
   const hits = [];
+  const graphIds = new Set();
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
+    graphIds.add(n.id);
     const text = String(n.t || '');
     const topic = String(n.scope || '');
     const hay = sbNorm(text) + '|' + sbNorm(topic);
     if (hay.includes(needle)) {
-      // 打分：主题命中 > 开头命中 > 中间命中
       let score = 0;
       if (sbNorm(topic).includes(needle)) score += 100;
       const pos = sbNorm(text).indexOf(needle);
@@ -3568,53 +3645,136 @@ function sbSearch(q) {
       hits.push({ i, score, pos });
     }
   }
-
   hits.sort((a, b) => b.score - a.score);
   SB.hits = hits.map(h => h.i);
   SB.sel = SB.hits.length ? 0 : -1;
 
-  sbCount.textContent = hits.length ? `${hits.length} 条` : '';
-  sbBox.classList.toggle('hit', hits.length > 0);
+  /* ── 第二段：流水里的（发生过什么）── */
+  const flow = { me: [], him: [], did: [] };
+  let flowTotal = 0;
+  if (SB_FLOW && SB_FLOW.length) {
+    for (const it of SB_FLOW) {
+      const text = String(it.text || '');
+      if (!text) continue;
+      // 图里已经有的那条，别在流水里重复显示
+      if (it.id && graphIds.has(it.id)) continue;
+      if (!sbNorm(text).includes(needle)) continue;
+      flowTotal++;
+      const b = sbFlowBucket(it);
+      if (flow[b].length < 50) flow[b].push(it);      // 每段最多留 50 条
+    }
+  }
+  SB.groups = { me: flow.me, him: flow.him, did: flow.did, flowTotal, graphCount: SB.hits.length };
+  SB.flowHits = [...flow.me, ...flow.him, ...flow.did];
+
+  const total = SB.hits.length + flowTotal;
+  sbCount.textContent = total ? `${total} 条` : '';
+  sbBox.classList.toggle('hit', total > 0);
 
   renderSbHits(raw);
 }
 
 /** 渲染结果列表 */
 function renderSbHits(q) {
-  if (!SB.hits.length) {
+  const g = SB.groups || { me: [], him: [], did: [], flowTotal: 0, graphCount: 0 };
+  const hasGraph = SB.hits.length > 0;
+  const hasFlow = (g.me.length + g.him.length + g.did.length) > 0;
+
+  if (!hasGraph && !hasFlow) {
     sbHits.innerHTML = `<div class="sb-none">没有找到「${esc(q)}」</div>`;
     sbHits.classList.add('show');
     return;
   }
 
   const MAX = 30;
-  const needle = sbNorm(q);
   const frag = document.createDocumentFragment();
 
-  for (const i of SB.hits.slice(0, MAX)) {
-    const n = nodes[i];
-    const el = document.createElement('div');
-    el.className = 'sb-hit' + (SB.hits.indexOf(i) === SB.sel ? ' sel' : '');
-    el.dataset.i = i;
+  /* ══════ 第一段：图里的结论 ══════ */
+  if (hasGraph) {
+    const hd = document.createElement('div');
+    hd.className = 'sb-group';
+    hd.innerHTML = `<span class="sg-t">已经想明白的</span><span class="sg-n">${SB.hits.length}</span>`;
+    frag.appendChild(hd);
 
-    const c = (THEMES[OPTS.theme] || THEMES.dusk).kinds[n.k] || '#9fb4e8';
-    const label = KIND_CN[n.k] || n.k || '';
+    for (const i of SB.hits.slice(0, MAX)) {
+      const n = nodes[i];
+      const el = document.createElement('div');
+      el.className = 'sb-hit' + (SB.hits.indexOf(i) === SB.sel ? ' sel' : '');
+      el.dataset.i = i;
 
-    el.innerHTML =
-      `<span class="h-kind" style="background:${c}22;color:${c}">${esc(label)}</span>` +
-      `<div class="h-body">` +
-        `<div class="h-text">${sbHighlight(n.t, q)}</div>` +
-        `<div class="h-meta">${esc(n.ts ? fmtLocalTs(n.ts, true) : '—')}${n.scope ? ' · #' + esc(n.scope) : ''}</div>` +
-      `</div>`;
+      const c = (THEMES[OPTS.theme] || THEMES.dusk).kinds[n.k] || '#9fb4e8';
+      const label = KIND_CN[n.k] || n.k || '';
 
-    el.onclick = () => sbGoto(i);
-    frag.appendChild(el);
+      el.innerHTML =
+        `<span class="h-kind" style="background:${c}22;color:${c}">${esc(label)}</span>` +
+        `<div class="h-body">` +
+          `<div class="h-text">${sbHighlight(n.t, q)}</div>` +
+          `<div class="h-meta">${esc(n.ts ? fmtLocalTs(n.ts, true) : '—')}${n.scope ? ' · #' + esc(n.scope) : ''}</div>` +
+        `</div>`;
+
+      el.onclick = () => sbGoto(i);
+      frag.appendChild(el);
+    }
+  }
+
+  /* ══════ 第二段：流水（发生过什么）══════
+     澄：「流水比图更该能搜……结论可以少，发生过的事一件都不能丢」
+     按「我说的 / 他说的 / 我做的」分三段。 */
+  const flowSections = [
+    { key: 'me',  title: '我说过的',  icon: '🗣' },
+    { key: 'him', title: '他/别人说的', icon: '👂' },
+    { key: 'did', title: '我做过的',  icon: '✎' },
+  ];
+
+  for (const sec of flowSections) {
+    const list = g[sec.key] || [];
+    if (!list.length) continue;
+
+    const hd = document.createElement('div');
+    hd.className = 'sb-group flow';
+    hd.innerHTML = `<span class="sg-t">${sec.icon} ${esc(sec.title)}</span><span class="sg-n">${list.length}</span>`;
+    frag.appendChild(hd);
+
+    for (const it of list.slice(0, 20)) {
+      const el = document.createElement('div');
+      el.className = 'sb-hit flow';
+      const txt = String(it.text || '');
+      const who = it.sender || it.who || '';
+      el.innerHTML =
+        `<span class="h-kind flow">${esc(it.kind || '')}</span>` +
+        `<div class="h-body">` +
+          `<div class="h-text">${sbHighlight(txt, q)}</div>` +
+          `<div class="h-meta">${esc(it.ts ? fmtLocalTs(it.ts, true) : '—')}${who ? ' · ' + esc(who) : ''}</div>` +
+        `</div>`;
+      // 点流水项 → 弹一个小卡片看原文（不是星，不能 openCard）
+      el.onclick = () => openFlowCard(it);
+      frag.appendChild(el);
+    }
   }
 
   sbHits.innerHTML = '';
   sbHits.appendChild(frag);
   sbHits.classList.add('show');
 }
+
+/* 流水项详情卡：跟星卡同一个卡片，但内容不同（它不是星） */
+function openFlowCard(it) {
+  if (!cardEl || !it) return;
+  selected = -1;
+  const kindLabel = KIND_CN[it.kind] || it.kind || '记录';
+  cardEl.innerHTML =
+    '<div class="row1"><span class="badge" style="background:#7f93b322;color:#9fb4e8">'
+      + esc(kindLabel) + ' · 流水</span><span class="close" id="cx">✕</span></div>'
+    + '<div class="full">' + esc(it.text || '') + '</div>'
+    + '<div class="meta">'
+      + '<div class="lab">时间</div><div class="val">' + esc(it.ts ? fmtLocalTs(it.ts, true) : '—') + '</div>'
+      + '<div class="lab">来源</div><div class="val">' + esc(it.kind || '—') + '</div>'
+      + '<div class="lab">说明</div><div class="val">这条是原始记录，不是提炼出来的结论</div>'
+    + '</div>';
+  cardEl.classList.add('show');
+  setTimeout(() => { const c2 = document.getElementById('cx'); if (c2) c2.onclick = closeCard; }, 0);
+}
+window.openFlowCard = openFlowCard;
 
 /** 在文本里高亮匹配片段 */
 function sbHighlight(text, q) {
