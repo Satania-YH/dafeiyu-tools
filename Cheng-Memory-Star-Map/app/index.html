@@ -1345,6 +1345,45 @@
   }
   .tp-card:hover .tp-card-go, .tp-card.on .tp-card-go{ opacity:1; color:#8fb8ff; }
 
+  /* ── 筛选 + 搜索 同一行 ── */
+  .tp-toolbar{
+    display:flex; align-items:center; gap:14px;
+    margin-bottom:16px; flex-wrap:wrap;
+  }
+  .tp-toolbar .tl-filter{ margin-bottom:0; flex:none; }
+
+  .tp-search{
+    display:flex; align-items:center; gap:7px;
+    flex:1; min-width:170px; max-width:330px; height:30px;
+    padding:0 10px; border-radius:8px;
+    background:rgba(140,170,255,.045);
+    border:1px solid rgba(140,170,255,.13);
+    transition:.15s;
+  }
+  .tp-search:focus-within{
+    border-color:rgba(140,190,255,.38);
+    background:rgba(140,170,255,.075);
+  }
+  .tp-search-ico{ flex:none; font-size:14px; color:#5d6a85; line-height:1; }
+  .tp-search input{
+    flex:1; min-width:0; height:100%; border:none; outline:none;
+    background:transparent; color:#dbe6fa;
+    font-size:11.5px; font-family:inherit; letter-spacing:.02em;
+  }
+  .tp-search input::placeholder{ color:#4e5a76; }
+  .tp-search input::-webkit-search-cancel-button{ display:none; }
+  .tp-search-n{
+    flex:none; font-size:10px; color:#6b7a99;
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  .tp-search-clr{
+    flex:none; font-size:11px; color:#4e5a76; cursor:pointer;
+    padding:1px 3px; border-radius:4px; transition:.13s;
+    visibility:hidden;
+  }
+  .tp-search.has-val .tp-search-clr{ visibility:visible; }
+  .tp-search-clr:hover{ color:#c3cde6; background:rgba(255,255,255,.06); }
+
   /* ── 分页 ── */
   .tp-pager{
     display:flex; align-items:center; justify-content:center; gap:5px;
@@ -2171,7 +2210,18 @@
       同一件事说过好几次的，会落进同一个话题。点一个话题，回星图把它圈出来 ——
       比在几百条连线里找要快。
     </p>
-    <div class="tl-filter" id="tpFilter"></div>
+    <!-- 2026-11-25 爸爸：「话题面版也加一个搜索框」
+         64 个话题靠翻页找太慢，直接搜名字。 -->
+    <div class="tp-toolbar">
+      <div class="tl-filter" id="tpFilter"></div>
+      <div class="tp-search" id="tpSearchBox">
+        <span class="tp-search-ico">⌕</span>
+        <input id="tpSearch" type="text" autocomplete="off" spellcheck="false"
+               placeholder="搜话题名…" />
+        <span class="tp-search-n" id="tpSearchN"></span>
+        <span class="tp-search-clr" id="tpSearchClear" title="清空">✕</span>
+      </div>
+    </div>
     <div class="tp-grid" id="tpGrid"></div>
     <div class="tp-pager" id="tpPager"></div>
    </div>
@@ -2763,6 +2813,7 @@ function setTopic(name) {
    ══════════════════════════════════════════════════════════ */
 let TP_FILTER = 'all';     // all | multi(≥2) | solo(1)
 let TP_PAGE = 0;
+let TP_Q = '';             // 话题名搜索词（2026-11-25 爸爸：「话题面版也加一个搜索框」）
 const TP_PAGE_SIZE = 24;
 
 const TP_FILTERS = [
@@ -2772,9 +2823,19 @@ const TP_FILTERS = [
 ];
 
 function tpFiltered() {
-  if (TP_FILTER === 'multi') return TOPIC_LIST.filter(t => t.n >= 2);
-  if (TP_FILTER === 'solo') return TOPIC_LIST.filter(t => t.n === 1);
-  return TOPIC_LIST;
+  let list = TOPIC_LIST;
+  // 搜索：只比话题名，子串就行（64 个话题不值得上模糊）
+  const q = TP_Q.trim().toLowerCase();
+  if (q) list = list.filter(t => t.name.toLowerCase().includes(q));
+  if (TP_FILTER === 'multi') list = list.filter(t => t.n >= 2);
+  if (TP_FILTER === 'solo') list = list.filter(t => t.n === 1);
+  return list;
+}
+
+function tpSetQuery(q) {
+  TP_Q = q || '';
+  TP_PAGE = 0;
+  renderTopicPage();
 }
 
 function tpSetFilter(k) {
@@ -2790,6 +2851,31 @@ function tpSetPage(p) {
   const el = document.getElementById('topics');
   if (el) el.scrollTop = 0;
 }
+
+/* 话题搜索框：绑定一次就够（不随渲染重建） */
+(function bindTpSearch(){
+  function run() {
+    const inp = document.getElementById('tpSearch');
+    if (!inp || inp.dataset.bound) return;
+    inp.dataset.bound = '1';
+    inp.addEventListener('input', () => tpSetQuery(inp.value));
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { inp.value = ''; tpSetQuery(''); }
+    });
+    const clr = document.getElementById('tpSearchClear');
+    if (clr) clr.onclick = () => {
+      inp.value = '';
+      tpSetQuery('');
+      inp.focus();
+    };
+  }
+  // DOM 可能还没就绪，两种时机都试
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', run);
+  } else {
+    run();
+  }
+})();
 
 function renderTopicPage() {
   const grid = document.getElementById('tpGrid');
@@ -2812,10 +2898,14 @@ function renderTopicPage() {
   const filtEl = document.getElementById('tpFilter');
   if (filtEl) {
     filtEl.innerHTML = '';
+    /* 数字要跟着搜索走 —— 搜到 3 个话题时，
+       「多颗星 11」这种数会让人以为还有 11 个没显示。 */
+    const q = TP_Q.trim().toLowerCase();
+    const base = q ? TOPIC_LIST.filter(t => t.name.toLowerCase().includes(q)) : TOPIC_LIST;
     const counts = {
-      all: TOPIC_LIST.length,
-      multi: TOPIC_LIST.filter(t => t.n >= 2).length,
-      solo: TOPIC_LIST.filter(t => t.n === 1).length,
+      all: base.length,
+      multi: base.filter(t => t.n >= 2).length,
+      solo: base.filter(t => t.n === 1).length,
     };
     for (const f of TP_FILTERS) {
       const b = document.createElement('button');
@@ -2826,8 +2916,17 @@ function renderTopicPage() {
     }
   }
 
+  /* ── 搜索框状态 ── */
+  const sBox = document.getElementById('tpSearchBox');
+  const sN = document.getElementById('tpSearchN');
+  const sIn = document.getElementById('tpSearch');
+  if (sBox) sBox.classList.toggle('has-val', !!TP_Q.trim());
+  if (sIn && sIn.value !== TP_Q) sIn.value = TP_Q;
   /* ── 分页 ── */
   const list = tpFiltered();
+
+  /* 搜到几个 —— 有搜索词时才显示，没搜索时不留个空位 */
+  if (sN) sN.textContent = TP_Q.trim() ? (list.length + ' 个') : '';
   const pages = Math.max(1, Math.ceil(list.length / TP_PAGE_SIZE));
   if (TP_PAGE >= pages) TP_PAGE = pages - 1;
   const start = TP_PAGE * TP_PAGE_SIZE;
