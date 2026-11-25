@@ -16,12 +16,52 @@ function Log($msg) {
     Add-Content -Path $LogFile -Value $line -Encoding UTF8
 }
 
+# 打开页面。
+# 2026-11-25 踩到的坑：这台机器默认浏览器是 egoliteHTM（ego-browser，自动化用的），
+# 不是给人看网页的那个。所以 Start-Process $Url 把页面交给 ego 了，
+# 界面上什么都不出现 —— 看起来像"没打开"。
+# 所以这里按顺序试：系统默认 → Edge → Chrome，谁能用就用谁。
+function Open-Page {
+    $tries = @(
+        @{ how = 'shell-default'; act = { Start-Process $Url } },
+        @{ how = 'edge';   exe = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' },
+        @{ how = 'chrome'; exe = 'C:\Program Files\Google\Chrome\Application\chrome.exe' }
+    )
+    foreach ($t in $tries) {
+        try {
+            if ($t.exe) {
+                if (-not (Test-Path $t.exe)) { continue }
+                Start-Process -FilePath $t.exe -ArgumentList "`"$Url`""
+                Log ("Open-Page via " + $t.how)
+                return
+            } else {
+                & $t.act
+                Log ("Open-Page via " + $t.how)
+                return
+            }
+        } catch {
+            Log ("Open-Page " + $t.how + " 失败: " + $_)
+        }
+    }
+    Log 'Open-Page 全部失败'
+}
+
+# 2026-11-25 爸爸：「你在桌面做一个快捷方式之类的 一点开就自动启动托盘并打开浏览器」
+#   -OpenBrowser  启动托盘后顺便把页面开出来（桌面快捷方式用这个）
+# 如果托盘已经在跑，就不再起第二个，但要顺手把页面开出来 —— 点了就得看见星图。
+$script:openBrowser = ($args -contains '-OpenBrowser')
+
 # ── 单实例锁（独占文件，非全局 Mutex —— 后者非管理员会失败）──
 $lockFile = Join-Path $Root 'data\tray.lock'
 try {
     $script:lock = [System.IO.File]::Open($lockFile, 'OpenOrCreate', 'ReadWrite', 'None')
 } catch {
-    Write-Host "托盘已经在运行了"
+    # 已经在跑：只打开页面
+    Write-Host '托盘已经在运行，打开页面'
+    # 这里函数还没定义（脚本在上面就 exit 了），所以直接走同样的回退顺序
+    try { Start-Process $Url } catch {}
+    $edge = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+    if (Test-Path $edge) { try { Start-Process -FilePath $edge -ArgumentList "`"$Url`"" } catch {} }
     exit 0
 }
 
@@ -115,7 +155,7 @@ $notify.Visible = $true
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
 
 $miOpen = $menu.Items.Add('打开星图')
-$miOpen.add_Click({ Start-Process $Url })
+$miOpen.add_Click({ Open-Page })
 
 $miCopy = $menu.Items.Add('复制地址')
 $miCopy.add_Click({
@@ -167,7 +207,7 @@ function Update-Tip {
     }
 }
 
-$notify.add_DoubleClick({ Start-Process $Url })
+$notify.add_DoubleClick({ Open-Page })
 $notify.add_MouseMove({
     # 悬停刷新（NotifyIcon 没有真正的 hover 事件，用 MouseMove 近似）
 })
@@ -176,6 +216,14 @@ $notify.add_MouseMove({
 Log '托盘启动'
 Start-Server
 Update-Tip
+
+# 服务就绪后把页面打开（只在 -OpenBrowser 时；托盘自身常驻，不主动打扰）
+if ($script:openBrowser) {
+    if (Test-Server) {
+        Log '打开浏览器'
+        Open-Page
+    }
+}
 
 # ── 定时刷新状态 + 服务守护 ──
 $timer = New-Object System.Windows.Forms.Timer
