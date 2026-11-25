@@ -1345,6 +1345,37 @@
   }
   .tp-card:hover .tp-card-go, .tp-card.on .tp-card-go{ opacity:1; color:#8fb8ff; }
 
+  /* ── 分页 ── */
+  .tp-pager{
+    display:flex; align-items:center; justify-content:center; gap:5px;
+    margin-top:26px; padding-bottom:8px; flex-wrap:wrap;
+  }
+  .tp-pg{
+    min-width:29px; height:29px; padding:0 8px;
+    font-family:inherit; font-size:11.5px; letter-spacing:.02em;
+    border-radius:7px; cursor:pointer;
+    background:rgba(140,170,255,.05); border:1px solid rgba(140,170,255,.13);
+    color:#8b9ab8; transition:.13s;
+    font-variant-numeric:tabular-nums;
+  }
+  .tp-pg:hover:not(.cur):not(.dis){
+    background:rgba(140,170,255,.13); border-color:rgba(140,170,255,.28); color:#cfdcf7;
+  }
+  .tp-pg.cur{
+    background:rgba(122,180,255,.20); border-color:rgba(122,180,255,.42); color:#a8d0ff;
+    cursor:default;
+  }
+  .tp-pg.dis{ opacity:.30; cursor:default; }
+  .tp-gap{ color:#3d4759; font-size:11px; padding:0 2px; }
+  .tp-pginfo{
+    margin-left:10px; font-size:10.5px; color:#4e5a76;
+    letter-spacing:.02em; font-variant-numeric:tabular-nums;
+  }
+  .tp-none{
+    grid-column:1 / -1; text-align:center; padding:50px 20px;
+    font-size:12px; color:#4d5871; line-height:1.9;
+  }
+
   /* ── 话题聚类（左侧导航里的那一块）── */
   .tp-box{
     margin-top:14px; padding-top:12px;
@@ -2140,7 +2171,9 @@
       同一件事说过好几次的，会落进同一个话题。点一个话题，回星图把它圈出来 ——
       比在几百条连线里找要快。
     </p>
+    <div class="tl-filter" id="tpFilter"></div>
     <div class="tp-grid" id="tpGrid"></div>
+    <div class="tp-pager" id="tpPager"></div>
    </div>
   </section>
 
@@ -2719,6 +2752,45 @@ function setTopic(name) {
    2026-11-25 爸爸：「话题专门做个面般 左侧加一个选项 右侧面般」
    卡片网格，一屏看全，不用滚。点一张 → 回星图把这个话题圈出来。
    ══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════
+   话题页的筛选和分页
+   2026-11-25 爸爸：「画提面般也做个筛选 分页」
+   （「画提面般」= 话题面板，他打字快）
+
+   为什么要分组筛：64 个话题里 53 个只有 1 颗星 ——
+   「7 颗那个才有肉，剩下全是一颗零碎」。
+   所以按「几颗星」分组是最有用的切法，不是按字母。
+   ══════════════════════════════════════════════════════════ */
+let TP_FILTER = 'all';     // all | multi(≥2) | solo(1)
+let TP_PAGE = 0;
+const TP_PAGE_SIZE = 24;
+
+const TP_FILTERS = [
+  { key: 'all',   label: '全部' },
+  { key: 'multi', label: '多颗星' },   // ≥2
+  { key: 'solo',  label: '只有一颗' },
+];
+
+function tpFiltered() {
+  if (TP_FILTER === 'multi') return TOPIC_LIST.filter(t => t.n >= 2);
+  if (TP_FILTER === 'solo') return TOPIC_LIST.filter(t => t.n === 1);
+  return TOPIC_LIST;
+}
+
+function tpSetFilter(k) {
+  if (TP_FILTER === k) return;
+  TP_FILTER = k;
+  TP_PAGE = 0;
+  renderTopicPage();
+}
+
+function tpSetPage(p) {
+  TP_PAGE = Math.max(0, p | 0);
+  renderTopicPage();
+  const el = document.getElementById('topics');
+  if (el) el.scrollTop = 0;
+}
+
 function renderTopicPage() {
   const grid = document.getElementById('tpGrid');
   const cnt = document.getElementById('tpCount');
@@ -2736,8 +2808,33 @@ function renderTopicPage() {
     cnt.textContent = TOPIC_LIST.length + ' 个 · 覆盖 ' + covered + ' / ' + total + ' 颗星';
   }
 
+  /* ── 筛选条 ── */
+  const filtEl = document.getElementById('tpFilter');
+  if (filtEl) {
+    filtEl.innerHTML = '';
+    const counts = {
+      all: TOPIC_LIST.length,
+      multi: TOPIC_LIST.filter(t => t.n >= 2).length,
+      solo: TOPIC_LIST.filter(t => t.n === 1).length,
+    };
+    for (const f of TP_FILTERS) {
+      const b = document.createElement('button');
+      b.className = 'tl-fbtn' + (TP_FILTER === f.key ? ' on' : '') + (counts[f.key] === 0 ? ' zero' : '');
+      b.innerHTML = esc(f.label) + '<span class="n">' + counts[f.key] + '</span>';
+      b.onclick = () => tpSetFilter(f.key);
+      filtEl.appendChild(b);
+    }
+  }
+
+  /* ── 分页 ── */
+  const list = tpFiltered();
+  const pages = Math.max(1, Math.ceil(list.length / TP_PAGE_SIZE));
+  if (TP_PAGE >= pages) TP_PAGE = pages - 1;
+  const start = TP_PAGE * TP_PAGE_SIZE;
+  const shown = list.slice(start, start + TP_PAGE_SIZE);
+
   grid.innerHTML = '';
-  for (const t of TOPIC_LIST) {
+  for (const t of shown) {
     // 每张卡底下那几个色点：这个话题里有哪几类
     const kinds = Object.entries(t.kinds).sort((a, b) => b[1] - a[1]);
     const dots = kinds.slice(0, 4).map(([k, c]) => {
@@ -2765,6 +2862,47 @@ function renderTopicPage() {
       toast('话题「' + t.name + '」' + t.n + ' 颗，已在星图上圈出');
     };
     grid.appendChild(b);
+  }
+
+  /* ── 底部分页 ── */
+  const pagerEl = document.getElementById('tpPager');
+  if (pagerEl) {
+    pagerEl.innerHTML = '';
+    if (pages <= 1) {
+      pagerEl.style.display = 'none';
+    } else {
+      pagerEl.style.display = '';
+      const mk = (label, p, dis, cur) => {
+        const b = document.createElement('button');
+        b.className = 'tp-pg' + (cur ? ' cur' : '');
+        b.textContent = label;
+        if (dis) { b.disabled = true; b.classList.add('dis'); }
+        else if (!cur) b.onclick = () => tpSetPage(p);
+        return b;
+      };
+      pagerEl.appendChild(mk('‹', TP_PAGE - 1, TP_PAGE === 0));
+      // 页码：当前附近 ±2，两头留首尾
+      const want = new Set([0, pages - 1]);
+      for (let p = TP_PAGE - 2; p <= TP_PAGE + 2; p++) if (p >= 0 && p < pages) want.add(p);
+      const sorted = [...want].sort((a, b) => a - b);
+      let prev = -1;
+      for (const p of sorted) {
+        if (prev >= 0 && p - prev > 1) {
+          const gap = document.createElement('span');
+          gap.className = 'tp-gap';
+          gap.textContent = '…';
+          pagerEl.appendChild(gap);
+        }
+        pagerEl.appendChild(mk(String(p + 1), p, false, p === TP_PAGE));
+        prev = p;
+      }
+      pagerEl.appendChild(mk('›', TP_PAGE + 1, TP_PAGE >= pages - 1));
+
+      const info = document.createElement('span');
+      info.className = 'tp-pginfo';
+      info.textContent = '第 ' + (TP_PAGE + 1) + ' / ' + pages + ' 页';
+      pagerEl.appendChild(info);
+    }
   }
 }
 
