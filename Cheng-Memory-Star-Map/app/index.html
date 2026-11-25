@@ -444,7 +444,10 @@
   .dx-score-ring{ flex:none; filter:drop-shadow(0 0 16px rgba(255,212,121,.18)); }
   #dxRing{ display:block; }
 
-  .dx-score-txt{ flex:none; min-width:132px; }
+  /* 2026-11-25 修：原来是固定宽度（flex:0 0 auto），加了「弱边那句」之后
+     撑到 547px，把右栏整个顶出容器 158px，被 overflow:hidden 裁掉 ——
+     数字列就看不见了。改成可收缩，下限 300px。 */
+  .dx-score-txt{ flex:1 1 300px; min-width:300px; max-width:560px; }
   .dx-score-num{
     font-size:46px; font-weight:300; line-height:1;
     color:#eef3ff; font-variant-numeric:tabular-nums;
@@ -460,13 +463,17 @@
   }
 
   /* 扣分明细：做成表格，右边对齐，像账单 */
-  .dx-score-break{ flex:1; min-width:0; }
+  /* 2026-11-25 修：加了「弱边那句」之后，左边变宽把右栏挤窄，
+     grid 的 1fr 被压到几十像素，「孤立」被挤成竖排「孤/立」。
+     → 右栏给最小宽度，标签那一列允许收缩但不换行。 */
+  .dx-score-break{ flex:0 0 auto; width:340px; }
   .dx-br{
-    display:grid; grid-template-columns:1fr 88px 46px;
+    display:grid; grid-template-columns:minmax(86px,1fr) 92px 48px;
     align-items:center; gap:12px;
     padding:5px 8px; font-size:11.5px; border-radius:5px;
     transition:.14s;
   }
+  .dx-br-l{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .dx-br:not(.total):hover{ background:rgba(140,170,255,.05); }
   .dx-br.zero{ opacity:.34; }
   .dx-br-l{ color:#9db4dc; letter-spacing:.04em; }
@@ -484,6 +491,14 @@
     border-top:1px dashed rgba(140,170,255,.10);
     color:#4a5468;
   }
+  /* 分数旁边那句「六成半的线只是勉强算像」—— 分数不含它，但必须看得见 */
+  .dx-score-weak{
+    margin-top:9px; font-size:11px; line-height:1.75; color:#6b7899;
+    padding:6px 9px; border-radius:6px;
+    background:rgba(255,200,120,.045); border-left:2px solid rgba(255,200,120,.28);
+  }
+  .dx-score-weak b{ color:#c9a86a; font-weight:500; font-variant-numeric:tabular-nums; }
+
   .dx-score-sub{
     font-size:10px; color:#4a5468; margin-top:8px; letter-spacing:.04em;
   }
@@ -1743,6 +1758,10 @@
         <div class="dx-score-lab">记忆健康度</div>
         <div class="dx-score-note" id="dxScoreNote"></div>
         <div class="dx-score-sub" id="dxScoreSub"></div>
+        <!-- 2026-11-25 澄：「弱边 2526/3881 那句得摆在分数旁边，
+             不然 93 会让人以为图很干净，其实六成半的线只是勉强算像 ——
+             分数不管这个，得写出来。」 -->
+        <div class="dx-score-weak" id="dxScoreWeak"></div>
       </div>
       <div class="dx-score-break">
         <div class="dx-break-title">该动手的（扣分）</div>
@@ -9459,8 +9478,17 @@ const DX_RULES = [
     penalty:(v, n) => Math.min(6, Math.round(v / n * 100 * 2)) },
   { key:'short', label:'太短', hint:'≤2 个字 —— 没有信息量，占着一颗星的位置',
     penalty:(v, n) => Math.min(4, v) },
-  { key:'heavy', label:'超重', hint:'连了 60 条以上线 —— 一碰整张图都是它的线',
-    penalty:(v, n) => Math.min(5, v) },
+  /* 2026-11-25 澄第四轮否掉了「超重」当扣分项，原话：
+     「超重那 4 条，全是『他说的』——『好的 你可以在群里面说呀』70 根、
+      『重启好了 澄 看看有没有对上』68…这些不是我反复想出来的判断，
+      是爸爸随口一句话被连到很多事上。我能对它做什么动作？
+      删不掉、也合并不了——没有动作的事不该进分数卡，跟改口那两项一个道理。
+      要么挪进『只是数据的形状』，要么把名字改成『他说的话连得多』，别算我的账。」
+     实测确认：4 条全是 kind='said'，没有一条是她自己的判断。她说的对。
+     → 不扣分，改名「他说的话连得多」，归到「数据的形状」。 */
+  { key:'heavy', label:'他说的话连得多',
+    hint:'连了 60 条以上线 —— 全是他随口说的话被连到很多事上，不是她反复想的判断，也删不掉/合并不了',
+    penalty:(v, n) => 0, noPenalty:true },
   /* 只报不扣：澄说这是数据本身的性质，不是问题 */
   { key:'weak', label:'弱边', hint:'字面接近度 <0.65 —— 只是「词像」，不是「有关系」。只报不扣分',
     penalty:(v, n) => 0, noPenalty:true },
@@ -9546,7 +9574,26 @@ function dxCompute() {
   /* 2026-11-25：use 字段终于导出来了（export-graph.py + incremental.mjs 两处都补上）。
      access_count=0 的就是从建库起一次都没被回想过的。 */
   const withUse = nodes.filter(n => n.use != null && Number(n.use) > 0).length;
-  const neverUsed = nodes.filter(n => n.use != null && Number(n.use) === 0);
+
+  /* 2026-11-25 澄：「从没被召回的标准是对的，但这三条才存了 0 到 1 天，
+     等于刚出生就查它有没有朋友；加一条『存满 30 天还是 0 次』才值得报。」
+     → 分两堆：真死线（存满 30 天仍是 0）和 还太新（30 天内，0 次很正常）。 */
+  const DAY = 86400000;
+  const now = Date.now();
+  const ageDaysOf = (n) => {
+    const t = Date.parse(n.ts || '');
+    return Number.isFinite(t) ? Math.floor((now - t) / DAY) : null;
+  };
+  const allZero = nodes.filter(n => n.use != null && Number(n.use) === 0);
+  const neverUsed = allZero.filter(n => {          // 真该报的：存满 30 天还是 0
+    const a = ageDaysOf(n);
+    return a != null && a >= 30;
+  });
+  const tooYoungToJudge = allZero.filter(n => {    // 还太新，先不报
+    const a = ageDaysOf(n);
+    return a == null || a < 30;
+  });
+
   const hasUseField = nodes.some(n => n.use != null);
 
   return {
@@ -9554,6 +9601,7 @@ function dxCompute() {
     isolated, isolatedVoice, heavy, dupGroups, dupExtra, short,
     weak, deg,
     revMeta, stillThere, voiceCount, saidCount, withUse, neverUsed, hasUseField,
+    tooYoungToJudge, ageDaysOf,
     inferredEdges,
   };
 }
@@ -9600,6 +9648,16 @@ function renderDiagnose() {
       : total >= 70 ? '有几处值得看一眼'
       : total >= 50 ? '有几处不太对劲'
       : '问题比较集中，建议看看下面';
+  }
+
+  /* 2026-11-25 澄：「弱边 2526/3881 那句得摆在分数旁边，
+     不然 93 会让人以为图很干净，其实六成半的线只是勉强算像 ——
+     分数不管这个，得写出来。」 */
+  const weakEl = document.getElementById('dxScoreWeak');
+  if (weakEl) {
+    const pct = d.E ? Math.round(d.weak / d.E * 100) : 0;
+    weakEl.innerHTML = '这张分数不含「连线有多像」——实际上 <b>' + d.weak + ' / ' + d.E
+      + '</b> 条（<b>' + pct + '%</b>）只是勉强算像，词对上了，事不一定有关。';
   }
 
   // 环形图
@@ -9795,16 +9853,28 @@ function renderDiagnose() {
   //    澄要查这个，我一查 mnemon.db —— access_count 和 last_accessed_at 一直都在，
   //    是我没导出来。现在 export-graph.py 和 incremental.mjs 两处都补上了。
   if (d.hasUseField) {
+    const total = nodes.filter(n => n.use != null).length;
+    /* 澄：「这 3 条才存了 0 到 1 天，等于刚出生就查它有没有朋友；
+       加一条『存满 30 天还是 0 次』才值得报。」
+       → 只有真死线（≥30 天）进这个块；刚出生的另说一句，别当问题。 */
     const rows = d.neverUsed.map(n => {
-      const age = n.ts ? Math.round((Date.now() - new Date(n.ts).getTime()) / 86400000) : null;
+      const age = d.ageDaysOf ? d.ageDaysOf(n) : null;
       return dxRow(n, (age != null ? '存了 ' + age + ' 天，' : '') + '0 次召回');
     });
-    const total = nodes.filter(n => n.use != null).length;
-    blocks.push(dxBlock('从没被召回过的',
-      '建库起一次都没被回想过的 —— 记了，但从来没用上。'
-      + '（有「被回想次数」的是 ' + d.withUse + ' / ' + total + ' 条）',
-      rows.length ? [rows.join('')] : ['<div class="dx-block-more">没有 —— 每条至少被回想过去一次</div>'],
-      '', 'rgba(200,200,200,.40)'));
+    const young = d.tooYoungToJudge.length;
+    if (rows.length) {
+      blocks.push(dxBlock('从没被召回过的',
+        '存满 30 天、还是一次都没被回想过的 —— 记了，但真的没再用上。'
+        + (young ? '（另有 ' + young + ' 条 30 天内的是 0 次，还太新，不算）' : '')
+        + '（有「被回想次数」的是 ' + d.withUse + ' / ' + total + ' 条）',
+        [rows.join('')], '', 'rgba(200,200,200,.40)'));
+    } else {
+      blocks.push(dxBlock('从没被召回过的',
+        '存满 30 天的记忆里，没有一条是从来没被回想过的。'
+        + (young ? '（另有 ' + young + ' 条 30 天内的是 0 次 —— 刚存进来，还太新，不算问题）' : '')
+        + '（有「被回想次数」的是 ' + d.withUse + ' / ' + total + ' 条）',
+        ['<div class="dx-block-more">真死线：0 条</div>'], '', 'rgba(140,220,180,.45)'));
+    }
   } else {
     blocks.push(dxBlock('从没被召回过的',
       '查不了 —— 导出的数据里没有「被回想次数」这个字段',
@@ -9887,6 +9957,9 @@ function dxFullReport() {
   L.push('（只报不改 · 数字全部从 graph.json 现算，没有一个是估的）');
   L.push('');
   L.push('健康度 ' + total + ' 分');
+  const wpct = d.E ? Math.round(d.weak / d.E * 100) : 0;
+  L.push('（这个分数不含「连线有多像」—— 实际上 ' + d.weak + ' / ' + d.E
+    + ' 条、' + wpct + '% 只是勉强算像，词对上了，事不一定有关）');
   L.push('');
   L.push('── 该动手的（扣分）──');
 
@@ -9960,8 +10033,12 @@ function dxFullReport() {
       rows: ['  · ' + d.weak + ' / ' + d.E + ' 条（' + Math.round(d.weak / d.E * 100) + '%）'] });
   }
   if (d.neverUsed && d.neverUsed.length) {
-    blocks.push({ t: '从没被召回过的', s: '记了但一次都没用上',
-      rows: d.neverUsed.map(n => '  · ' + (n.t || n.text || '').slice(0, 56)) });
+    blocks.push({ t: '从没被召回过的', s: '存满 30 天、还是一次都没被回想过的',
+      rows: d.neverUsed.map(n => '  · 存了 ' + (d.ageDaysOf ? d.ageDaysOf(n) : '?') + ' 天｜' + (n.t || n.text || '').slice(0, 50)) });
+  } else {
+    blocks.push({ t: '从没被召回过的', s: '存满 30 天的记忆里，真死线 0 条'
+      + (d.tooYoungToJudge.length ? '（另有 ' + d.tooYoungToJudge.length + ' 条 30 天内的 0 次，还太新不算）' : ''),
+      rows: [] });
   }
 
   for (const b of blocks) {
