@@ -9650,6 +9650,28 @@ function drawStatsStarfield(allNodes, byKindAdded) {
       });
     }
     it.overflow = Math.max(0, it.added - 20);
+
+    /* 流动星尘：2026-11-25 爸爸：「流动星辰也加一下」
+       每个团周围撒一批会飘的小点 —— 不是绕着转（那太机械），
+       是顺着一个方向缓缓流过去，出了范围再从另一头进来。
+       这样看着像星际介质在流，而不是一颗颗卫星。
+       数量跟着总的星数走：大类周围更热闹。 */
+    it.dust = [];
+    const dustN = Math.min(28, 10 + Math.round(it.total * 0.09));
+    for (let d = 0; d < dustN; d++) {
+      it.dust.push({
+        /* 起始位置：在椭圆盘面上随机撒（压扁，像俯视一个盘） */
+        ang: (d / dustN) * Math.PI * 2 + i * 1.7,
+        rad: 0.9 + (d % 5) * 0.32 + Math.random() * 0.4,
+        /* 流速：每颗不一样，不然会像整体在转 */
+        speed: 0.055 + (d % 7) * 0.011,
+        /* 个体相位：闪烁不同步 */
+        ph: (d * 2.39) % (Math.PI * 2),
+        /* 大小和亮度 */
+        sz: 0.5 + (d % 4) * 0.22,
+        br: 0.30 + (d % 3) * 0.12,
+      });
+    }
   });
 
   ST_SF_DATA = items;
@@ -9748,37 +9770,68 @@ function drawStatsStarfield(allNodes, byKindAdded) {
       /* ── ②③ 星芒：十字长 + 45° 短 ──
          用线性渐变从中心往外淡出，比硬线更像光。
          长的两端慢慢摆（T*0.10），短的快一点反向。 */
-      const drawRay = (angle, len, width, alpha) => {
-        const ex = it.x + Math.cos(angle) * len;
-        const ey = it.y + Math.sin(angle) * len;
+      /* 2026-11-25 爸爸：「十字线可以多一点 但不要太长
+                      可以参考澄的星核的刺的效果」
+         —— 星图本体那些星用的是 makeSprite() 里的「渐细光锥」：
+            从中心有一定宽度，用 quadraticCurveTo 收窄到尖端，
+            不是等宽的线。等宽线看着像画上去的，光锥看着才像光。
+         这里照那套做法重写：双填（fill 而不是 stroke），锥形收窄。 */
+      const drawRay = (angle, len, halfW, alpha) => {
+        const ca = Math.cos(angle), sa = Math.sin(angle);
+        /* 局部坐标 → 屏幕坐标的转换：沿芒方向的单位向量 (ca,sa)，
+           垂直方向 (-sa, ca)。 */
+        const P = (along, perp) => [it.x + ca * along - sa * perp,
+                                    it.y + sa * along + ca * perp];
+        const ex = it.x + ca * len, ey = it.y + sa * len;
         const lg = ctx.createLinearGradient(it.x, it.y, ex, ey);
-        lg.addColorStop(0, 'rgba(255,255,255,' + (alpha * 0.9) + ')');
-        lg.addColorStop(0.18, 'rgba(' + cs + ',' + (alpha * 0.65) + ')');
-        lg.addColorStop(0.55, 'rgba(' + cs + ',' + (alpha * 0.18) + ')');
-        lg.addColorStop(1, 'rgba(' + cs + ',0)');
-        ctx.strokeStyle = lg;
-        ctx.lineWidth = width;
-        ctx.lineCap = 'round';
+        lg.addColorStop(0.00, 'rgba(255,255,255,' + Math.min(1, alpha * 1.2) + ')');
+        lg.addColorStop(0.14, 'rgba(' + cs + ',' + (alpha * 0.68) + ')');
+        lg.addColorStop(0.48, 'rgba(' + cs + ',' + (alpha * 0.20) + ')');
+        lg.addColorStop(1.00, 'rgba(' + cs + ',0)');
+        ctx.fillStyle = lg;
         ctx.beginPath();
-        ctx.moveTo(it.x - Math.cos(angle) * len * 0.16, it.y - Math.sin(angle) * len * 0.16);
-        ctx.lineTo(ex, ey);
-        ctx.stroke();
+        const [ax, ay] = P(0, -halfW);
+        const [bx, by] = P(0, halfW);
+        const [cx2, cy2] = P(len, 0);
+        const [m1x, m1y] = P(len * 0.55, -halfW * 0.30);
+        const [m2x, m2y] = P(len * 0.55, halfW * 0.30);
+        ctx.moveTo(ax, ay);
+        ctx.quadraticCurveTo(m1x, m1y, cx2, cy2);
+        ctx.quadraticCurveTo(m2x, m2y, bx, by);
+        ctx.closePath();
+        ctx.fill();
       };
-      /* 十字：主芒。4 条各画正反两向，所以只循环 2 次（0° 和 90°）就够。
-         之前循环 4 次其实画了 8 条反向重叠的，反而糊。 */
+      /* 芒按「三档」排，长度递减、数量递增 ——
+         这是衍射星芒的真实层次：主芒最长最亮，外围的越来越短越来越淡。
+         爸爸说「可以多一点 但不要太长」，所以每档都比之前压短，
+         但档数从 2 变成 3。 */
+
+      /* 三档芒，长度和宽度都递减。
+         2026-11-25 第一版太粗，十字糊成一片白 ——
+         主芒半宽从 0.10R 收到 0.055R，让它细而长，
+         这样才像衍射芒（真的衍射芒非常细）。
+         密度靠第三档补，不靠把主芒加粗。 */
+
+      /* 第一档：十字主芒，细而长 */
       for (let q = 0; q < 2; q++) {
         const a = q * Math.PI + T * 0.10 + it.phase * 0.3;
-        const len = R * (3.0 + 0.7 * Math.sin(T * 0.9 + it.phase + q));
-        /* 正反两向都画：光是从中心往两边射的 */
-        drawRay(a, len, 1.7, 0.58 * breath);
-        drawRay(a + Math.PI, len, 1.7, 0.58 * breath);
+        const len = R * (2.30 + 0.40 * Math.sin(T * 0.9 + it.phase + q));
+        drawRay(a, len, R * 0.055, 0.50 * breath);
+        drawRay(a + Math.PI, len, R * 0.055, 0.50 * breath);
       }
-      /* 45° 短芒：4 条短而弱，形成八芒 */
+      /* 第二档：45°，中等 */
       for (let q = 0; q < 2; q++) {
-        const a = q * Math.PI + Math.PI / 2 - T * 0.07;
-        const len = R * (1.5 + 0.3 * Math.sin(T * 1.4 + q));
-        drawRay(a, len, 1.0, 0.32 * breath);
-        drawRay(a + Math.PI, len, 1.0, 0.32 * breath);
+        const a = q * Math.PI + Math.PI / 4 - T * 0.07;
+        const len = R * (1.55 + 0.24 * Math.sin(T * 1.4 + q));
+        drawRay(a, len, R * 0.038, 0.30 * breath);
+        drawRay(a + Math.PI, len, R * 0.038, 0.30 * breath);
+      }
+      /* 第三档：22.5° 插空的八条细芒（每 45° 一条），最短最淡 */
+      for (let q = 0; q < 4; q++) {
+        const a = q * Math.PI / 2 + Math.PI / 8 + T * 0.05;
+        const len = R * (1.12 + 0.14 * Math.sin(T * 1.9 + q * 1.7));
+        drawRay(a, len, R * 0.026, 0.18 * breath);
+        drawRay(a + Math.PI, len, R * 0.026, 0.18 * breath);
       }
 
       /* ── ④ 二层光晕：颜色最饱和的一层 ── */
@@ -9824,19 +9877,33 @@ function drawStatsStarfield(allNodes, byKindAdded) {
 
       ctx.restore();
 
-      /* ── ⑥ 环绕星尘：一圈慢慢转的小亮点，不属于子星那批 ──
-         （子星代表"这段时间新增"，星尘是氛围，两者不能混） */
+      /* ── ⑥ 流动星尘 ──
+         2026-11-25 爸爸：「流动星辰也加一下」
+         每颗尘有自己的流速，顺着一个方向缓缓流过去；
+         绕出去一圈再从起点回来（用取模，无缝）。
+         不是整体一起转 —— 一起转是「卫星」，各自流才像「星尘」。
+         （子星代表"这段时间新增"，星尘只是氛围，两者不能混） */
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const DUST = 14;
-      for (let d = 0; d < DUST; d++) {
-        const a = (d / DUST) * Math.PI * 2 + T * 0.16;
-        const dd = R * (1.25 + 0.55 * Math.sin(d * 2.3 + T * 0.4));
-        const dx = it.x + Math.cos(a) * dd;
-        const dy = it.y + Math.sin(a) * dd * 0.62;   // 压扁，像在盘面上
-        const dAlpha = (0.20 + 0.20 * Math.sin(T * 1.9 + d * 1.7)) * breath;
-        ctx.fillStyle = 'rgba(255,255,255,' + Math.max(0, dAlpha) + ')';
-        ctx.beginPath(); ctx.arc(dx, dy, 0.85, 0, 7); ctx.fill();
+      for (let d = 0; d < it.dust.length; d++) {
+        const p = it.dust[d];
+        /* 角度随时间推进；每颗速度不同，且带一点点上下浮动 */
+        const a = p.ang + T * p.speed;
+        const rr = p.rad * (1 + 0.10 * Math.sin(T * 0.55 + p.ph));
+        const dx = it.x + Math.cos(a) * R * rr;
+        const dy = it.y + Math.sin(a) * R * rr * 0.58;   // 压扁成盘面
+        /* 闪烁：慢的呼吸 + 快的微闪 */
+        const tw = 0.55 + 0.45 * Math.sin(T * 1.6 + p.ph)
+                        + 0.18 * Math.sin(T * 5.3 + p.ph * 2.1);
+        const a2 = Math.max(0, p.br * tw) * breath;
+        if (a2 <= 0.01) continue;
+        /* 尘也是光点：核心 + 极小光晕，比实心圆点更像光 */
+        const gg = ctx.createRadialGradient(dx, dy, 0, dx, dy, p.sz * 3.2);
+        gg.addColorStop(0, 'rgba(255,255,255,' + a2 + ')');
+        gg.addColorStop(0.35, 'rgba(' + cs + ',' + (a2 * 0.45) + ')');
+        gg.addColorStop(1, 'rgba(' + cs + ',0)');
+        ctx.fillStyle = gg;
+        ctx.beginPath(); ctx.arc(dx, dy, p.sz * 3.2, 0, 7); ctx.fill();
       }
       ctx.restore();
 
