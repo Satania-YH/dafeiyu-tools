@@ -569,6 +569,23 @@
   .dx-copy:hover{ background:rgba(140,170,255,.14); border-color:rgba(140,170,255,.22); color:#cfdcf7; }
   .dx-copy.ok{ color:#8fd7a0; opacity:1; }
 
+  /* 刷新按钮 —— 跟复制按钮同一套外观，但弱一档（它是辅助动作） */
+  .dx-refresh{
+    margin-left:auto; font-family:inherit; font-size:11.5px; letter-spacing:.02em;
+    padding:6px 12px; border-radius:8px; cursor:pointer;
+    background:rgba(140,170,255,.055); border:1px solid rgba(140,170,255,.13);
+    color:#8b9ab8; transition:.15s;
+  }
+  .dx-refresh:hover{ background:rgba(140,170,255,.13); border-color:rgba(140,170,255,.26); color:#cfdcf7; }
+  .dx-refresh.spin{ opacity:.6; cursor:wait; }
+  .dx-refresh.spin::before{
+    content:''; display:inline-block; width:9px; height:9px; margin-right:4px;
+    border:1.5px solid rgba(160,200,255,.35); border-top-color:#a8d0ff;
+    border-radius:50%; animation:dxspin .7s linear infinite;
+    vertical-align:-1px;
+  }
+  @keyframes dxspin{ to{ transform:rotate(360deg); } }
+
   /* 2026-11-25 爸爸：「记忆诊断 加一个复制诊断意见的功能」
      —— 一条一条复制太碎，要能一次把整份带走。 */
   .dx-copyall{
@@ -2081,6 +2098,9 @@
     <div class="dx-head">
       <h1><span class="dx-title-star">✦</span>记 忆 诊 断</h1>
       <span class="dx-count" id="dxCount"></span>
+      <!-- 2026-11-25 爸爸：「记忆诊断没有刷新按钮啊」
+           原来只在切进这个页时算一次，停在页面上数据变了不会更新。 -->
+      <button class="dx-refresh" id="dxRefresh" title="重新计算（数据变了才需要点）">⟳ 刷新</button>
       <button class="dx-copyall" id="dxCopyAll" title="把整份诊断结果复制出来，可以直接发给澄看">⧉ 复制诊断意见</button>
     </div>
     <p class="dx-sub">只报，不改。每一项扣多少分都写在明面上。</p>
@@ -10479,8 +10499,43 @@ function renderStartrack() {
 
 let DX_LOADED = false;
 
+/* ══════════════════════════════════════════════════════════
+   记忆诊断刷新（2026-11-25 爸爸：「记忆诊断没有刷新按钮啊」）
+
+   原来只在 setView('diagnose') 那一刻算一次 —— 停在页面上不动，
+   新数据进来了分数还是旧的。
+   这个按钮做两件事：
+     1. 从服务端重拉 /api/graph（会话可能有新星，前端 DATA 还停在旧的）
+     2. 重算并重绘
+   ══════════════════════════════════════════════════════════ */
+function bindDxRefresh() {
+  const b = document.getElementById('dxRefresh');
+  if (!b || b.dataset.bound) return;
+  b.dataset.bound = '1';
+  b.onclick = async (ev) => {
+    ev.stopPropagation();
+    if (b.classList.contains('spin')) return;
+    const old = b.textContent;
+    b.classList.add('spin');
+    b.textContent = '刷新中';
+    try {
+      /* 先问一下服务端有没有新数据 —— 有就整份换掉 */
+      await refreshGraphQuiet();
+      renderDiagnose();
+      b.classList.remove('spin');
+      b.textContent = '✓ 已刷新';
+      setTimeout(() => { b.textContent = old; }, 1400);
+    } catch (e) {
+      b.classList.remove('spin');
+      b.textContent = '✕ 失败';
+      setTimeout(() => { b.textContent = old; }, 1800);
+    }
+  };
+}
+
 function ensureDiagnose() {
   DX_LOADED = true;
+  bindDxRefresh();
   renderDiagnose();
 }
 
