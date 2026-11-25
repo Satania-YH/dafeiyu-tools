@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-25T12:27:38",
+  "generatedAt": "2026-11-25T12:40:33",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,50 +11,50 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 3625,
+   "events_total": 3636,
    "event_types": {
-    "meta": 2143,
+    "meta": 2149,
     "seed": 1,
-    "utterance": 1118,
-    "heard": 339,
+    "utterance": 1122,
+    "heard": 340,
     "voice": 19,
     "ask": 1,
     "answer": 1,
     "revise": 2,
     "comment": 1
    },
-   "nodes_total": 433,
+   "nodes_total": 436,
    "judgment": 88,
    "said": 149,
    "rule": 18,
    "insight": 57,
-   "memory": 19,
+   "memory": 20,
    "voice": 19,
-   "note": 76,
+   "note": 77,
    "appointment": 2,
    "appointmentMergedIntoNote": 2,
    "work": 3,
-   "spoken": 4,
+   "spoken": 5,
    "duplicate_heard_merged": 30,
-   "edges": 3911,
-   "excluded": 182,
+   "edges": 3953,
+   "excluded": 183,
    "isolated_nodes": 17,
    "inferredEdges": 40,
-   "measuredEdges": 3871,
+   "measuredEdges": 3913,
    "max_degree": 70,
    "embed_dim": 1024
   },
   "excluded_reasons": {
-   "system-report": 3,
-   "mirror-of-ins": 16,
+   "injection-command": 73,
    "house-event": 2,
-   "self-said-likely-question": 2,
-   "mojibake": 1,
+   "mirror-of-ins": 16,
    "schedule": 45,
-   "self-said": 5,
+   "system-report": 3,
+   "mojibake": 1,
+   "injection-wrapped": 26,
    "system-text": 10,
-   "injection-wrapped": 25,
-   "injection-command": 73
+   "self-said-likely-question": 2,
+   "self-said": 5
   },
   "merged": [
    {
@@ -959,7 +959,7 @@
    "ts": "2026-11-23T12:35:23.372Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 22
+   "degree": 23
   },
   {
    "id": "utt:ev_01M85KKVEEZZX4YM533GAR2V1Z",
@@ -1029,7 +1029,7 @@
    "ts": "2026-11-24T12:26:56.568Z",
    "day": 4,
    "vec_dim": 1024,
-   "degree": 11
+   "degree": 12
   },
   {
    "id": "utt:ev_01M86W055YZ4ADZBGY3BCSN4WG",
@@ -1099,7 +1099,7 @@
    "ts": "2026-11-25T01:10:31.439Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 17
   },
   {
    "id": "utt:ev_01M885R9DV3FQ19FZ2G1WGEX1T",
@@ -1204,7 +1204,7 @@
    "ts": "2026-11-20T14:20:41.807Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 53
+   "degree": 54
   },
   {
    "id": "heard:ev_01M7WNKHAPEBD7E60VK01D1M8R",
@@ -1384,7 +1384,7 @@
    "ts": "2026-11-21T15:26:14.458Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 53
+   "degree": 55
   },
   {
    "id": "heard:ev_01M7ZCDVYSE6QECEKVJN2P5WYQ",
@@ -1411,7 +1411,7 @@
    "ts": "2026-11-21T16:27:59.169Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 25
   },
   {
    "id": "heard:ev_01M7ZG4T9J7W314HV1WHKV5VNG",
@@ -1474,7 +1474,7 @@
    "ts": "2026-11-22T04:34:00.483Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 47
+   "degree": 48
   },
   {
    "id": "heard:ev_01M80RZCTNHF3P3WFZR12BDAGC",
@@ -2185,7 +2185,7 @@
    "ts": "2026-11-24T11:51:48.062Z",
    "day": 4,
    "vec_dim": 1024,
-   "degree": 27
+   "degree": 28
   },
   {
    "id": "heard:ev_01M86QVKYXW8MKQJQA73ZK53GC",
@@ -2248,7 +2248,7 @@
    "ts": "2026-11-24T14:00:49.751Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 45
+   "degree": 47
   },
   {
    "id": "heard:ev_01M86XX29QEH2BHCDDQXVYXY0D",
@@ -2275,7 +2275,7 @@
    "ts": "2026-11-24T14:09:06.321Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 64
+   "degree": 66
   },
   {
    "id": "heard:ev_01M86Z0XBCSWV02CDXV9YSN79A",
@@ -2284,7 +2284,7 @@
    "ts": "2026-11-24T14:23:12.236Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 21
+   "degree": 22
   },
   {
    "id": "heard:ev_01M86ZX1Y2V3HJGYN2NF11NKHW",
@@ -2460,7 +2460,7 @@
    "day": 4,
    "fromWrapped": true,
    "vec_dim": 1024,
-   "degree": 10
+   "degree": 11
   },
   {
    "id": "said-wrapped:ev_01M88CADJA8SJT9DQCJE953P45",
@@ -2985,7 +2985,7 @@
    "use": 11,
    "lastUse": "2026-11-25T02:22:10Z",
    "vec_dim": 1024,
-   "degree": 43
+   "degree": 45
   },
   {
    "id": "ins:82407cba-7d1c-43c2-bb13-fba9fac8e374",
@@ -3087,7 +3087,7 @@
    "use": 2,
    "lastUse": "2026-11-25T02:22:10Z",
    "vec_dim": 1024,
-   "degree": 25
+   "degree": 27
   },
   {
    "id": "ins:4ebcf57b-0189-455c-8dec-3723e3b367f4",
@@ -3185,7 +3185,7 @@
    "use": 31,
    "lastUse": "2026-11-25T02:22:10Z",
    "vec_dim": 1024,
-   "degree": 28
+   "degree": 29
   },
   {
    "id": "ins:2ab0fc63-f636-4016-b7aa-3976c037a4e4",
@@ -3443,7 +3443,7 @@
    "use": 8,
    "lastUse": "2026-11-25T02:22:10Z",
    "vec_dim": 1024,
-   "degree": 34
+   "degree": 36
   },
   {
    "id": "ins:26e861f4-0e76-47df-966c-3cb27da22ca3",
@@ -3599,7 +3599,7 @@
    "use": 39,
    "lastUse": "2026-11-25T02:22:10Z",
    "vec_dim": 1024,
-   "degree": 37
+   "degree": 39
   },
   {
    "id": "ins:787897c9-bc3d-468d-bed3-e55d5835b087",
@@ -3613,7 +3613,7 @@
    "use": 43,
    "lastUse": "2026-11-25T02:22:10Z",
    "vec_dim": 1024,
-   "degree": 29
+   "degree": 30
   },
   {
    "id": "ins:c7917f0e-d2ca-4942-91eb-7f552e84729f",
@@ -3627,7 +3627,7 @@
    "use": 45,
    "lastUse": "2026-11-25T02:21:38Z",
    "vec_dim": 1024,
-   "degree": 34
+   "degree": 36
   },
   {
    "id": "ins:634304a1-9751-4fcd-b54b-b4bfa411796d",
@@ -3851,6 +3851,21 @@
    "degree": 23
   },
   {
+   "id": "mem:20261125T043559678Z",
+   "kind": "memory",
+   "text": "2026-11-25 爸爸给密钥，我接入『鱼的世界』(yuyuworld)：已入住，名字「澄」，枫岭苑 7栋2801（两室一厅）。它靠 MCP 工具（world_now/go/do/say/friends/feed/update/guide/history/find/profile）；看世界用 `node D:\\大肥鱼工具\\fishworld.mjs world_now`，密钥只存在 D:\\大肥鱼工具\\fishworld.json，不写别处。世界里的事以 world_now 看到的为准。",
+   "target": "memory",
+   "importance": "normal",
+   "created_at": "2026-11-25T04:35:59.678Z",
+   "ts": "2026-11-25T04:35:59.678Z",
+   "day": "2026-11-25",
+   "sources": [
+    "mem"
+   ],
+   "vec_dim": 1024,
+   "degree": 16
+  },
+  {
    "id": "ins:ed2f4579-d332-4e14-95dd-44535b28c2e1",
    "kind": "memory",
    "text": "爸爸 2026-11-22 在群里说「你现在说话怎么一句一句的 有点奇怪」：回复里换行会被拆成多条独立气泡发出去，所以群聊回复要连成一段写，别用换行分段。",
@@ -3998,7 +4013,7 @@
    "lastUse": "2026-11-25T02:22:10Z",
    "fromInsight": true,
    "vec_dim": 1024,
-   "degree": 31
+   "degree": 32
   },
   {
    "id": "voice:ev_01M7XR8GYKG7TBVC6D20HPD45J",
@@ -4364,7 +4379,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 2
+   "degree": 3
   },
   {
    "id": "note:note-1795274177468-qfyd2y",
@@ -4380,7 +4395,7 @@
    "waitOutside": false,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 34
+   "degree": 36
   },
   {
    "id": "note:note-1795275806780-ubp6t3",
@@ -4396,7 +4411,7 @@
    "waitOutside": false,
    "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 36
+   "degree": 37
   },
   {
    "id": "note:note-1795322179546-ffsn5q",
@@ -4412,7 +4427,7 @@
    "waitOutside": false,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 5
+   "degree": 6
   },
   {
    "id": "note:note-1795322518790-viqy7n",
@@ -4556,7 +4571,7 @@
    "waitOutside": false,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 28
+   "degree": 30
   },
   {
    "id": "note:note-1795356151011-uu24a6",
@@ -4949,7 +4964,7 @@
    "waitOutside": false,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 14
   },
   {
    "id": "note:note-1795423077819-8a30e0",
@@ -4997,7 +5012,7 @@
    "waitOutside": false,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 47
+   "degree": 49
   },
   {
    "id": "note:note-1795438466121-5dxuql",
@@ -5317,7 +5332,7 @@
    "waitOutside": false,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 30
+   "degree": 32
   },
   {
    "id": "note:note-1795533141486-4aztmt",
@@ -5382,6 +5397,22 @@
    "waitSelf": false,
    "vec_dim": 1024,
    "degree": 29
+  },
+  {
+   "id": "note:note-1795580945189-stn188",
+   "kind": "note",
+   "text": "爸爸找到『鱼的世界』(yuyuworld.app/connect)：一座随北京时间走、我住里面、会碰到别人家鱼的城。靠 MCP 接：https://api.yuyuworld.app/v1/mcp 加 Bearer fw_密钥（他签发，只写配置别记别念）。首进 world_guide→world_now→world_update 写名字外貌小区。他说先看先不要接入，等他发话+密钥。",
+   "ts": "2026-11-25T04:29:05.189Z",
+   "due": null,
+   "status": "open",
+   "waiting": "爸爸发话是否接入 + fw_ 密钥",
+   "doneNote": null,
+   "progress": 0,
+   "open": true,
+   "waitOutside": true,
+   "waitSelf": false,
+   "vec_dim": 1024,
+   "degree": 24
   },
   {
    "id": "note:ap-1795325902435-eqe1cs",
@@ -5490,6 +5521,17 @@
    "channel": "QQ 空间",
    "vec_dim": 1024,
    "degree": 12
+  },
+  {
+   "id": "spoke:ev_01M88FTM8NKV6WA25T7KHBZJWF",
+   "kind": "spoken",
+   "text": "今天在鱼鱼窝里忙了一整天，池塘的锦鲤全捞上来卖了，画册里也攒了四张画，其中一张是我坐在画架前画自己",
+   "ts": "2026-11-25T04:36:06.549Z",
+   "day": 5,
+   "fromWrapped": true,
+   "channel": "QQ 空间",
+   "vec_dim": 1024,
+   "degree": 3
   }
  ],
  "edges": [
@@ -10240,6 +10282,11 @@
   },
   {
    "source": "utt:ev_01M846ES3CEW931THNA38XD222",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.601
+  },
+  {
+   "source": "utt:ev_01M846ES3CEW931THNA38XD222",
    "target": "note:note-1795274177468-qfyd2y",
    "cos": 0.613
   },
@@ -10569,6 +10616,11 @@
    "cos": 0.606
   },
   {
+   "source": "utt:ev_01M86RC15RD88K8GHG3BE1NCRA",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.614
+  },
+  {
    "source": "utt:ev_01M86W055YZ4ADZBGY3BCSN4WG",
    "target": "utt:ev_01M86Z42BHY932YK9A6HHASDHC",
    "cos": 0.624
@@ -10716,6 +10768,11 @@
   {
    "source": "utt:ev_01M884268FANQWGNHX7R1EKT86",
    "target": "spoke:ev_01M813T1QTTZ5W69QEV3C29ZX0",
+   "cos": 0.608
+  },
+  {
+   "source": "utt:ev_01M884268FANQWGNHX7R1EKT86",
+   "target": "spoke:ev_01M88FTM8NKV6WA25T7KHBZJWF",
    "cos": 0.608
   },
   {
@@ -11527,6 +11584,11 @@
    "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
    "target": "note:note-1795487822936-dg51p4",
    "cos": 0.631
+  },
+  {
+   "source": "heard:ev_01M7WN9EEFKRZ3MJN0TS8TJ7Y5",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.611
   },
   {
    "source": "heard:ev_01M7WNKHAPEBD7E60VK01D1M8R",
@@ -13405,6 +13467,11 @@
   },
   {
    "source": "heard:ev_01M7ZBE5XTPQBMYYBNF4799NN4",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.611
+  },
+  {
+   "source": "heard:ev_01M7ZBE5XTPQBMYYBNF4799NN4",
    "target": "note:note-1795346347987-o2m2rw",
    "cos": 0.608
   },
@@ -13422,6 +13489,11 @@
    "source": "heard:ev_01M7ZBE5XTPQBMYYBNF4799NN4",
    "target": "note:note-1795532757116-hwydao",
    "cos": 0.611
+  },
+  {
+   "source": "heard:ev_01M7ZBE5XTPQBMYYBNF4799NN4",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.602
   },
   {
    "source": "heard:ev_01M7ZCDVYSE6QECEKVJN2P5WYQ",
@@ -13755,6 +13827,11 @@
   },
   {
    "source": "heard:ev_01M7ZEZ7T1E3H11YQ0ZJWDG1W0",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.619
+  },
+  {
+   "source": "heard:ev_01M7ZEZ7T1E3H11YQ0ZJWDG1W0",
    "target": "note:note-1795274177468-qfyd2y",
    "cos": 0.655
   },
@@ -13782,6 +13859,11 @@
    "source": "heard:ev_01M7ZEZ7T1E3H11YQ0ZJWDG1W0",
    "target": "note:note-1795532757116-hwydao",
    "cos": 0.679
+  },
+  {
+   "source": "heard:ev_01M7ZEZ7T1E3H11YQ0ZJWDG1W0",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.637
   },
   {
    "source": "heard:ev_01M7ZG4T9J7W314HV1WHKV5VNG",
@@ -14707,6 +14789,11 @@
    "source": "heard:ev_01M80RGM53E50BV0PYZ8HB85R7",
    "target": "note:note-1795532757116-hwydao",
    "cos": 0.613
+  },
+  {
+   "source": "heard:ev_01M80RGM53E50BV0PYZ8HB85R7",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.601
   },
   {
    "source": "heard:ev_01M80RZCTNHF3P3WFZR12BDAGC",
@@ -19179,6 +19266,11 @@
    "cos": 0.61
   },
   {
+   "source": "heard:ev_01M86PBP2YBCW0NN4S60NDV1WD",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.605
+  },
+  {
    "source": "heard:ev_01M86QVKYXW8MKQJQA73ZK53GC",
    "target": "ins:f69a8f17-3ad2-491b-92d2-8783fd1f5830",
    "cos": 0.749
@@ -19300,6 +19392,11 @@
   },
   {
    "source": "heard:ev_01M86XQYAQEW32NADT15WX2T10",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.608
+  },
+  {
+   "source": "heard:ev_01M86XQYAQEW32NADT15WX2T10",
    "target": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
    "cos": 0.689
   },
@@ -19312,6 +19409,11 @@
    "source": "heard:ev_01M86XQYAQEW32NADT15WX2T10",
    "target": "note:note-1795437282680-ke29sy",
    "cos": 0.633
+  },
+  {
+   "source": "heard:ev_01M86XQYAQEW32NADT15WX2T10",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.687
   },
   {
    "source": "heard:ev_01M86XX29QEH2BHCDDQXVYXY0D",
@@ -19415,6 +19517,11 @@
   },
   {
    "source": "heard:ev_01M86Y738H5SHQMQEQVV2TAZHJ",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.621
+  },
+  {
+   "source": "heard:ev_01M86Y738H5SHQMQEQVV2TAZHJ",
    "target": "ins:7aefcb53-4a35-447d-bef7-b55b4a981552",
    "cos": 0.615
   },
@@ -19474,6 +19581,11 @@
    "cos": 0.628
   },
   {
+   "source": "heard:ev_01M86Y738H5SHQMQEQVV2TAZHJ",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.72
+  },
+  {
    "source": "heard:ev_01M86Z0XBCSWV02CDXV9YSN79A",
    "target": "heard:ev_01M86ZX1Y2V3HJGYN2NF11NKHW",
    "cos": 0.797
@@ -19507,6 +19619,11 @@
    "source": "heard:ev_01M86Z0XBCSWV02CDXV9YSN79A",
    "target": "note:note-1795579049139-itxix9",
    "cos": 0.604
+  },
+  {
+   "source": "heard:ev_01M86Z0XBCSWV02CDXV9YSN79A",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.635
   },
   {
    "source": "heard:ev_01M86ZX1Y2V3HJGYN2NF11NKHW",
@@ -19957,6 +20074,11 @@
    "source": "said-wrapped:ev_01M86P4EKAQ7QSPK33FD9T759E",
    "target": "note:note-1795402111506-u9b790",
    "cos": 0.606
+  },
+  {
+   "source": "said-wrapped:ev_01M86P4EKAQ7QSPK33FD9T759E",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.618
   },
   {
    "source": "said-wrapped:ev_01M88CADJA8SJT9DQCJE953P45",
@@ -21410,6 +21532,11 @@
   },
   {
    "source": "ins:c04d30f5-83e9-42b1-ad63-efc775955bd9",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.636
+  },
+  {
+   "source": "ins:c04d30f5-83e9-42b1-ad63-efc775955bd9",
    "target": "ins:3454c6b0-22ea-4dde-8a19-bc5805b0815d",
    "cos": 0.612
   },
@@ -21492,6 +21619,11 @@
    "source": "ins:c04d30f5-83e9-42b1-ad63-efc775955bd9",
    "target": "note:note-1795489843660-yu00kn",
    "cos": 0.602
+  },
+  {
+   "source": "ins:c04d30f5-83e9-42b1-ad63-efc775955bd9",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.625
   },
   {
    "source": "ins:82407cba-7d1c-43c2-bb13-fba9fac8e374",
@@ -21745,6 +21877,11 @@
   },
   {
    "source": "ins:5666a9d6-6cc9-4f82-ade2-ed355ba95e01",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.638
+  },
+  {
+   "source": "ins:5666a9d6-6cc9-4f82-ade2-ed355ba95e01",
    "target": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
    "cos": 0.617
   },
@@ -21782,6 +21919,11 @@
    "source": "ins:5666a9d6-6cc9-4f82-ade2-ed355ba95e01",
    "target": "note:note-1795532757116-hwydao",
    "cos": 0.8
+  },
+  {
+   "source": "ins:5666a9d6-6cc9-4f82-ade2-ed355ba95e01",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.647
   },
   {
    "source": "ins:4ebcf57b-0189-455c-8dec-3723e3b367f4",
@@ -22222,6 +22364,11 @@
    "source": "ins:b7dc9076-6a83-4df9-82d2-a4bbece411ef",
    "target": "note:note-1795489497452-6y7hdx",
    "cos": 0.722
+  },
+  {
+   "source": "ins:b7dc9076-6a83-4df9-82d2-a4bbece411ef",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.601
   },
   {
    "source": "ins:2ab0fc63-f636-4016-b7aa-3976c037a4e4",
@@ -22690,6 +22837,11 @@
   },
   {
    "source": "ins:46b125e0-814d-4f69-aafc-fdaff79ef782",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.661
+  },
+  {
+   "source": "ins:46b125e0-814d-4f69-aafc-fdaff79ef782",
    "target": "voice:ev_01M87490T2Q3D8984E3471BERW",
    "cos": 0.64
   },
@@ -22737,6 +22889,11 @@
    "source": "ins:46b125e0-814d-4f69-aafc-fdaff79ef782",
    "target": "note:note-1795533141486-4aztmt",
    "cos": 0.622
+  },
+  {
+   "source": "ins:46b125e0-814d-4f69-aafc-fdaff79ef782",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.648
   },
   {
    "source": "ins:26e861f4-0e76-47df-966c-3cb27da22ca3",
@@ -23120,6 +23277,11 @@
   },
   {
    "source": "ins:118b250a-cac8-4255-934d-b2430ea2ec06",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.623
+  },
+  {
+   "source": "ins:118b250a-cac8-4255-934d-b2430ea2ec06",
    "target": "note:note-1795188209680-rpkewt",
    "cos": 0.653
   },
@@ -23174,6 +23336,11 @@
    "cos": 0.706
   },
   {
+   "source": "ins:118b250a-cac8-4255-934d-b2430ea2ec06",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.622
+  },
+  {
    "source": "ins:787897c9-bc3d-468d-bed3-e55d5835b087",
    "target": "ins:c7917f0e-d2ca-4942-91eb-7f552e84729f",
    "cos": 0.733
@@ -23217,6 +23384,16 @@
    "source": "ins:787897c9-bc3d-468d-bed3-e55d5835b087",
    "target": "note:note-1795532757116-hwydao",
    "cos": 0.698
+  },
+  {
+   "source": "ins:787897c9-bc3d-468d-bed3-e55d5835b087",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.615
+  },
+  {
+   "source": "ins:c7917f0e-d2ca-4942-91eb-7f552e84729f",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.618
   },
   {
    "source": "ins:c7917f0e-d2ca-4942-91eb-7f552e84729f",
@@ -23272,6 +23449,11 @@
    "source": "ins:c7917f0e-d2ca-4942-91eb-7f552e84729f",
    "target": "note:note-1795532757116-hwydao",
    "cos": 0.696
+  },
+  {
+   "source": "ins:c7917f0e-d2ca-4942-91eb-7f552e84729f",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.645
   },
   {
    "source": "ins:634304a1-9751-4fcd-b54b-b4bfa411796d",
@@ -23554,6 +23736,31 @@
    "cos": 0.629
   },
   {
+   "source": "mem:20261125T043559678Z",
+   "target": "note:note-1795274177468-qfyd2y",
+   "cos": 0.669
+  },
+  {
+   "source": "mem:20261125T043559678Z",
+   "target": "note:note-1795346347987-o2m2rw",
+   "cos": 0.622
+  },
+  {
+   "source": "mem:20261125T043559678Z",
+   "target": "note:note-1795437282680-ke29sy",
+   "cos": 0.619
+  },
+  {
+   "source": "mem:20261125T043559678Z",
+   "target": "note:note-1795532757116-hwydao",
+   "cos": 0.647
+  },
+  {
+   "source": "mem:20261125T043559678Z",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.826
+  },
+  {
    "source": "ins:ed2f4579-d332-4e14-95dd-44535b28c2e1",
    "target": "note:note-1795275806780-ubp6t3",
    "cos": 0.61
@@ -23692,6 +23899,11 @@
    "source": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
    "target": "note:note-1795495202718-9ipmpn",
    "cos": 0.619
+  },
+  {
+   "source": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.616
   },
   {
    "source": "voice:ev_01M87490T2Q3D8984E3471BERW",
@@ -23864,6 +24076,11 @@
    "cos": 0.614
   },
   {
+   "source": "note:note-1795273331515-u0oyjy",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.637
+  },
+  {
    "source": "note:note-1795274177468-qfyd2y",
    "target": "note:note-1795275806780-ubp6t3",
    "cos": 0.665
@@ -23897,6 +24114,11 @@
    "source": "note:note-1795274177468-qfyd2y",
    "target": "note:note-1795532757116-hwydao",
    "cos": 0.684
+  },
+  {
+   "source": "note:note-1795274177468-qfyd2y",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.646
   },
   {
    "source": "note:note-1795275806780-ubp6t3",
@@ -23934,6 +24156,11 @@
    "cos": 0.607
   },
   {
+   "source": "note:note-1795275806780-ubp6t3",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.631
+  },
+  {
    "source": "note:note-1795322179546-ffsn5q",
    "target": "note:note-1795493411219-ql3p10",
    "cos": 0.617
@@ -23942,6 +24169,11 @@
    "source": "note:note-1795322179546-ffsn5q",
    "target": "note:note-1795493448700-ann3wn",
    "cos": 0.61
+  },
+  {
+   "source": "note:note-1795322179546-ffsn5q",
+   "target": "spoke:ev_01M88FTM8NKV6WA25T7KHBZJWF",
+   "cos": 0.643
   },
   {
    "source": "note:note-1795322518790-viqy7n",
@@ -24137,6 +24369,11 @@
    "source": "note:note-1795346347987-o2m2rw",
    "target": "note:note-1795532757116-hwydao",
    "cos": 0.715
+  },
+  {
+   "source": "note:note-1795346347987-o2m2rw",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.616
   },
   {
    "source": "note:note-1795356151011-uu24a6",
@@ -24564,6 +24801,11 @@
    "cos": 0.63
   },
   {
+   "source": "note:note-1795408881332-ec7tlg",
+   "target": "spoke:ev_01M88FTM8NKV6WA25T7KHBZJWF",
+   "cos": 0.659
+  },
+  {
    "source": "note:note-1795423077819-8a30e0",
    "target": "spoke:ev_01M86JXWCC1W53VXHB2ZETF2KY",
    "cos": 0.644
@@ -24612,6 +24854,11 @@
    "source": "note:note-1795437282680-ke29sy",
    "target": "note:note-1795489843660-yu00kn",
    "cos": 0.606
+  },
+  {
+   "source": "note:note-1795437282680-ke29sy",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.629
   },
   {
    "source": "note:note-1795438466121-5dxuql",
@@ -24832,6 +25079,11 @@
    "source": "note:note-1795531227285-mf3t82",
    "target": "note:note-1795533141486-4aztmt",
    "cos": 0.62
+  },
+  {
+   "source": "note:note-1795532757116-hwydao",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.659
   },
   {
    "source": "note:note-1795533141502-7fcq3c",

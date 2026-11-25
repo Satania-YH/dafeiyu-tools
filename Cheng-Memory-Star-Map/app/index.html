@@ -1277,6 +1277,74 @@
   }
   .wk-none{ font-size:10.5px; color:#3d4759; padding:4px 2px; }
 
+  /* ══════════ 话题页（独立整页）══════════ */
+  #topics{
+    position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
+    overflow-y:auto; overflow-x:hidden; z-index:45;
+    background:linear-gradient(180deg,rgba(9,13,23,.99),rgba(5,7,13,.99));
+    padding:22px 30px 40px;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .22s, visibility .22s, left .26s cubic-bezier(.4,0,.2,1);
+  }
+  #topics.shown{ opacity:1; visibility:visible; pointer-events:auto; }
+  #rail.collapsed ~ #topics{ left:52px; }
+  #topics::-webkit-scrollbar{ width:8px; }
+  #topics::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.18); border-radius:4px; }
+  #topics .tp-page{ max-width:1000px; margin:0 auto; }
+  #topics .tp-head-main{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+  #topics .tp-head-main h1{ margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff; }
+  #topics .tp-count{ font-size:11.5px; color:#5c6884; }
+  #topics .tp-sub{
+    font-size:11.5px; color:#65718c; margin:4px 0 20px;
+    letter-spacing:.05em; line-height:1.7;
+  }
+
+  /* 卡片网格：一屏能看全，不用滚 */
+  .tp-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
+    gap:10px;
+  }
+  .tp-card{
+    position:relative; text-align:left; cursor:pointer; overflow:hidden;
+    font-family:inherit; padding:12px 14px 11px; border-radius:10px;
+    background:linear-gradient(160deg,rgba(255,255,255,.032),rgba(255,255,255,.012));
+    border:1px solid rgba(140,170,255,.12);
+    transition:.15s;
+  }
+  .tp-card:hover{
+    background:linear-gradient(160deg,rgba(140,170,255,.10),rgba(140,170,255,.03));
+    border-color:rgba(140,170,255,.30);
+    transform:translateY(-1px);
+  }
+  .tp-card.on{
+    background:linear-gradient(160deg,rgba(122,180,255,.16),rgba(122,180,255,.05));
+    border-color:rgba(122,180,255,.48);
+  }
+  .tp-card-top{ display:flex; align-items:baseline; gap:8px; margin-bottom:8px; }
+  .tp-card-n{
+    flex:none; font-size:19px; font-weight:300; color:#cfe0ff;
+    font-variant-numeric:tabular-nums; line-height:1;
+  }
+  .tp-card-n small{ font-size:10px; color:#5c6884; margin-left:2px; }
+  .tp-card-name{
+    flex:1; min-width:0; font-size:12.5px; color:#dbe6ff; letter-spacing:.02em;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  /* 底下那一排色点：这个话题里有哪几类，各几颗 */
+  .tp-card-kinds{ display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+  .tp-kdot{
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:9.5px; color:#6b7a99; letter-spacing:.01em;
+  }
+  .tp-kdot i{
+    width:5px; height:5px; border-radius:50%; display:inline-block;
+  }
+  .tp-card-go{
+    position:absolute; right:11px; bottom:9px;
+    font-size:9.5px; color:#4e5a76; opacity:0; transition:.15s;
+  }
+  .tp-card:hover .tp-card-go, .tp-card.on .tp-card-go{ opacity:1; color:#8fb8ff; }
+
   /* ── 话题聚类（左侧导航里的那一块）── */
   .tp-box{
     margin-top:14px; padding-top:12px;
@@ -1700,6 +1768,11 @@
     </button>
     <!-- 2026-11-25：「记忆轨迹和星图轨迹合并成一个，用 Tab 切换」
          跟「记忆变化」的数据源 Tab 一个做法。 -->
+    <!-- 2026-11-25 爸爸：「话题专门做个面般 左侧加一个选项 右侧面般
+         这样看起来好看一点」——从导航栏里挤着的那块挪成独立页面 -->
+    <button class="nav-item" data-view="topics">
+      <span class="ico">◈</span><span class="nav-label">话题</span>
+    </button>
     <button class="nav-item" data-view="timeline">
       <span class="ico">☰</span><span class="nav-label">记忆轨迹</span>
     </button>
@@ -1716,11 +1789,6 @@
       <span class="ico">⚙</span><span class="nav-label">通用设置</span>
     </button>
 
-    <!-- 2026-11-25：话题聚类。只出现在「记忆星图」视图里 ——
-         别的页面不需要它，摆着反而碍事。 -->
-    <div class="tp-box" id="topicWrap">
-      <div id="topicList"></div>
-    </div>
   </nav>
 
   <!-- ══════ 设置抽屉：只在「通用设置」时出现 ══════ -->
@@ -2057,6 +2125,25 @@
   </section>
 
   <!-- ══════ 未成之星：能看依据、能改判 ══════ -->
+  <!-- ══════ 话题：431 颗星里 88 颗带 topic，分成 64 个话题 ══════
+       2026-11-25 爸爸：「话题专门做个面般 左侧加一个选项 右侧面般
+                        这样看起来好看一点」
+       原来挤在左侧导航栏里，带个丑滚动条，还占着星图的地。
+       现在独立成页，一屏能看全。 -->
+  <section id="topics">
+   <div class="tp-page">
+    <div class="tp-head-main">
+      <h1>话 题</h1>
+      <span class="tp-count" id="tpCount"></span>
+    </div>
+    <p class="tp-sub">
+      同一件事说过好几次的，会落进同一个话题。点一个话题，回星图把它圈出来 ——
+      比在几百条连线里找要快。
+    </p>
+    <div class="tp-grid" id="tpGrid"></div>
+   </div>
+  </section>
+
   <section id="excluded">
    <div class="ex-page">
     <div class="ex-head">
@@ -2627,7 +2714,64 @@ function setTopic(name) {
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   话题页（独立整页）
+   2026-11-25 爸爸：「话题专门做个面般 左侧加一个选项 右侧面般」
+   卡片网格，一屏看全，不用滚。点一张 → 回星图把这个话题圈出来。
+   ══════════════════════════════════════════════════════════ */
+function renderTopicPage() {
+  const grid = document.getElementById('tpGrid');
+  const cnt = document.getElementById('tpCount');
+  if (!grid) return;
+
+  if (!TOPIC_LIST.length) {
+    grid.innerHTML = '<div class="tp-none">还没有话题 —— 星图数据里的节点都还没标 topic</div>';
+    if (cnt) cnt.textContent = '';
+    return;
+  }
+
+  if (cnt) {
+    const covered = TOPIC_LIST.reduce((a, t) => a + t.n, 0);
+    const total = (DATA && DATA.nodes) ? DATA.nodes.length : 0;
+    cnt.textContent = TOPIC_LIST.length + ' 个 · 覆盖 ' + covered + ' / ' + total + ' 颗星';
+  }
+
+  grid.innerHTML = '';
+  for (const t of TOPIC_LIST) {
+    // 每张卡底下那几个色点：这个话题里有哪几类
+    const kinds = Object.entries(t.kinds).sort((a, b) => b[1] - a[1]);
+    const dots = kinds.slice(0, 4).map(([k, c]) => {
+      const col = (themeRGB.kinds[k] || themeRGB.link);
+      const rgb = Array.isArray(col) ? col : [140, 170, 255];
+      return '<span class="tp-kdot"><i style="background:rgb(' + rgb.join(',') + ');'
+        + 'box-shadow:0 0 5px rgb(' + rgb.join(',') + ')"></i>'
+        + esc(KIND_CN[k] || k) + (c > 1 ? ' ' + c : '') + '</span>';
+    }).join('');
+    if (kinds.length > 4) dots += '<span class="tp-kdot">+急了</span>'.replace('急了', (kinds.length - 4));
+
+    const b = document.createElement('button');
+    b.className = 'tp-card' + (TOPIC_SEL === t.name ? ' on' : '');
+    b.innerHTML = '<div class="tp-card-top">'
+        + '<span class="tp-card-n">' + t.n + '<small>颗</small></span>'
+        + '<span class="tp-card-name">' + esc(t.name) + '</span>'
+      + '</div>'
+      + '<div class="tp-card-kinds">' + dots + '</div>'
+      + '<span class="tp-card-go">在星图上圈出来 →</span>';
+    b.onclick = () => {
+      /* 点了就回星图，把话题圈出来 —— 这一页的用处就是「找到然后过去」 */
+      TOPIC_SEL = t.name;
+      setView('starmap');
+      renderTopicPage();
+      toast('话题「' + t.name + '」' + t.n + ' 颗，已在星图上圈出');
+    };
+    grid.appendChild(b);
+  }
+}
+
 function renderTopicList() {
+  /* 旧的「左侧导航内嵌列表」已经改成独立页面了（2026-11-25）。
+     这个函数留着只做一件事：把话题页也一起刷一遍。 */
+  renderTopicPage();
   const box = document.getElementById('topicList');
   if (!box) return;
   if (!TOPIC_LIST.length) { box.innerHTML = ''; return; }
@@ -7659,6 +7803,7 @@ function setView(v){
   const isTimeline = (v === 'timeline');
   const isStarmap = (v === 'starmap');
   const isExcluded = (v === 'excluded');
+  const isTopics = (v === 'topics');
   const isStats = (v === 'statspage');
   /* 2026-11-25：星图轨迹并进记忆轨迹做 Tab 了。
      老的 'startrack' 视图留着当别名，进来就切到 timeline + 星图 Tab，
@@ -7675,19 +7820,20 @@ function setView(v){
   panel.classList.toggle('shown', isSettings);
   if (tlEl) tlEl.classList.toggle('shown', isTimeline);
   if (exEl) exEl.classList.toggle('shown', isExcluded);
+  const tpEl = document.getElementById('topics');
+  if (tpEl) tpEl.classList.toggle('shown', !!isTopics);
   const stEl = document.getElementById('statspage');
   if (stEl) stEl.classList.toggle('shown', isStats);
   /* 旧的 #startrack section 已经搬进 #timeline 里了，这里不再单独控制 */
   const dxEl = document.getElementById('diagnose');
   if (dxEl) dxEl.classList.toggle('shown', isDiagnose);
   stage.classList.toggle('asleep', !isStarmap);
-  /* 话题面板只在星图视图出现 —— 别的页面用不上 */
-  const tw = document.getElementById('topicWrap');
-  if (tw) tw.classList.toggle('hide', !isStarmap);
+  /* 话题已经独立成页了，不用再控制显隐 */
 
   if (isSettings) panel.scrollTop = 0;
   if (isTimeline) { if (tlEl) tlEl.scrollTop = 0; ensureTimeline(); }
   if (isExcluded) { if (exEl) exEl.scrollTop = 0; ensureExcluded(); }
+  if (isTopics) { if (tpEl) tpEl.scrollTop = 0; buildTopicIndex(); renderTopicPage(); }
   if (isStats) { if (stEl) stEl.scrollTop = 0; ensureStats(); }
   /* 从旧入口（setView('startrack')）进来时，直接把 Tab 切到星图 */
   if (isStartrackAlias) { tlSetTab('graph', true); }
