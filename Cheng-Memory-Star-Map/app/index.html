@@ -4067,9 +4067,6 @@ function draw(){
     if (nodeGroup.length && nodeGroup[e.a] >= 0 && nodeGroup[e.b] >= 0 && nodeGroup[e.a] !== nodeGroup[e.b]) a *= 0.40;
     if (a <= 0.02) continue;
 
-    /* 推出来的边被指到时，用冷色，别跟实测边一个颜色 */
-    if (isHoveredEdge && e.inferred) col = [130, 160, 210];
-
     /* ══════ 悬浮到这条线时的"选中效果" ══════
        2026-11-24 用户：「怎么只有虚线有选中效果 实线也要有啊 然后选中效果不够高级」
        虚线那边有 isHovered（变亮变粗），实线原来只管"是不是聚焦线"，
@@ -4079,6 +4076,11 @@ function draw(){
          · 两端各一粒小光点，让这条线看起来"通着"
        不用虚线、不用动画 —— 动的东西会抢注意力，静态的层次更耐看。 */
     const isHoveredEdge = (eiHover === hoverEdge);
+
+    /* 推出来的边被指到时用冷色，别跟实测边一个颜色。
+       ⚠️ 这行原来写在 isHoveredEdge 定义之前 —— let/const 的 TDZ，
+       整条渲染循环每帧都抛异常，画布停在 300×150 再没长过。 */
+    if (isHoveredEdge && e.inferred) col = [130, 160, 210];
 
     /* ⚠️ 2026-11-24 用户：「你这变的太粗了啊」。
        第一版加了固定像素（lw*5+4），zoom 之后基础 lw 本来就有 2~3px，
