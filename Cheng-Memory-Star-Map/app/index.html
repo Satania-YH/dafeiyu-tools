@@ -10540,9 +10540,21 @@ async function dxDoRefresh(opts) {
     setLabel('刷新中');
   }
 
+  /* 最短转这么久。
+     2026-11-25 爸爸：「手动点击之后也要出现刷新旋转和不可点 刷新完再开放」
+     本地拉一次 /api/graph 只要 200ms —— 转一下就没了，等于没转。
+     所以给一个下限：活干得快也要转够 600ms，让人看得见「它在干活」。 */
+  const MIN_SPIN_MS = 600;
+  const t0 = Date.now();
+  const waitAtLeast = async () => {
+    const left = MIN_SPIN_MS - (Date.now() - t0);
+    if (left > 0) await new Promise(r => setTimeout(r, left));
+  };
+
   try {
     await refreshGraphQuiet();        // 拉服务端最新
     renderDiagnose();                 // 重算 + 重绘
+    await waitAtLeast();              // 别闪一下就没了
     if (b) {
       b.classList.remove('spin');
       b.disabled = false;
@@ -10552,6 +10564,7 @@ async function dxDoRefresh(opts) {
       }, 1400);
     }
   } catch (e) {
+    await waitAtLeast();
     if (b) {
       b.classList.remove('spin');
       b.disabled = false;
