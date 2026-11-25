@@ -1177,16 +1177,9 @@
   .tl-empty{
     text-align:center; padding:60px 20px; color:#4d5871; font-size:12.5px; line-height:1.9;
   }
-  /* 2026-11-25：「今天没有就空空如也的提示就可以了」
-     加一颗会呼吸的小星，不是干巴巴一行字。 */
-  .tl-empty-star{
-    font-size:26px; color:rgba(122,180,255,.34); line-height:1; margin-bottom:14px;
-    animation: tlemptyBreath 2.8s ease-in-out infinite;
-  }
-  @keyframes tlemptyBreath{
-    0%,100%{ opacity:.35; transform:scale(.94); }
-    50%    { opacity:.85; transform:scale(1.06); }
-  }
+  /* 2026-11-25：「不要用星 用数据就行了 不然记忆轨迹和星没关系」
+     原来这里放了一颗会呼吸的小星，记忆轨迹跟星没关系，去掉了。
+     留一条细分隔线当视觉落点，不要光秃秃一行字。 */
   .tl-empty-sub{ color:#39435a; font-size:11.5px; }
   .tl-empty-today{ color:#5d6a85; }
 
@@ -9058,26 +9051,29 @@ function ensureStartrack() {
    还是「筛选框选窄了」：
      · 选的是今天 → 今天没新东西，去看看别的日子
      · 选的是别的 → 这个范围里确实没有
+
+   2026-11-25 又一句：「不要用星 用数据就行了 不然记忆轨迹和星没关系」
+            再一句：「我说的是文字 今天还没有新的星 这种 改成今天还没有新的记录」
+   → 原来两块空态前面都放了一颗呼吸的星，可「记忆轨迹」是 events 流水，
+     跟星一点关系没有，加星纯属我审美上头。去掉图标。
+     文案统一用「记录」，不用「星」也不用「数据」—— 说人话。
    ══════════════════════════════════════════════════════════ */
 function emptyHint(kind, hasFilter, pickedDate) {
   const today = stLocalDate(new Date().toISOString());
   const isToday = pickedDate && pickedDate === today;
-  const who = (kind === 'star') ? '星' : '记录';
   if (isToday) {
     return '<div class="tl-empty tl-empty-today">'
-      + '<div class="tl-empty-star">✦</div>'
-      + '今天还没有新的' + who + '<br>'
+      + '今天还没有新的记录<br>'
       + '<span class="tl-empty-sub">空空如也 · 换个日子翻翻，或者等会儿再来</span>'
       + '</div>';
   }
   if (hasFilter) {
     return '<div class="tl-empty">'
-      + '<div class="tl-empty-star">✦</div>'
-      + '这个范围里没有' + who + '<br>'
+      + '这个范围里没有记录<br>'
       + '<span class="tl-empty-sub">把日期或分类放宽一点试试</span>'
       + '</div>';
   }
-  return '<div class="tl-empty">还没有任何' + who + '</div>';
+  return '<div class="tl-empty">还没有任何记录</div>';
 }
 
 function srtDays() {
