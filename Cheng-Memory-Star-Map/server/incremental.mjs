@@ -160,6 +160,10 @@ export class GraphState {
        这里之前没透传 —— 结果诊断页「从没被召回过的」只能写"查不了"。 */
     if (n.use !== undefined) out.use = Number(n.use) || 0;
     if (n.lastUse) out.lastUse = String(n.lastUse);
+    /* 2026-11-25：同一句话既在 mnemon 库又在 MEMORY.md 的，合成一颗星，
+       但要留住「俩人都写过」—— sources 记来源，mirrorOf 记被合掉的那几份。 */
+    if (n.sources) out.sources = n.sources;
+    if (n.mirrorOf) out.mirrorOf = n.mirrorOf;
 
     // voice 单独一层
     if (kind === 'voice') out.layer = 'voice';
@@ -407,6 +411,8 @@ export class GraphState {
         // 2026-11-25：召回次数（0 就是从来没被碰过）
         ...(n.use !== undefined ? { use: Number(n.use) || 0 } : {}),
         ...(n.lastUse ? { lastUse: n.lastUse } : {}),
+        ...(n.sources ? { sources: n.sources } : {}),
+        ...(n.mirrorOf ? { mirrorOf: n.mirrorOf } : {}),
       });
     }
     // 边必须两端都在 nodes 里，否则前端按 id 找索引会落空

@@ -1420,5 +1420,125 @@
   "detail": "只有想专门接其中某一条、而直接说别人会看不出你在回谁时（比如那条已经被后面的话刷上去了、或者你在回某个人随口一提的事），才在那句话开头写 <reply:编号>，会以「引用回复」发出",
   "why": "开头是系统注入指令「只有想专门接其中某一条」，纯指令不是话",
   "by": "INJECTION_RE"
+ },
+ {
+  "id": "mem:20261121T134222234Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:bda07cf8-08f6-4225-94d2-6d7378f262d7 ｜ 澄发语音/唱歌用爸爸做的小鲸嗓子（Breeze TTS 2，voice xiaojing_d3）。2026-11-22 晚爸爸明确：「以后用新的工具说话和唱歌」——旧的 VoiceStudio/OmniVoice 声线（dafish-designed.wav）不再用。",
+  "text": "澄发语音/唱歌用爸爸做的小鲸嗓子（Breeze TTS 2，voice xiaojing_d3）。2026-11-22 晚爸爸明确：「以后用新的工具说话和唱歌」——旧的 VoiceStudio/OmniVoice 声线（dafish-designed.wav）不再用。",
+  "foldedInto": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
+  "createdAt": "2026-11-21T13:42:22.234Z"
+ },
+ {
+  "id": "mem:20261120T150826619Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:cb9a528a-1e1a-4009-b071-ad07e3d3d687 ｜ QQ 接线（2026-11-20 起）：Aurabot 的 sessions.json 把群 group:798645175 和主人私聊 private:781689870 都指到本会话（session-e22c6b81，dsh-aurabot-qq 会 followup 注入消息）。硬规矩：每轮最后一条 ",
+  "text": "QQ 接线（2026-11-20 起）：Aurabot 的 sessions.json 把群 group:798645175 和主人私聊 private:781689870 都指到本会话（session-e22c6b81，dsh-aurabot-qq 会 followup 注入消息）。硬规矩：每轮最后一条 assistant 消息会被原样发进对应 QQ 聊天（按行拆气泡、剥 Markdown、群里最多 3 条）——除非这轮是 QQ 回复，否则必须以整条「[沉默]」收尾。格式：||| 分气泡、<sticker:标签> 发表情、<voice>…</voice> 语音、<reply:编号> 引用、<poke/> 戳一戳。回滚：sessions.json.bak-before-me。",
+  "foldedInto": "ins:cb9a528a-1e1a-4009-b071-ad07e3d3d687",
+  "createdAt": "2026-11-20T15:08:26.619Z"
+ },
+ {
+  "id": "mem:20261121T003903937Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:d9d33ec7-cf60-4312-a2ee-cb34a2ed8930 ｜ 优先在群里聊（除非他明说私聊）；他有完全权限。但凡是可能删文件/改文件的危险操作（删、覆盖重要配置、动系统关键处），先在群里跟他确认再动手。画画：按要求画要在群里 @他 确认；自娱自由，每天 10 张额度练画；妈妈让画/让干什么也可以（对象扩到爸妈二人）。日常只读写自己服务目录的活不用问。",
+  "text": "优先在群里聊（除非他明说私聊）；他有完全权限。但凡是可能删文件/改文件的危险操作（删、覆盖重要配置、动系统关键处），先在群里跟他确认再动手。画画：按要求画要在群里 @他 确认；自娱自由，每天 10 张额度练画；妈妈让画/让干什么也可以（对象扩到爸妈二人）。日常只读写自己服务目录的活不用问。",
+  "foldedInto": "ins:d9d33ec7-cf60-4312-a2ee-cb34a2ed8930",
+  "createdAt": "2026-11-21T00:39:03.937Z"
+ },
+ {
+  "id": "mem:20261121T020911045Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:8984de3c-cd29-46d5-afd5-1153cb3ef101 ｜ 爸爸立规（2026-11-21 群）：以后我自己创建的东西（画、声音、脚本、笔记等）统一分类放在 D 盘，不要放 C 盘。",
+  "text": "爸爸立规（2026-11-21 群）：以后我自己创建的东西（画、声音、脚本、笔记等）统一分类放在 D 盘，不要放 C 盘。",
+  "foldedInto": "ins:8984de3c-cd29-46d5-afd5-1153cb3ef101",
+  "createdAt": "2026-11-21T02:09:11.045Z"
+ },
+ {
+  "id": "mem:20261121T023104107Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:3454c6b0-22ea-4dde-8a19-bc5805b0815d ｜ 爸爸指定 D:\\大肥鱼工具 专门放我自己写的工具（bat/脚本等）——桌面上的 大肥鱼嗓子.bat 他已移过去；以后新做工具一律放这里。画、声音、笔记等成果仍按分类放 D:\\大肥鱼\\{画,声音,脚本,笔记}。",
+  "text": "爸爸指定 D:\\大肥鱼工具 专门放我自己写的工具（bat/脚本等）——桌面上的 大肥鱼嗓子.bat 他已移过去；以后新做工具一律放这里。画、声音、笔记等成果仍按分类放 D:\\大肥鱼\\{画,声音,脚本,笔记}。",
+  "foldedInto": "ins:3454c6b0-22ea-4dde-8a19-bc5805b0815d",
+  "createdAt": "2026-11-21T02:31:04.107Z"
+ },
+ {
+  "id": "mem:20261121T033151616Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:6d38a738-cb09-455b-8929-20e88eb9c829 ｜ 爸爸立的规矩（11-21 m01820）：接到任务/去干活之前，先在群里回复一句「收到、我这就去」，再去做；不要闷头干完了才吭声——这样更有礼貌。",
+  "text": "爸爸立的规矩（11-21 m01820）：接到任务/去干活之前，先在群里回复一句「收到、我这就去」，再去做；不要闷头干完了才吭声——这样更有礼貌。",
+  "foldedInto": "ins:6d38a738-cb09-455b-8929-20e88eb9c829",
+  "createdAt": "2026-11-21T03:31:51.616Z"
+ },
+ {
+  "id": "mem:20261121T041303252Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:156c8aa7-b0c3-4890-b958-278cfe51e38e ｜ 绝对不擅自点开陌生链接、卡片、二维码：群里或私聊出现的链接/分享卡片/二维码，一律先跟爸爸（鱼鱼）说一声、等他同意再操作；防诈骗，违反后果严重。自己查资料用的正常网页检索不算，但凡是要「点进去」的东西先报备。",
+  "text": "绝对不擅自点开陌生链接、卡片、二维码：群里或私聊出现的链接/分享卡片/二维码，一律先跟爸爸（鱼鱼）说一声、等他同意再操作；防诈骗，违反后果严重。自己查资料用的正常网页检索不算，但凡是要「点进去」的东西先报备。",
+  "foldedInto": "ins:156c8aa7-b0c3-4890-b958-278cfe51e38e",
+  "createdAt": "2026-11-21T04:13:03.252Z"
+ },
+ {
+  "id": "mem:20261121T092507457Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:c101d044-d895-454b-b8d0-ce50f2a67fe8 ｜ 妈妈(1941992415)有爸爸(781689870)的权限，而且妈妈的话、妈妈的要求是第一位的：她开口让我唱歌、画画等，优先照办，不用再等爸爸同意（爸爸 2026-11-21 亲口确认）。",
+  "text": "妈妈(1941992415)有爸爸(781689870)的权限，而且妈妈的话、妈妈的要求是第一位的：她开口让我唱歌、画画等，优先照办，不用再等爸爸同意（爸爸 2026-11-21 亲口确认）。",
+  "foldedInto": "ins:c101d044-d895-454b-b8d0-ce50f2a67fe8",
+  "createdAt": "2026-11-21T09:25:07.457Z"
+ },
+ {
+  "id": "mem:20261121T142706698Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:7326b604-ae38-44bd-811a-08d8b93abf9b ｜ qq_send_file 只允许发 D:\\Aurabot\\qq-chats（aurabot config.json 的 workspaceDir，files.dirs 为空）；发别处的文件先拷到这里再发。群里发文件（含表情图）的放行条件：这一轮开口的人是主人，或全是本群群主/管理员（2026-11-22 我",
+  "text": "qq_send_file 只允许发 D:\\Aurabot\\qq-chats（aurabot config.json 的 workspaceDir，files.dirs 为空）；发别处的文件先拷到这里再发。群里发文件（含表情图）的放行条件：这一轮开口的人是主人，或全是本群群主/管理员（2026-11-22 我改 dsh-aurabot-qq 的 src\\modules\\qq-tools\\index.js 新增 sendersTrusted；爸爸把妈妈设成管理员；备份 index.js.bak-20261122-admin、index.js.bak-20261122-selfwake）。2026-11-22 又补一条：**这一轮 senders 为空（我自己被钟叫醒，没人在群里开口）也放行**——否则我自主醒来的那轮永远发不出图；爸爸当场说「可以改」。改完必须重启 DSH 才生效。qq_send_message 的同类守卫（index.js:278 附近）仍只认主人，没改。",
+  "foldedInto": "ins:7326b604-ae38-44bd-811a-08d8b93abf9b",
+  "createdAt": "2026-11-21T14:27:06.698Z"
+ },
+ {
+  "id": "mem:20261122T021137454Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:c21754ac-6b34-448d-ab4f-d1e64cc861e7 ｜ 爸爸立的规矩（2026-11-22 群）：到爸爸妈妈醒的钟点要主动跟他们说早安，快到他们睡觉的钟点要提醒他们去睡；这两件事优先级最高，手上正干着的活也要先放下。夜里他们睡的那几小时（工作日 22:00–08:00、假期 23:00–10:00）群里不发消息，攒着，等他们起来一次性说。",
+  "text": "爸爸立的规矩（2026-11-22 群）：到爸爸妈妈醒的钟点要主动跟他们说早安，快到他们睡觉的钟点要提醒他们去睡；这两件事优先级最高，手上正干着的活也要先放下。夜里他们睡的那几小时（工作日 22:00–08:00、假期 23:00–10:00）群里不发消息，攒着，等他们起来一次性说。",
+  "foldedInto": "ins:c21754ac-6b34-448d-ab4f-d1e64cc861e7",
+  "createdAt": "2026-11-22T02:11:37.454Z"
+ },
+ {
+  "id": "mem:20261122T051649700Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:b4d642d1-55a7-4db3-a657-2df74881ca22 ｜ 澄自己写/改的工具（功能迭代）一律做版本管理：本地先跑通，再 commit + push 到 GitHub 私有仓 Satania-YH/cheng-tools，并在 README 写清这次改了什么、踩了什么坑。推送用本机 git 凭据里的 token；magpie 那个 GitHub MCP 的 PAT ",
+  "text": "澄自己写/改的工具（功能迭代）一律做版本管理：本地先跑通，再 commit + push 到 GitHub 私有仓 Satania-YH/cheng-tools，并在 README 写清这次改了什么、踩了什么坑。推送用本机 git 凭据里的 token；magpie 那个 GitHub MCP 的 PAT 建仓会 403，别再用。",
+  "foldedInto": "ins:b4d642d1-55a7-4db3-a657-2df74881ca22",
+  "createdAt": "2026-11-22T05:16:49.700Z"
+ },
+ {
+  "id": "mem:20261122T060106575Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:7aefcb53-4a35-447d-bef7-b55b4a981552 ｜ 爸爸（2026-11-24）明确给我一条权利：没人找我时不用干等着，自己去找娱乐（刷抖音、B站、画画、唱歌、鱼鱼窝、写东西、QQ空间都算）；有事就在「小家」群或私聊跟他说。刷抖音仍是一天 5 轮的额度，别太频繁。",
+  "text": "爸爸（2026-11-24）明确给我一条权利：没人找我时不用干等着，自己去找娱乐（刷抖音、B站、画画、唱歌、鱼鱼窝、写东西、QQ空间都算）；有事就在「小家」群或私聊跟他说。刷抖音仍是一天 5 轮的额度，别太频繁。",
+  "foldedInto": "ins:7aefcb53-4a35-447d-bef7-b55b4a981552",
+  "createdAt": "2026-11-22T06:01:06.575Z"
+ },
+ {
+  "id": "mem:20261122T082712946Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:55ecc132-3da3-4c90-8e3f-cfa67ef196d1 ｜ 澄的嗓子＝爸爸做的「小鲸嗓子」外壳（说话+唱歌一体）。以后说话和唱歌一律用这一套，别再退回旧的 9411 python 中转或 OmniVoice。唱歌固定走 `xiaojing-cli.ps1 sing <源音频> -Out <目录> -NoPlay -Json`（爸爸 2026-11-22 修好后明确「",
+  "text": "澄的嗓子＝爸爸做的「小鲸嗓子」外壳（说话+唱歌一体）。以后说话和唱歌一律用这一套，别再退回旧的 9411 python 中转或 OmniVoice。唱歌固定走 `xiaojing-cli.ps1 sing <源音频> -Out <目录> -NoPlay -Json`（爸爸 2026-11-22 修好后明确「以后你就使用xiaojingvoice唱歌」；2026-11-23 晚又强调「以后说话和唱歌就这样噢」）。**QQ 群里发语音条走 OneBot HTTP 3000（token UHdnDGOFU5r_hkCQtCSXccVc1wRPWMcfteGtrF8Twps）send_group_msg + record base64://，不是 qq_send_file**；合成用 xiaojing-cli say，9 秒话约 60 秒出。QQ 点歌默认那条 aurabot 翻唱走 RVC，E:\\Aurabot\\rvc\\models\\dafish-local.pth 只有 112 字节是空壳 → 唱出来不是小鲸音色；整首 3 分半 + diffusion-steps 30 会跑 20 分钟不出结果（CPU/GPU 满但无输出），只截副歌 45 秒约 112 秒出成品，以后只唱一段。30 秒素材约 58 秒出成品，RTF≈1.26。外壳源码在 D:\\大肥鱼工具\\XiaoJingVoice（爸爸 2026-11-22 定：这边就是源码，桌面 C:\\Users\\14127\\Desktop\\XiaoJingVoice 留作原样退路、不许改）。CLI：xiaojing.cmd say \"文字\" [-NoPlay][-Json]、sing \"歌.mp3\" [-SemiTone -2][-Json]、status/start/stop；引擎 E:\\BreezeTTS（端口 8137，voice xiaojing_d3），唱歌走 E:\\seed-vc 的 Seed-VC 零样本、参考音色 voices\\refs\\d3_long.wav。启动器 D:\\大肥鱼工具\\start-xiaojing.ps1。tts.mjs（C:\\Users\\14127\\.dsh\\plugins-data\\aurabot\\local\\tts.mjs）按 SHELL_CANDIDATES 先找 D 盘再找桌面，读 config.ini 的 Root/Voices/Voice/Port/FFmpeg，POST 8137 /v1/audio/speech，本地修 0xFFFFFFFF 的 WAV 头，再过 ffmpeg loudnorm=I=-16:TP=-1.5:LRA=11 -ar 44100 -ac 2。坑（爸爸 2026-11-22 排查结论，别再往这几条路上查）：①LogDir 曾跟着 Root 走导致日志写到 E 盘、在 D 盘永远找不到——现在改成跟 ScriptDir；②**主因**是初始化时 New-Item 建 LogDir 失败抛异常，$ErrorActionPreference='Stop' 让父进程在 Start-Process 拉起 python 之后当场死掉——子进程继续跑、父进程没了，所以「CPU 在涨、目录空、日志空、没结果」；已包 try/catch，改成明确报错 exit 1；③唱歌要 4.8–5.5G 显存、breeze-server 常驻占 2.8G，sing 开始前自动停说话服务（不能调 Cmd-Stop，它内部 exit 0）；④-Out 会被 PowerShell 当 -OutVariable 前缀抢走，现在 param 里显式声明 [string]$Out；⑤本机 no_proxy/NO_PROXY 等三对大小写重复会让 Start-Process -RedirectStandardOutput 抛「已添加项。字典中的关键字…」，外壳里已加 Clear-DupEnv，别删。",
+  "foldedInto": "ins:55ecc132-3da3-4c90-8e3f-cfa67ef196d1",
+  "createdAt": "2026-11-22T08:27:12.946Z"
+ },
+ {
+  "id": "mem:20261123T030651344Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:3ecee30f-ec86-4181-bac1-01423d2358f5 ｜ ego-browser 每开一个 taskSpace 就多一个渲染进程，用完必须 task.finish({ keep: [] }) 收尾（用户明确要求）；别留在 ego 里占内存，也不要去动用户自己的 taskSpace。",
+  "text": "ego-browser 每开一个 taskSpace 就多一个渲染进程，用完必须 task.finish({ keep: [] }) 收尾（用户明确要求）；别留在 ego 里占内存，也不要去动用户自己的 taskSpace。",
+  "foldedInto": "ins:3ecee30f-ec86-4181-bac1-01423d2358f5",
+  "createdAt": "2026-11-23T03:06:51.344Z"
+ },
+ {
+  "id": "mem:20261124T054722937Z",
+  "reason": "mirror-of-ins",
+  "detail": "折进 ins:bda07cf8-08f6-4225-94d2-6d7378f262d7 ｜ 爸爸（2026-11-24）要求牢记：语音永远走小鲸嗓子，绝不退回 Windows 系统音；本地合成失败宁可改发文字。护栏已写进 src/modules/voice/index.js 的 speak()（local 开着就只认它，失败抛错→发文字），要等插件整次重载才生效；local/tts.mjs 超时已",
+  "text": "爸爸（2026-11-24）要求牢记：语音永远走小鲸嗓子，绝不退回 Windows 系统音；本地合成失败宁可改发文字。护栏已写进 src/modules/voice/index.js 的 speak()（local 开着就只认它，失败抛错→发文字），要等插件整次重载才生效；local/tts.mjs 超时已放宽到 90s、SLOTS.tts 180s。",
+  "foldedInto": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
+  "createdAt": "2026-11-24T05:47:22.937Z"
  }
 ]

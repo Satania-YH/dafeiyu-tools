@@ -571,26 +571,76 @@ print('reroute from insight: %d' % len(_rerouted_ins), file=sys.stderr)
 
 # ---------- runtime memories ----------
 mem_nodes=[]
+mirror_folded=[]   # 2026-11-25：被折进 ins 的镜像，进 graph-excluded 备查
 try:
     mem=json.load(open(MEM,'r',encoding='utf-8'))
     entries=mem.get('entries',[]) if isinstance(mem,dict) else mem
-    ins_norms=[norm(x['text']) for x in ins_nodes]
+
+    # ── 2026-11-25 澄第三轮定的规则（原话压缩）──
+    #   a. 留 ins: —— 它有 id 和结构，access_count 就挂在它身上；mem: 那份进 excluded 备查
+    #   b. 线别丢 —— 按「同目标+同类型」并过去，丢了等于把两边连接砍掉一半
+    #   c. 字一模一样的合，但合完那颗星要同时挂 ins + mem 两个来源，
+    #      别把「俩人都写过」抹掉；字不一样的（我这么说他那么写）本来就不算重复
+    #
+    # 实测 8 组镜像对的邻居重合度是 78%–96%（同一段文字算出同一批邻居），
+    # 但重合 ≠ 完全一样，剩下那几条是 mem 独有的。所以并的时候把 mem 独有的邻居接上去。
+    def _fold_into_ins(ins_node, mem_node):
+        # 同一颗星挂两个来源
+        srcs = ins_node.get('sources') or ['ins']
+        if 'mem' not in srcs: srcs = srcs + ['mem']
+        ins_node['sources'] = srcs
+        # 记下 mem 那份的 id 和建库时间，可回查「俩人都写过」
+        ins_node.setdefault('mirrorOf', []).append({
+            'id': mem_node['id'],
+            'createdAt': mem_node.get('created_at'),
+        })
+
+    # 先建索引：ins 文本 → 节点
+    # ⚠️ 必须覆盖「所有来自 mnemon 的节点」，不只是还留在 ins_nodes 里的。
+    # 被 route_about_them() 重路由进 rule_extra / mem_extra 的那些，
+    # id 还是 ins: 开头的 —— 它们才正是和 MEMORY.md 撞的那些。
+    ins_by_norm = {}
+    for x in (ins_nodes
+              + [y for y in rule_extra if str(y.get('id','')).startswith('ins:')]
+              + [y for y in mem_extra  if str(y.get('id','')).startswith('ins:')]):
+        ins_by_norm.setdefault(norm(x['text']), []).append(x)
+
     for i,en in enumerate(entries):
         c=(en.get('content') or '').strip()
         if not c: continue
         n=norm(c)
-        dup=any(n==x or (len(n)>=40 and (n in x or x in n)) for x in ins_norms)
-        if dup: continue
-        # 2026-11-23：原来用位置序号 mem:%d，memories.json 插/删一条后面全移位，增量服务会把老记忆当新星。
-        # 改用 created_at（实测 7 条被编辑过、created_at 不变，稳定）压成 20261121T034252Z 这种形态。
+
+        # 找镜像：先找一字不差，再找包含关系（>=40 字才算，短的不判，免得误合）
+        cap = None
+        if n in ins_by_norm:
+            cap = ins_by_norm[n][0]
+        else:
+            for k, lst in ins_by_norm.items():
+                if len(n)>=40 and (n in k or k in n):
+                    cap = lst[0]; break
+
         created=(en.get('created_at') or '').strip()
         cid=re.sub(r'[-:.]','',created).replace('Z','Z') or ('idx%d'%i)
+        mid='mem:'+cid
+
+        if cap is not None:
+            # 折进 ins，不单独成星（否则图上同一句话两颗星）
+            _fold_into_ins(cap, {'id': mid, 'created_at': created})
+            mirror_folded.append({
+                'id': mid, 'reason': 'mirror-of-ins',
+                'detail': ('折进 ' + cap['id'] + ' ｜ ' + c)[:200],
+                'text': c, 'foldedInto': cap['id'],
+                'createdAt': created or None,
+            })
+            continue
+        # 没有镜像的才单独成星（真正只存了一份的那 10 条）
         # 2026-11-24：memory 之前只有 created_at（字符串，被前端当 id 用了），没有 ts。
         # 结果 24 条常驻记忆在时间滑条上全是"无日期"。补 ts / day。
-        mem_nodes.append({'id':'mem:'+cid,'kind':'memory','text':c,'target':en.get('target'),
+        mem_nodes.append({'id':mid,'kind':'memory','text':c,'target':en.get('target'),
                           'importance':en.get('importance'),'created_at':created,
                           'ts': created or None,
-                          'day': (created[:10] if created else None)})
+                          'day': (created[:10] if created else None),
+                          'sources':['mem']})
 except Exception as ex:
     print('MEM ERR', ex, file=sys.stderr)
 
@@ -809,6 +859,8 @@ for coll, dst in ((voice_nodes_raw, voice_nodes), (said_wrapped, said_nodes), (s
         seen_wrap[k] = nd
         dst.append(nd)
 
+excluded = excluded + mirror_folded   # 折进 ins 的镜像，进 graph-excluded 备查
+
 rule_nodes = rule_nodes + STATED_RULES
 rule_nodes = rule_nodes + rule_extra
 mem_nodes  = mem_nodes + mem_extra
@@ -938,6 +990,37 @@ if vecs and len(vecs)==len(nodes):
                 edges.append({'source':nodes[i]['id'],'target':nodes[j]['id'],'cos':round(c,3)})
     # attach dimensions
     for k,x in enumerate(nodes): x['vec_dim']=len(vecs[k])
+
+# ---------- 镜像的线不能丢（澄：线别丢，丢了等于把两边连接砍掉一半）----------
+# 上面 mem: 镜像被折进 ins: 了，它原来的邻居就没进图。
+# 但同一段文字算出来的邻居本来就几乎一样（实测 8 组重合 78%–96%），
+# 真正会丢的只有 mem 独有的那几条。这里按文本重新算一遍：
+# 对每个被折掉的镜像，用它自己的向量去比所有节点，把 ins: 还没有的邻居补上。
+if mirror_folded and 'embed_all' in dir():
+    try:
+        _mf_texts = [m['text'] for m in mirror_folded]
+        _mf_vecs = embed_all(_mf_texts)
+        if _mf_vecs and len(_mf_vecs) == len(mirror_folded):
+            _id2node = {x['id']: x for x in nodes}
+            _restored = 0
+            for m, v in zip(mirror_folded, _mf_vecs):
+                tgt = m.get('foldedInto')
+                if not tgt or tgt not in _id2node: continue
+                have = set()
+                for ed in edges:
+                    if ed['source'] == tgt: have.add(ed['target'])
+                    elif ed['target'] == tgt: have.add(ed['source'])
+                for k, nv in enumerate(vecs):
+                    nid = nodes[k]['id']
+                    if nid == tgt or nid in have: continue
+                    c = sum(a*b for a, b in zip(v, nv))
+                    if c >= THRESH:
+                        edges.append({'source': tgt, 'target': nid,
+                                      'cos': round(c, 3), 'viaMirror': m['id']})
+                        _restored += 1
+            print('mirror edges restored: %d' % _restored, file=sys.stderr)
+    except Exception as ex:
+        print('MIRROR EDGE ERR', ex, file=sys.stderr)
 
 # ---------- write ----------
 deg={}

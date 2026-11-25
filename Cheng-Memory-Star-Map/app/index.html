@@ -2026,6 +2026,9 @@
          没有这个字段 = 这类节点根本不记召回次数（便条/作品/说出去的），
          该是「不适用」，不是 0。 */
       use: (n.use == null ? null : Number(n.use)),
+      /* 2026-11-25：同一句话两边都写过的，合成一颗星但要留来源。 */
+      sources: Array.isArray(n.sources) ? n.sources : null,
+      mirrorOf: Array.isArray(n.mirrorOf) ? n.mirrorOf : null,
       scope: n.topic || '',
       tags: n.topic ? [n.topic] : [],
       degree: n.degree || 0,
@@ -9222,7 +9225,10 @@ function dxCompute() {
   const heavy = nodes.filter(n => (deg[n.id] || 0) >= 60);
 
   // 重复：前 40 字归一化后相同
-  const norm = (t) => (t || '').replace(/\s+/g, '').slice(0, 40);
+  /* 2026-11-25：这里原来 slice(0,40) —— 只比前 40 个字。
+     结果「QQ 接线…」开头相同的两条（后面内容不同）被误判成重复。
+     去重之后还给报了一组假的。改成比整段。 */
+  const norm = (t) => (t || '').replace(/\s+/g, '');
   const bucket = new Map();
   for (const n of nodes) {
     const k = norm(n.t || n.text);
@@ -9415,6 +9421,18 @@ function renderDiagnose() {
       d.isolatedVoice.length > 8 ? '还有 ' + (d.isolatedVoice.length - 8) + ' 条' : '',
       'rgba(140,180,200,.40)'));
   }
+  // 镜像合并情况：告诉人「俩人都写过」的那几颗现在是双来源
+  const mirNodes = nodes.filter(n => n.sources && n.sources.length > 1);
+  if (mirNodes.length) {
+    const nm = { ins: 'mnemon库', mem: 'MEMORY.md' };
+    const rows = mirNodes.map(n => dxRow(n, '来源 ' + (n.sources || []).map(x => nm[x] || x).join(' + ')
+      + '（合掉 ' + ((n.mirrorOf || []).length) + ' 份）'));
+    blocks.push(dxBlock('俩人都写过的那几句',
+      '同一句话在 mnemon 库和 MEMORY.md 里各有一份 —— 已经合成一颗星，但两个来源都挂着，不抹掉谁写的。'
+      + '（2026-11-25 澄：合的时候要让留下的那颗同时挂 ins + mem，别把「俩人都写过」弄丢）',
+      [rows.join('')], '', 'rgba(140,220,180,.50)'));
+  }
+
   // 重复
   if (d.dupGroups.length) {
     const rows = [];
@@ -10453,6 +10471,8 @@ function addStarToScene(node, edges) {
     impRaw: node.importance != null ? node.importance : null,
     conf: null,
     use: (node.use == null ? null : Number(node.use)),   // 同上：没有就 null，别乱填 0
+    sources: Array.isArray(node.sources) ? node.sources : null,
+    mirrorOf: Array.isArray(node.mirrorOf) ? node.mirrorOf : null,
     scope: node.topic || '',
     tags: node.topic ? [node.topic] : [],
     degree: (edges || []).length,
