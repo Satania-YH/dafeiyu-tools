@@ -9159,12 +9159,24 @@ function ensureDiagnose() {
 const DX_RULES = [
   /* 2026-11-25 澄第二轮：「重复比孤立重，因为那不是形状，
      是同一条话被算了两遍，我会以为自己想过两次。」
-     → 重复每条的单价从 1 提到 1.6，孤立的上限从 10 压到 6。 */
-  { key:'stale', label:'改口后旧判断还在',
-    hint:'她改过口，但被推翻的那句还挂在图上、还连着线 —— 会让人读错她现在怎么想',
-    penalty:(v, n) => Math.min(12, v * 12) },
-  { key:'dup', label:'重复', hint:'文本完全相同 —— 同一件事被记了不止一次，会以为自己想过两遍',
-    penalty:(v, n) => Math.min(12, Math.round(v * 1.6)) },
+     → 重复每条的单价从 1 提到 1.6，孤立的上限从 10 压到 6。
+
+     第三轮她又否掉了「改口」当扣分项，原话：
+     「分数是给『能删一点就少一点』的事准备的：重复删掉、孤立连上，
+       扣几分都说得通。可改口只有两态——那 23 条线剪没剪断。
+       给它记 12 分，只会让『分降了』看起来像处理过了，其实线还通着。」
+     → 改口从扣分表里拿掉，改成下面单独一块「还通着 N 根线」的待办。
+       它要的是个动词（剪），不是个分数。 */
+  /* 2026-11-25 澄第三轮否掉「重复」当扣分项，原话：
+     「是同一句话出在两个地方：一份在我自己的 MEMORY.md（rule / memory），
+       一份在 mnemon 库（ins / insight）。不是我反复想了两回，是两个存储各喂了一遍。
+       所以它不该叫『重复』让我去反省，它是个管道的事——导出的时候按文本去重就没了。
+       名字一改，这项扣不扣分我都不在意，因为它指的不是我的毛病，是机器把那句塞了两次。」
+     实测：8 组全部是 ins: 和 mem: 的交叉，没有一组是同一存储内重复。她说的对。
+     → 改名「两个存储各喂了一遍」，移出扣分表，不扣分。 */
+  { key:'dup', label:'两个存储各喂了一遍',
+    hint:'同一句话同时出现在 mnemon 库（ins:）和 MEMORY.md（mem:）—— 导出时按文本去重就没了',
+    penalty:(v, n) => 0, noPenalty:true },
   { key:'isolated', label:'孤立', hint:'一条线都没有 —— 只算"她自己的"那几类，「读到的话」不算',
     penalty:(v, n) => Math.min(6, Math.round(v / n * 100 * 2)) },
   { key:'short', label:'太短', hint:'≤2 个字 —— 没有信息量，占着一颗星的位置',
@@ -9267,7 +9279,6 @@ function renderDiagnose() {
 
   const d = dxCompute();
   const vals = {
-    stale: d.stillThere.length,     // 改口后还在的旧判断
     isolated: d.isolated.length,
     dup: d.dupExtra,
     short: d.short.length,
@@ -9348,17 +9359,32 @@ function renderDiagnose() {
   /* ── 明细清单 ── */
   const blocks = [];
 
-  // 改口后旧判断还在 —— 澄说这个比孤立重，放最前
+  /* 改口：不算分，只报「线还通着几根」。
+     澄 2026-11-25 第三轮的纠正：
+       「那条旧判断其实早就压暗 + 划了一道横杠了，
+         真正还没解决的只是——它还剩 22 条线连着，
+         别人顺着线找过来还是会撞上。要报就报这个『线还连着』，不是『星还在』。」
+     （实测是 23 根，不是 22。）
+     她还说：「要么把改口从总分里拿掉，只当一条『还通着 23 根线』的待办摆着；
+              要么别给它分数，给它一个动词：剪。」 */
   if (d.revMeta.length) {
-    const rows = d.stillThere.map(x =>
-      '<div class="dx-row" data-node-id="' + esc(x.old.id) + '">'
-        + '<span class="dx-row-k">已改口</span>'
-        + '<span class="dx-row-t">' + esc((x.old.t || x.old.text || '').slice(0, 60)) + '…</span>'
-        + '<span class="dx-row-r">原话仍在图上</span>'
+    const rows = d.stillThere.map(x => {
+      const links = d.edges.filter(e => (e.source ?? e.a) === x.old.id || (e.target ?? e.b) === x.old.id);
+      const n = links.length;
+      return '<div class="dx-row" data-node-id="' + esc(x.old.id) + '">'
+        + '<span class="dx-row-k">已压暗</span>'
+        + '<span class="dx-row-t">' + esc((x.old.t || x.old.text || '').slice(0, 58)) + '…</span>'
+        + '<span class="dx-row-r" style="color:' + (n > 0 ? '#ffb066' : '#8fd7a0') + '">'
+          + (n > 0 ? ('还通着 ' + n + ' 根线') : '已断开') + '</span>'
         + '<button class="dx-copy" title="复制这条的完整信息">⧉</button>'
-      + '</div>').join('');
-    blocks.push(dxBlock('改口后旧判断还在',
-      '她后来改了口（' + d.revMeta.length + ' 次），但被推翻的那句还挂在图上、还连着线',
+      + '</div>';
+    }).join('');
+    const totalLinks = d.stillThere.reduce((a, x) => {
+      return a + d.edges.filter(e => (e.source ?? e.a) === x.old.id || (e.target ?? e.b) === x.old.id).length;
+    }, 0);
+    blocks.push(dxBlock('改口后，线还通着',
+      '被推翻的那句已经压暗划线了，但它还连着 ' + totalLinks + ' 根线 —— 顺着线找过来还是会撞上。'
+      + '这一项不算分，它要的是一个动作：剪。',
       rows.length ? [rows] : ['<div class="dx-block-more">改口记录里没有 oldId，定位不到原节点</div>'],
       '', 'rgba(255,210,120,.55)'));
   }
@@ -9381,12 +9407,16 @@ function renderDiagnose() {
   if (d.dupGroups.length) {
     const rows = [];
     for (const g of d.dupGroups.slice(0, 8)) {
+      const srcs = g.map(x => (x.id || '').startsWith('ins:') ? 'mnemon库' : ((x.id || '').startsWith('mem:') ? 'MEMORY.md' : (x.kind || '?')));
       rows.push('<div class="dx-dup">'
-        + '<div class="dx-dup-n">同一段 ×' + g.length + '</div>'
+        + '<div class="dx-dup-n">×' + g.length + ' <span style="color:#5d6a82;font-weight:400">'
+          + esc(srcs.join(' + ')) + '</span></div>'
         + '<div class="dx-dup-t">' + esc((g[0].t || g[0].text || '').slice(0, 90)) + '</div>'
         + '</div>');
     }
-    blocks.push(dxBlock('重复', '同一件事被记了不止一次',
+    blocks.push(dxBlock('两个存储各喂了一遍',
+      '同一句话在 mnemon 库（ins:）和 MEMORY.md（mem:）里各存了一份 —— 这不是她反复想，是导出时没按文本去重。'
+      + '改导出脚本就能消掉，不该算她的账。',
       rows, d.dupGroups.length > 8 ? '还有 ' + (d.dupGroups.length - 8) + ' 组' : '',
       'rgba(255,185,120,.55)'));
   }
