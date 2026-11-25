@@ -569,12 +569,16 @@
   .dx-copy:hover{ background:rgba(140,170,255,.14); border-color:rgba(140,170,255,.22); color:#cfdcf7; }
   .dx-copy.ok{ color:#8fd7a0; opacity:1; }
 
-  /* 刷新按钮 —— 跟复制按钮同一套外观，但弱一档（它是辅助动作） */
+  /* 刷新按钮 —— 跟复制按钮同一套外观，但弱一档（它是辅助动作）
+     2026-11-25 修：原来两个按钮都写了 margin-left:auto，
+     第一个把剩余空间全吃光，第二个被推到看不见的地方。
+     现在只有第一个吃 auto，两个一起靠右。 */
   .dx-refresh{
     margin-left:auto; font-family:inherit; font-size:11.5px; letter-spacing:.02em;
     padding:6px 12px; border-radius:8px; cursor:pointer;
     background:rgba(140,170,255,.055); border:1px solid rgba(140,170,255,.13);
     color:#8b9ab8; transition:.15s;
+    flex:none;
   }
   .dx-refresh:hover{ background:rgba(140,170,255,.13); border-color:rgba(140,170,255,.26); color:#cfdcf7; }
 
@@ -597,10 +601,11 @@
   /* 2026-11-25 爸爸：「记忆诊断 加一个复制诊断意见的功能」
      —— 一条一条复制太碎，要能一次把整份带走。 */
   .dx-copyall{
-    margin-left:auto; font-family:inherit; font-size:11.5px; letter-spacing:.02em;
+    font-family:inherit; font-size:11.5px; letter-spacing:.02em;
     padding:6px 13px; border-radius:8px; cursor:pointer;
     background:rgba(140,170,255,.07); border:1px solid rgba(140,170,255,.16);
     color:#9db4d8; transition:.15s; display:inline-flex; align-items:center; gap:5px;
+    flex:none;
   }
   .dx-copyall:hover{ background:rgba(140,170,255,.14); border-color:rgba(140,170,255,.28); color:#cfdcf7; }
   .dx-copyall.ok{ background:rgba(90,200,140,.12); border-color:rgba(90,200,140,.32); color:#8fd7a0; }
@@ -10542,9 +10547,12 @@ async function dxDoRefresh(opts) {
 
   /* 最短转这么久。
      2026-11-25 爸爸：「手动点击之后也要出现刷新旋转和不可点 刷新完再开放」
-     本地拉一次 /api/graph 只要 200ms —— 转一下就没了，等于没转。
-     所以给一个下限：活干得快也要转够 600ms，让人看得见「它在干活」。 */
-  const MIN_SPIN_MS = 600;
+              然后：「而且这么快就刷新完了？」
+     第一版给了 600ms，他说还是太快。本地拉一次 /api/graph 只要 200ms ——
+     人眼对「一个动作有没有发生」的判断大概要 1 秒左右，
+     低于这个数就只觉得「闪了一下」。
+     提到 1200ms：转够一圈半，能看清它真的在转。 */
+  const MIN_SPIN_MS = 1200;
   const t0 = Date.now();
   const waitAtLeast = async () => {
     const left = MIN_SPIN_MS - (Date.now() - t0);
