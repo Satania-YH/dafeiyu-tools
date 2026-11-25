@@ -9601,64 +9601,127 @@ let ST_SF_T0 = 0;
      缩放是「按钮反馈」，冲击波才是「星被点亮了」。
      这一页是看星星的地方，反馈也该是光的语言。
    ══════════════════════════════════════════════════════════ */
-const STAR_BURSTS = [];      // 进行中的爆发 { x, y, t0, hue, r }
+/* ══════════════════════════════════════════════════════════
+   点击特效 v2
+   2026-11-25 爸爸：「感觉点了就只是放大了一下啊 没有你说的那么炫酷」
+   —— 第一版确实废：按帧量出来，粒子 130ms 后就无影无踪，
+      因为①速度太快（几步飞出画面）②太小（3-7px）③透明度掉太快。
+
+   v2 重新算过：
+     · 半径从 R 起跳，飞到 R*3.2 就停（不再无限远）
+     · 速度先快后慢（easeOutCubic），末尾停下来给眼睛看清
+     · 粒子 24 粒，大小 2-6px，核心纯白 + 外圈色
+     · 寿命 1100ms（原来 900，多给 200ms）
+     · 额外加一圈「星尘余晖」：粒子停住后还在原地震颤一小会儿
+   ══════════════════════════════════════════════════════════ */
+const STAR_BURSTS = [];
 
 function stBurst(x, y, hueArr, R) {
   STAR_BURSTS.push({
     x, y, t0: performance.now(),
-    hue: hueArr,
-    r: R,
-    /* 每个粒子：随机角度 + 速度，带一点差异免得像整齐的伞 */
-    parts: Array.from({ length: 16 }, (_, k) => {
-      const a = (k / 16) * Math.PI * 2 + Math.random() * 0.5;
-      const sp = 0.12 + Math.random() * 0.20;
-      return { a, sp, sz: 0.9 + Math.random() * 1.6, ph: Math.random() * 6.28 };
+    hue: hueArr, r: R,
+    parts: Array.from({ length: 28 }, (_, k) => {
+      const a = (k / 28) * Math.PI * 2 + Math.random() * 0.3;
+      const sp = 0.85 + Math.random() * 0.55;
+      return {
+        a, sp,
+        /* 2026-11-25 再放大：这团本身就有一二十颗子星 + 三十多颗星尘，
+           粒子跟它们同尺寸同亮度就完全混进去了。必须比背景亮一档。 */
+        sz: 3.2 + Math.random() * 4.2,             // 3 → 7 px
+        linger: Math.random() < 0.5,
+      };
     }),
   });
-  /* 只留最近 6 次，点太多次别把内存堆起来 */
-  if (STAR_BURSTS.length > 6) STAR_BURSTS.shift();
+  if (STAR_BURSTS.length > 5) STAR_BURSTS.shift();
 }
 
-function drawBursts(T) {
+function drawBursts() {
   const now = performance.now();
   for (let bi = STAR_BURSTS.length - 1; bi >= 0; bi--) {
     const b = STAR_BURSTS[bi];
     const el = now - b.t0;
-    const LIFE = 900;
+    const LIFE = 1100;
     if (el > LIFE) { STAR_BURSTS.splice(bi, 1); continue; }
-    const p = el / LIFE;              // 0 → 1
-    const ease = 1 - Math.pow(1 - p, 2.2);   // 先快后慢
+
+    const p = Math.min(1, el / LIFE);
     const cs = b.hue[0] + ',' + b.hue[1] + ',' + b.hue[2];
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
 
-    /* ① 冲击波环：两道，一快一慢 */
+    /* ① 冲击波：两道，快速出、慢速淡 */
     for (let w = 0; w < 2; w++) {
-      const pd = Math.max(0, p - w * 0.18);          // 第二道晚一点
-      if (pd <= 0) continue;
-      const rr = b.r * (0.8 + pd * 3.6);
-      const alpha = (1 - pd) * (w === 0 ? 0.55 : 0.28);
+      const pw = Math.max(0, (p - w * 0.14) / (1 - w * 0.14));
+      if (pw <= 0) continue;
+      const eo = 1 - Math.pow(1 - pw, 2.4);        // 先快后慢
+      const rr = b.r * (0.9 + eo * 2.6);
+      const alpha = Math.pow(1 - pw, 1.6) * (w === 0 ? 0.75 : 0.38);
       ctx.beginPath();
       ctx.arc(b.x, b.y, rr, 0, 7);
       ctx.strokeStyle = 'rgba(' + cs + ',' + alpha + ')';
-      ctx.lineWidth = (w === 0 ? 2.0 : 1.1) * (1 - pd * 0.6);
+      ctx.lineWidth = (w === 0 ? 2.6 : 1.4) * (1 - pw * 0.55);
       ctx.stroke();
     }
 
-    /* ② 粒子：往外飞 + 轻微下坠，像星火 */
+    /* ② 中心闪光：一开始一团白，200ms 内收掉 */
+    if (p < 0.30) {
+      const fp = p / 0.30;
+      const fr = b.r * (1.0 + fp * 1.2);
+      const fa = (1 - fp) * 0.85;
+      const fg = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, fr);
+      fg.addColorStop(0, 'rgba(255,255,255,' + fa + ')');
+      fg.addColorStop(0.35, 'rgba(' + cs + ',' + (fa * 0.6) + ')');
+      fg.addColorStop(1, 'rgba(' + cs + ',0)');
+      ctx.fillStyle = fg;
+      ctx.beginPath(); ctx.arc(b.x, b.y, fr, 0, 7); ctx.fill();
+    }
+
+    /* ③ 粒子：飞到 R*3.2 附近，一半停住、一半继续飘 */
     for (const pt of b.parts) {
-      const dist = b.r * (0.6 + ease * 3.8 * pt.sp * 3.2);
+      const eo = 1 - Math.pow(1 - Math.min(1, p * 1.25), 3);   // easeOutCubic
+      /* 有 linger 的飞到 1.0 就停；没的最后再飘远一点 */
+      const reach = pt.linger ? 1.0 : (1.0 + (p > 0.6 ? (p - 0.6) * 2.4 : 0));
+      const dist = b.r * (0.8 + eo * 3.6 * pt.sp * reach);
       const px = b.x + Math.cos(pt.a) * dist;
-      const py = b.y + Math.sin(pt.a) * dist * 0.72 + ease * ease * 14;  // 下坠
-      const alpha = (1 - p) * 0.85;
-      if (alpha <= 0.02) continue;
-      const gg = ctx.createRadialGradient(px, py, 0, px, py, pt.sz * 3.0);
-      gg.addColorStop(0, 'rgba(255,255,255,' + alpha + ')');
-      gg.addColorStop(0.40, 'rgba(' + cs + ',' + (alpha * 0.55) + ')');
-      gg.addColorStop(1, 'rgba(' + cs + ',0)');
-      ctx.fillStyle = gg;
-      ctx.beginPath(); ctx.arc(px, py, pt.sz * 3.0, 0, 7); ctx.fill();
+      const py = b.y + Math.sin(pt.a) * dist * 0.78;
+
+      /* 亮度：前 40% 保持很高，后面才掉 —— 这是"看得见"的关键 */
+      const fade = p < 0.40 ? 1.0 : Math.pow(1 - (p - 0.40) / 0.60, 1.5);
+      const alpha = fade * 0.95;
+      if (alpha <= 0.03) continue;
+
+      const rr = pt.sz * (1 + 0.25 * Math.sin(p * 22 + pt.a));   // 轻微呼吸
+      /* 三层画：外层彩色光雾（大）+ 中层亮核 + 内层纯白点（小但最亮）。
+         单层渐变不够——这团背景本来就亮，单层会被吃掉。 */
+      const outer = ctx.createRadialGradient(px, py, 0, px, py, rr * 4.0);
+      outer.addColorStop(0, 'rgba(' + cs + ',' + (alpha * 0.55) + ')');
+      outer.addColorStop(0.45, 'rgba(' + cs + ',' + (alpha * 0.16) + ')');
+      outer.addColorStop(1, 'rgba(' + cs + ',0)');
+      ctx.fillStyle = outer;
+      ctx.beginPath(); ctx.arc(px, py, rr * 4.0, 0, 7); ctx.fill();
+
+      const mid = ctx.createRadialGradient(px, py, 0, px, py, rr * 1.7);
+      mid.addColorStop(0, 'rgba(255,255,255,' + alpha + ')');
+      mid.addColorStop(0.42, 'rgba(255,255,255,' + (alpha * 0.65) + ')');
+      mid.addColorStop(1, 'rgba(' + cs + ',0)');
+      ctx.fillStyle = mid;
+      ctx.beginPath(); ctx.arc(px, py, rr * 1.7, 0, 7); ctx.fill();
+
+      /* 纯白硬核 —— 就是这一点让人"看见"粒子 */
+      ctx.fillStyle = 'rgba(255,255,255,' + alpha + ')';
+      ctx.beginPath(); ctx.arc(px, py, rr * 0.62, 0, 7); ctx.fill();
+
+      /* 拖尾：往中心方向拉一条短线，像彗星 */
+      if (p < 0.75) {
+        const tx = b.x + Math.cos(pt.a) * dist * 0.72;
+        const ty = b.y + Math.sin(pt.a) * dist * 0.72 * 0.78;
+        const tg = ctx.createLinearGradient(px, py, tx, ty);
+        tg.addColorStop(0, 'rgba(255,255,255,' + (alpha * 0.5) + ')');
+        tg.addColorStop(1, 'rgba(' + cs + ',0)');
+        ctx.strokeStyle = tg;
+        ctx.lineWidth = Math.max(1.2, pt.sz * 0.55);
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(tx, ty); ctx.stroke();
+      }
     }
 
     ctx.restore();
@@ -10086,7 +10149,7 @@ function drawStatsStarfield(allNodes, byKindAdded) {
     }
 
     /* 爆发画在最后 —— 它是"刚刚发生的事"，该压在星上面 */
-    drawBursts(T);
+    drawBursts();
 
     ST_SF_ANIM = requestAnimationFrame(loop);
   };
