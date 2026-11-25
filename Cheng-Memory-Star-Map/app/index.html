@@ -577,12 +577,20 @@
     color:#8b9ab8; transition:.15s;
   }
   .dx-refresh:hover{ background:rgba(140,170,255,.13); border-color:rgba(140,170,255,.26); color:#cfdcf7; }
-  .dx-refresh.spin{ opacity:.6; cursor:wait; }
-  .dx-refresh.spin::before{
-    content:''; display:inline-block; width:9px; height:9px; margin-right:4px;
-    border:1.5px solid rgba(160,200,255,.35); border-top-color:#a8d0ff;
-    border-radius:50%; animation:dxspin .7s linear infinite;
-    vertical-align:-1px;
+
+  /* 刷新中：按钮里的 ⟳ 转起来，按钮本身不可点、变灰。
+     2026-11-25 爸爸：「刷新中不能点击 刷新按钮要旋转」
+     用 span 包住 ⟳ 单独转 —— 转整个按钮会让文字跟着歪，很丑。 */
+  .dx-refresh .dx-spin-ico{
+    display:inline-block; margin-right:4px;
+    transition:transform .1s;
+  }
+  .dx-refresh.spin{
+    opacity:.65; cursor:not-allowed; pointer-events:none;
+    background:rgba(140,170,255,.03); border-color:rgba(140,170,255,.10);
+  }
+  .dx-refresh.spin .dx-spin-ico{
+    animation:dxspin .75s linear infinite;
   }
   @keyframes dxspin{ to{ transform:rotate(360deg); } }
 
@@ -2100,7 +2108,7 @@
       <span class="dx-count" id="dxCount"></span>
       <!-- 2026-11-25 爸爸：「记忆诊断没有刷新按钮啊」
            原来只在切进这个页时算一次，停在页面上数据变了不会更新。 -->
-      <button class="dx-refresh" id="dxRefresh" title="重新计算（数据变了才需要点）">⟳ 刷新</button>
+      <button class="dx-refresh" id="dxRefresh" title="重新计算（数据变了才需要点）"><span class="dx-spin-ico">⟳</span>刷新</button>
       <button class="dx-copyall" id="dxCopyAll" title="把整份诊断结果复制出来，可以直接发给澄看">⧉ 复制诊断意见</button>
     </div>
     <p class="dx-sub">只报，不改。每一项扣多少分都写在明面上。</p>
@@ -10508,35 +10516,72 @@ let DX_LOADED = false;
      1. 从服务端重拉 /api/graph（会话可能有新星，前端 DATA 还停在旧的）
      2. 重算并重绘
    ══════════════════════════════════════════════════════════ */
+/* 执行一次「真刷新」：拉服务端 + 重算 + 重绘。
+   按钮状态全包在里面 —— 从哪儿触发都长得一样。
+   2026-11-25 爸爸：「进去的时候 刷新按钮要变成刷新中 刷新中不能点击 刷新按钮要旋转」 */
+let DX_REFRESHING = false;
+
+async function dxDoRefresh(opts) {
+  const b = document.getElementById('dxRefresh');
+  const quiet = opts && opts.quiet;
+  if (DX_REFRESHING) return;          // 正在刷新就别再来一次
+  DX_REFRESHING = true;
+
+  /* 按钮里 ⟳ 是 <span class="dx-spin-ico">，改文案只能动 span 后面的文字，
+     不能直接写 textContent（会把 span 抹掉，旋转就没了）。 */
+  const setLabel = (txt) => {
+    if (!b) return;
+    b.innerHTML = '<span class="dx-spin-ico">⟳</span>' + esc(txt);
+  };
+
+  if (b) {
+    b.disabled = true;                // 不能点击
+    b.classList.add('spin');          // ⟳ 转起来
+    setLabel('刷新中');
+  }
+
+  try {
+    await refreshGraphQuiet();        // 拉服务端最新
+    renderDiagnose();                 // 重算 + 重绘
+    if (b) {
+      b.classList.remove('spin');
+      b.disabled = false;
+      setLabel(quiet ? '刷新' : '已刷新');
+      if (!quiet) setTimeout(() => {
+        if (!DX_REFRESHING) setLabel('刷新');
+      }, 1400);
+    }
+  } catch (e) {
+    if (b) {
+      b.classList.remove('spin');
+      b.disabled = false;
+      setLabel('刷新失败');
+      setTimeout(() => { if (!DX_REFRESHING) setLabel('刷新'); }, 1800);
+    }
+  } finally {
+    DX_REFRESHING = false;
+  }
+}
+
 function bindDxRefresh() {
   const b = document.getElementById('dxRefresh');
   if (!b || b.dataset.bound) return;
   b.dataset.bound = '1';
-  b.onclick = async (ev) => {
+  b.onclick = (ev) => {
     ev.stopPropagation();
-    if (b.classList.contains('spin')) return;
-    const old = b.textContent;
-    b.classList.add('spin');
-    b.textContent = '刷新中';
-    try {
-      /* 先问一下服务端有没有新数据 —— 有就整份换掉 */
-      await refreshGraphQuiet();
-      renderDiagnose();
-      b.classList.remove('spin');
-      b.textContent = '✓ 已刷新';
-      setTimeout(() => { b.textContent = old; }, 1400);
-    } catch (e) {
-      b.classList.remove('spin');
-      b.textContent = '✕ 失败';
-      setTimeout(() => { b.textContent = old; }, 1800);
-    }
+    if (b.disabled) return;
+    dxDoRefresh();
   };
 }
 
 function ensureDiagnose() {
   DX_LOADED = true;
   bindDxRefresh();
-  renderDiagnose();
+  /* 每次切进来都真拉一次 —— 2026-11-25 爸爸要的。
+     之前只重算内存里的旧数据，切换时才准。
+     quiet=true：刷完直接把按钮改回「⟳ 刷新」，不显示「✓ 已刷新」
+     （因为这不是用户主动点的，不用报喜）。 */
+  dxDoRefresh({ quiet: true });
 }
 
 /* 扣分表：每一项都是明码标价，页面上会原样写出来 */

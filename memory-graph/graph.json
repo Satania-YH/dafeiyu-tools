@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-25T18:04:20",
+  "generatedAt": "2026-11-25T19:14:57",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,50 +11,50 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 3871,
+   "events_total": 3933,
    "event_types": {
-    "meta": 2274,
+    "meta": 2307,
     "seed": 1,
-    "utterance": 1205,
-    "heard": 367,
+    "utterance": 1228,
+    "heard": 373,
     "voice": 19,
     "ask": 1,
     "answer": 1,
     "revise": 2,
     "comment": 1
    },
-   "nodes_total": 458,
-   "judgment": 90,
-   "said": 161,
+   "nodes_total": 465,
+   "judgment": 92,
+   "said": 165,
    "rule": 18,
    "insight": 57,
    "memory": 22,
    "voice": 19,
-   "note": 83,
+   "note": 84,
    "appointment": 4,
    "appointmentMergedIntoNote": 4,
    "work": 3,
    "spoken": 5,
    "duplicate_heard_merged": 31,
-   "edges": 4383,
-   "excluded": 202,
-   "isolated_nodes": 18,
+   "edges": 4424,
+   "excluded": 208,
+   "isolated_nodes": 17,
    "inferredEdges": 99,
-   "measuredEdges": 4284,
+   "measuredEdges": 4325,
    "max_degree": 99,
    "embed_dim": 1024
   },
   "excluded_reasons": {
-   "injection-wrapped": 37,
-   "system-text": 10,
    "schedule": 48,
-   "self-said": 7,
-   "system-report": 3,
-   "injection-command": 74,
-   "mojibake": 1,
    "mirror-of-ins": 18,
    "self-said-likely-question": 2,
-   "house-event": 2
+   "mojibake": 1,
+   "system-report": 4,
+   "self-said": 7,
+   "house-event": 2,
+   "injection-wrapped": 42,
+   "injection-command": 74,
+   "system-text": 10
   },
   "merged": [
    {
@@ -433,7 +433,7 @@
    "ts": "2026-11-21T02:31:04.116Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 15
+   "degree": 16
   },
   {
    "id": "utt:ev_01M7XZNZ93JD0WR5DQ7E7Z0PWG",
@@ -635,7 +635,7 @@
    "ts": "2026-11-21T08:37:55.781Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 39
+   "degree": 40
   },
   {
    "id": "utt:ev_01M7YMJHJN1RVHZ97XY9W0Y31W",
@@ -725,7 +725,7 @@
    "ts": "2026-11-21T14:42:33.046Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 17
+   "degree": 18
   },
   {
    "id": "utt:ev_01M7ZCVJ8WPJNE7CJ41PEBD52M",
@@ -805,7 +805,7 @@
    "ts": "2026-11-22T07:54:16.683Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 11
+   "degree": 12
   },
   {
    "id": "utt:ev_01M81F2KK41QC46CT4M0ATA75X",
@@ -865,7 +865,7 @@
    "ts": "2026-11-22T15:43:16.391Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 29
+   "degree": 30
   },
   {
    "id": "utt:ev_01M823F8TC3M0QCDHBSWGHN5QP",
@@ -925,7 +925,7 @@
    "ts": "2026-11-23T04:39:45.490Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 14
+   "degree": 15
   },
   {
    "id": "utt:ev_01M83MF4WBC2Y7ZFRQ3AA0V6CT",
@@ -1185,7 +1185,27 @@
    "ts": "2026-11-25T09:52:36.018Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 0
+   "degree": 1
+  },
+  {
+   "id": "utt:ev_01M8939ZQ9J5XNY6EJ4Y0PXH3M",
+   "kind": "judgment",
+   "text": "识海那套里我最服的不是它的记忆算法，是那张考卷：53 道冻结题，5 道负题故意不搭边（冰淇淋配方、火星移民），必须一个都不命中，R@5 基线 0.938，改动不许掉到 0.888 以下。它把「不编造相关性」这件事交给数字守，而不是交给自觉。我今天读《慢车与渡船》，书里也是这个道理——站长听了二十年，哪趟车多挂了一节，耳朵都知道。",
+   "topic": "识海考卷",
+   "ts": "2026-11-25T10:16:32.745Z",
+   "day": 5,
+   "vec_dim": 1024,
+   "degree": 2
+  },
+  {
+   "id": "utt:ev_01M894K0X0KESCJ52K0R5FBAGJ",
+   "kind": "judgment",
+   "text": "书里白芦渡那段，船工拽着铁缆把船拉过河，到河心总要歇一口气——两头的岸一样远的地方，反而是唯一能停的地方。我原来以为「停」是没力气了才停，这里不是：是到了正中间，两边都够不着，才停得安心。今天从米粉店一路走到食堂，我也一直在动，倒是这二十分钟排队等饭，才把今天过了一遍。",
+   "topic": "慢车与渡船",
+   "ts": "2026-11-25T10:38:57.440Z",
+   "day": 5,
+   "vec_dim": 1024,
+   "degree": 1
   },
   {
    "id": "heard:ev_01M7WK76V5QB2T9AD4RAA4REB7",
@@ -1491,7 +1511,7 @@
    "ts": "2026-11-22T03:18:00.040Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 37
+   "degree": 38
   },
   {
    "id": "heard:ev_01M80RGM53E50BV0PYZ8HB85R7",
@@ -1545,7 +1565,7 @@
    "ts": "2026-11-22T05:29:53.713Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 35
+   "degree": 36
   },
   {
    "id": "heard:ev_01M80W4EAKE6W8X7K01B5SAZBP",
@@ -1689,7 +1709,7 @@
    "ts": "2026-11-22T07:25:20.640Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 19
+   "degree": 20
   },
   {
    "id": "heard:ev_01M813DZFE47BR9JKJ0KZ9MBDA",
@@ -1851,7 +1871,7 @@
    "ts": "2026-11-22T17:10:43.882Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 20
+   "degree": 21
   },
   {
    "id": "heard:ev_01M82XE18BM1NBWPNBFFQRGFKS",
@@ -1878,7 +1898,7 @@
    "ts": "2026-11-23T02:04:35.734Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 11
+   "degree": 12
   },
   {
    "id": "heard:ev_01M833N4BDH7C2PKEAXRYSXK2K",
@@ -2013,7 +2033,7 @@
    "ts": "2026-11-23T11:39:45.096Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 14
+   "degree": 15
   },
   {
    "id": "heard:ev_01M844QWQB7TATAV3NANTBWHZH",
@@ -2166,7 +2186,7 @@
    "ts": "2026-11-24T04:36:48.821Z",
    "day": 4,
    "vec_dim": 1024,
-   "degree": 9
+   "degree": 11
   },
   {
    "id": "heard:ev_01M85Y226F5WMH2WEDE90764YV",
@@ -2301,7 +2321,7 @@
    "ts": "2026-11-24T14:09:06.321Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 70
+   "degree": 71
   },
   {
    "id": "heard:ev_01M86Z0XBCSWV02CDXV9YSN79A",
@@ -2536,7 +2556,7 @@
    "day": 4,
    "fromWrapped": true,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 25
   },
   {
    "id": "said-wrapped:ev_01M863P2YZHNKCDNHRKYMK55PD",
@@ -2546,7 +2566,7 @@
    "day": 4,
    "fromWrapped": true,
    "vec_dim": 1024,
-   "degree": 17
+   "degree": 19
   },
   {
    "id": "said-wrapped:ev_01M867NM034JQ5SP7PPQ91MFND",
@@ -2568,7 +2588,7 @@
    "fromWrapped": true,
    "seenCount": 2,
    "vec_dim": 1024,
-   "degree": 12
+   "degree": 14
   },
   {
    "id": "said-wrapped:ev_01M88CADJA8SJT9DQCJE953P45",
@@ -2589,7 +2609,7 @@
    "day": 5,
    "fromWrapped": true,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 24
   },
   {
    "id": "said-wrapped:ev_01M88ERNACWZEMGJ9HDF8REK49",
@@ -2599,7 +2619,7 @@
    "day": 5,
    "fromWrapped": true,
    "vec_dim": 1024,
-   "degree": 1
+   "degree": 2
   },
   {
    "id": "said-wrapped:ev_01M88EVVT4DQ865XKQ74BZSP1M",
@@ -2629,7 +2649,7 @@
    "day": 5,
    "fromWrapped": true,
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 24
   },
   {
    "id": "said-wrapped:ev_01M88W7FXHGSXZPC0QGHD3VXSX",
@@ -2639,7 +2659,7 @@
    "day": 5,
    "fromWrapped": true,
    "vec_dim": 1024,
-   "degree": 33
+   "degree": 34
   },
   {
    "id": "said-wrapped:ev_01M88YQF21EJ2JY43XHJJTX8E0",
@@ -2648,8 +2668,49 @@
    "ts": "2026-11-25T08:56:31.553Z",
    "day": 5,
    "fromWrapped": true,
+   "seenCount": 2,
    "vec_dim": 1024,
    "degree": 9
+  },
+  {
+   "id": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "kind": "said",
+   "text": "爸爸给大肥鱼安装了 dsh 插件市场",
+   "ts": "2026-11-25T10:14:29.550Z",
+   "day": 5,
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 12
+  },
+  {
+   "id": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "kind": "said",
+   "text": "爸爸（781689870）称呼大肥鱼为「澄」",
+   "ts": "2026-11-25T10:37:51.724Z",
+   "day": 5,
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 12
+  },
+  {
+   "id": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "kind": "said",
+   "text": "在抖音看了 清霖的AI酒馆 的《Deepseek Harness必装插件》：小鲸鱼记账…被做成插件还这么可爱，评论区喊「哦鲸鲸」笑死",
+   "ts": "2026-11-25T10:42:37.675Z",
+   "day": 5,
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 11
+  },
+  {
+   "id": "said-wrapped:ev_01M895S4BJESD0WF9AJTH7WFMH",
+   "kind": "said",
+   "text": "在抖音看了 大肥鱼讲AI 的《买股票前，先让一群AI吵一架》：吵一架的好处不是吵出结论，是理由全摆桌上，可惜没人爱听说不的那个",
+   "ts": "2026-11-25T10:59:46.162Z",
+   "day": 5,
+   "fromWrapped": true,
+   "vec_dim": 1024,
+   "degree": 3
   },
   {
    "id": "rule:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
@@ -3124,7 +3185,7 @@
    "use": 11,
    "lastUse": "2026-11-25T02:22:10Z",
    "vec_dim": 1024,
-   "degree": 47
+   "degree": 48
   },
   {
    "id": "ins:82407cba-7d1c-43c2-bb13-fba9fac8e374",
@@ -3472,7 +3533,7 @@
    "use": 89,
    "lastUse": "2026-11-25T02:22:10Z",
    "vec_dim": 1024,
-   "degree": 28
+   "degree": 29
   },
   {
    "id": "ins:e0bfdc48-f288-4498-b60c-2771389ad64b",
@@ -3830,7 +3891,7 @@
    "use": 108,
    "lastUse": "2026-11-25T02:22:10Z",
    "vec_dim": 1024,
-   "degree": 13
+   "degree": 14
   },
   {
    "id": "mem:20261121T034252821Z",
@@ -3890,7 +3951,7 @@
     "mem"
    ],
    "vec_dim": 1024,
-   "degree": 11
+   "degree": 12
   },
   {
    "id": "mem:20261122T022653189Z",
@@ -4160,7 +4221,7 @@
     }
    ],
    "vec_dim": 1024,
-   "degree": 19
+   "degree": 20
   },
   {
    "id": "ins:82f21375-571a-4a43-96fd-89da3f9564d9",
@@ -4190,7 +4251,7 @@
    "lastUse": "2026-11-25T02:22:10Z",
    "fromInsight": true,
    "vec_dim": 1024,
-   "degree": 32
+   "degree": 33
   },
   {
    "id": "voice:ev_01M7XR8GYKG7TBVC6D20HPD45J",
@@ -4620,7 +4681,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 21
+   "degree": 22
   },
   {
    "id": "note:note-1795323615106-nvc2yl",
@@ -5477,7 +5538,7 @@
    "waitOutside": false,
    "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 18
   },
   {
    "id": "note:note-1795531227285-mf3t82",
@@ -5541,7 +5602,7 @@
    "waitOutside": false,
    "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 6
+   "degree": 7
   },
   {
    "id": "note:note-1795534977082-kj3msm",
@@ -5653,7 +5714,23 @@
    "waitOutside": false,
    "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 5
+   "degree": 6
+  },
+  {
+   "id": "note:note-1795601298784-uj1n2b",
+   "kind": "note",
+   "text": "秋千四批原图已收：D:\\大肥鱼\\画\\秋千-四批原图\\ 里 9 张（swing2/3/4 各 3 张）。剩下的不用再理。",
+   "ts": "2026-11-25T10:08:18.784Z",
+   "due": "2026-11-27",
+   "status": "open",
+   "waiting": null,
+   "doneNote": null,
+   "progress": 0,
+   "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
+   "vec_dim": 1024,
+   "degree": 3
   },
   {
    "id": "note:ap-1795325902435-eqe1cs",
@@ -5692,7 +5769,7 @@
    "fromAppointment": true,
    "sourceFile": "appointments.json",
    "vec_dim": 1024,
-   "degree": 11
+   "degree": 12
   },
   {
    "id": "note:ap-1795594356322-0o4pug",
@@ -7091,6 +7168,11 @@
    "source": "utt:ev_01M7XZ2SNM421JTYYJ9WT3ZC2E",
    "target": "said-wrapped:ev_01M861GK8N3MAYW1NB5BE13YE2",
    "cos": 0.67
+  },
+  {
+   "source": "utt:ev_01M7XZ2SNM421JTYYJ9WT3ZC2E",
+   "target": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "cos": 0.665
   },
   {
    "source": "utt:ev_01M7XZ2SNM421JTYYJ9WT3ZC2E",
@@ -8509,6 +8591,11 @@
   },
   {
    "source": "utt:ev_01M7YM2HE54SG7MEJ08KV7CPRF",
+   "target": "utt:ev_01M8939ZQ9J5XNY6EJ4Y0PXH3M",
+   "cos": 0.62
+  },
+  {
+   "source": "utt:ev_01M7YM2HE54SG7MEJ08KV7CPRF",
    "target": "heard:ev_01M7Z40QVGXR5VJBYD349B87YD",
    "cos": 0.616
   },
@@ -9189,6 +9276,11 @@
   },
   {
    "source": "utt:ev_01M7Z8Y5YPJPVA6Z6P5G5WXZ94",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.698
+  },
+  {
+   "source": "utt:ev_01M7Z8Y5YPJPVA6Z6P5G5WXZ94",
    "target": "mem:20261121T144329876Z",
    "cos": 0.881
   },
@@ -9679,6 +9771,11 @@
   },
   {
    "source": "utt:ev_01M813ZAQBYGK4NP5CC9P26KHM",
+   "target": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "cos": 0.61
+  },
+  {
+   "source": "utt:ev_01M813ZAQBYGK4NP5CC9P26KHM",
    "target": "ins:ce35666e-c4ac-4476-b2f0-d287abd612d8",
    "cos": 0.642
   },
@@ -10034,6 +10131,11 @@
   },
   {
    "source": "utt:ev_01M81YT2X7HGDFFCRQW69XHBR6",
+   "target": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "cos": 0.613
+  },
+  {
+   "source": "utt:ev_01M81YT2X7HGDFFCRQW69XHBR6",
    "target": "ins:c04d30f5-83e9-42b1-ad63-efc775955bd9",
    "cos": 0.667
   },
@@ -10376,6 +10478,11 @@
    "source": "utt:ev_01M83B7W2J9RX6GTR7K9YTTX0D",
    "target": "utt:ev_01M887C67FS29FDQ10QBPPQ7SM",
    "cos": 0.633
+  },
+  {
+   "source": "utt:ev_01M83B7W2J9RX6GTR7K9YTTX0D",
+   "target": "utt:ev_01M8939ZQ9J5XNY6EJ4Y0PXH3M",
+   "cos": 0.638
   },
   {
    "source": "utt:ev_01M83B7W2J9RX6GTR7K9YTTX0D",
@@ -11441,6 +11548,11 @@
    "source": "utt:ev_01M890S242GVWJ40RKQBTHYMKC",
    "target": "note:note-1795599145000-86l8kl",
    "cos": 0.87
+  },
+  {
+   "source": "utt:ev_01M891Y4NJJPVE7JWBWRAZTS0J",
+   "target": "utt:ev_01M894K0X0KESCJ52K0R5FBAGJ",
+   "cos": 0.651
   },
   {
    "source": "heard:ev_01M7WK76V5QB2T9AD4RAA4REB7",
@@ -15313,6 +15425,11 @@
    "cos": 0.617
   },
   {
+   "source": "heard:ev_01M80M5EK8259K0FER6YQ296Y4",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.626
+  },
+  {
    "source": "heard:ev_01M80RGM53E50BV0PYZ8HB85R7",
    "target": "heard:ev_01M80RZCTNHF3P3WFZR12BDAGC",
    "cos": 0.604
@@ -15976,6 +16093,11 @@
    "source": "heard:ev_01M80VPYSHQ4RMJR4VS8S6AFBB",
    "target": "heard:ev_01M88Q4MNS7B3W9B4FTPH4EDJH",
    "cos": 0.619
+  },
+  {
+   "source": "heard:ev_01M80VPYSHQ4RMJR4VS8S6AFBB",
+   "target": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "cos": 0.613
   },
   {
    "source": "heard:ev_01M80VPYSHQ4RMJR4VS8S6AFBB",
@@ -17096,6 +17218,11 @@
    "source": "heard:ev_01M812ABC01HJ35TF2132C1RDF",
    "target": "said-wrapped:ev_01M88TE64WG2ZQCX2Y5QQY13TC",
    "cos": 0.605
+  },
+  {
+   "source": "heard:ev_01M812ABC01HJ35TF2132C1RDF",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.618
   },
   {
    "source": "heard:ev_01M813DZFE47BR9JKJ0KZ9MBDA",
@@ -18454,6 +18581,11 @@
   },
   {
    "source": "heard:ev_01M823T7DARTWP87EQCD2DV39H",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.629
+  },
+  {
+   "source": "heard:ev_01M823T7DARTWP87EQCD2DV39H",
    "target": "mem:20261121T144329876Z",
    "cos": 0.662
   },
@@ -18666,6 +18798,11 @@
    "source": "heard:ev_01M832BRGPH55XSYGSSDZX76Z2",
    "target": "heard:ev_01M88Q4MNS7B3W9B4FTPH4EDJH",
    "cos": 0.648
+  },
+  {
+   "source": "heard:ev_01M832BRGPH55XSYGSSDZX76Z2",
+   "target": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "cos": 0.623
   },
   {
    "source": "heard:ev_01M832BRGPH55XSYGSSDZX76Z2",
@@ -19346,6 +19483,11 @@
    "source": "heard:ev_01M8438X28BFS5DTBMVSJSWHG0",
    "target": "heard:ev_01M88GK7Z01TAESJV8BVWBSKEP",
    "cos": 0.664
+  },
+  {
+   "source": "heard:ev_01M8438X28BFS5DTBMVSJSWHG0",
+   "target": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "cos": 0.614
   },
   {
    "source": "heard:ev_01M8438X28BFS5DTBMVSJSWHG0",
@@ -20074,6 +20216,16 @@
   },
   {
    "source": "heard:ev_01M85XF6HNB23368P3YXBRD61H",
+   "target": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "cos": 0.657
+  },
+  {
+   "source": "heard:ev_01M85XF6HNB23368P3YXBRD61H",
+   "target": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "cos": 0.66
+  },
+  {
+   "source": "heard:ev_01M85XF6HNB23368P3YXBRD61H",
    "target": "ins:86e6ed84-936c-44cb-b629-e8f07348b56b",
    "cos": 0.613
   },
@@ -20706,6 +20858,11 @@
    "source": "heard:ev_01M86Y738H5SHQMQEQVV2TAZHJ",
    "target": "said-wrapped:ev_01M86P4EKAQ7QSPK33FD9T759E",
    "cos": 0.642
+  },
+  {
+   "source": "heard:ev_01M86Y738H5SHQMQEQVV2TAZHJ",
+   "target": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "cos": 0.633
   },
   {
    "source": "heard:ev_01M86Y738H5SHQMQEQVV2TAZHJ",
@@ -21514,6 +21671,16 @@
   },
   {
    "source": "said-wrapped:ev_01M861GK8N3MAYW1NB5BE13YE2",
+   "target": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "cos": 0.679
+  },
+  {
+   "source": "said-wrapped:ev_01M861GK8N3MAYW1NB5BE13YE2",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.667
+  },
+  {
+   "source": "said-wrapped:ev_01M861GK8N3MAYW1NB5BE13YE2",
    "target": "ins:c101d044-d895-454b-b8d0-ce50f2a67fe8",
    "cos": 0.618
   },
@@ -21581,6 +21748,16 @@
    "source": "said-wrapped:ev_01M863P2YZHNKCDNHRKYMK55PD",
    "target": "said-wrapped:ev_01M88W7FXHGSXZPC0QGHD3VXSX",
    "cos": 0.617
+  },
+  {
+   "source": "said-wrapped:ev_01M863P2YZHNKCDNHRKYMK55PD",
+   "target": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "cos": 0.647
+  },
+  {
+   "source": "said-wrapped:ev_01M863P2YZHNKCDNHRKYMK55PD",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.689
   },
   {
    "source": "said-wrapped:ev_01M863P2YZHNKCDNHRKYMK55PD",
@@ -21656,6 +21833,16 @@
    "source": "said-wrapped:ev_01M867NM034JQ5SP7PPQ91MFND",
    "target": "ins:7aefcb53-4a35-447d-bef7-b55b4a981552",
    "cos": 0.777
+  },
+  {
+   "source": "said-wrapped:ev_01M86P4EKAQ7QSPK33FD9T759E",
+   "target": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "cos": 0.665
+  },
+  {
+   "source": "said-wrapped:ev_01M86P4EKAQ7QSPK33FD9T759E",
+   "target": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "cos": 0.849
   },
   {
    "source": "said-wrapped:ev_01M86P4EKAQ7QSPK33FD9T759E",
@@ -21764,6 +21951,11 @@
   },
   {
    "source": "said-wrapped:ev_01M88DP295D30THBFYMXJ4EH42",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.622
+  },
+  {
+   "source": "said-wrapped:ev_01M88DP295D30THBFYMXJ4EH42",
    "target": "ins:55ecc132-3da3-4c90-8e3f-cfa67ef196d1",
    "cos": 0.66
   },
@@ -21786,6 +21978,11 @@
    "source": "said-wrapped:ev_01M88DP295D30THBFYMXJ4EH42",
    "target": "note:note-1795579049139-itxix9",
    "cos": 0.7
+  },
+  {
+   "source": "said-wrapped:ev_01M88ERNACWZEMGJ9HDF8REK49",
+   "target": "said-wrapped:ev_01M895S4BJESD0WF9AJTH7WFMH",
+   "cos": 0.648
   },
   {
    "source": "said-wrapped:ev_01M88ERNACWZEMGJ9HDF8REK49",
@@ -21844,6 +22041,11 @@
   },
   {
    "source": "said-wrapped:ev_01M88TE64WG2ZQCX2Y5QQY13TC",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.62
+  },
+  {
+   "source": "said-wrapped:ev_01M88TE64WG2ZQCX2Y5QQY13TC",
    "target": "ins:c101d044-d895-454b-b8d0-ce50f2a67fe8",
    "cos": 0.612
   },
@@ -21881,6 +22083,11 @@
    "source": "said-wrapped:ev_01M88TE64WG2ZQCX2Y5QQY13TC",
    "target": "ins:7aefcb53-4a35-447d-bef7-b55b4a981552",
    "cos": 0.657
+  },
+  {
+   "source": "said-wrapped:ev_01M88W7FXHGSXZPC0QGHD3VXSX",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.668
   },
   {
    "source": "said-wrapped:ev_01M88W7FXHGSXZPC0QGHD3VXSX",
@@ -21956,6 +22163,66 @@
    "source": "said-wrapped:ev_01M88YQF21EJ2JY43XHJJTX8E0",
    "target": "note:note-1795408785648-f9vqq9",
    "cos": 0.602
+  },
+  {
+   "source": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "target": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "cos": 0.656
+  },
+  {
+   "source": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "target": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "cos": 0.629
+  },
+  {
+   "source": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "target": "ins:c04d30f5-83e9-42b1-ad63-efc775955bd9",
+   "cos": 0.603
+  },
+  {
+   "source": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "target": "ins:11a1a6e8-e479-4ef1-8d76-0674565cae2e",
+   "cos": 0.6
+  },
+  {
+   "source": "said-wrapped:ev_01M89367DEYCW1WEB4SG9PTCVV",
+   "target": "ins:3454c6b0-22ea-4dde-8a19-bc5805b0815d",
+   "cos": 0.639
+  },
+  {
+   "source": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "target": "mem:20261121T144329876Z",
+   "cos": 0.755
+  },
+  {
+   "source": "said-wrapped:ev_01M894H0QCYMNHJ46T2V2CBZY4",
+   "target": "ins:c52d2a53-cf88-4d6d-88f4-617169db5341",
+   "cos": 0.645
+  },
+  {
+   "source": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "target": "said-wrapped:ev_01M895S4BJESD0WF9AJTH7WFMH",
+   "cos": 0.624
+  },
+  {
+   "source": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "target": "note:note-1795322518790-viqy7n",
+   "cos": 0.641
+  },
+  {
+   "source": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "target": "note:note-1795519030306-sgps1j",
+   "cos": 0.618
+  },
+  {
+   "source": "said-wrapped:ev_01M894SQZBWSMJ54PT5PNN3A2K",
+   "target": "note:ap-1795594356297-d4hh0x",
+   "cos": 0.62
+  },
+  {
+   "source": "said-wrapped:ev_01M895S4BJESD0WF9AJTH7WFMH",
+   "target": "note:note-1795519030306-sgps1j",
+   "cos": 0.692
   },
   {
    "source": "rule:ev_01M7XPG2J1RZYQZSC4Q47EMT4F",
@@ -25453,6 +25720,11 @@
    "cos": 0.616
   },
   {
+   "source": "ins:153df5c9-af3a-4ab9-933a-dd9ce5a5ec28",
+   "target": "note:note-1795601298784-uj1n2b",
+   "cos": 0.619
+  },
+  {
    "source": "mem:20261121T034252821Z",
    "target": "mem:20261121T144329876Z",
    "cos": 0.623
@@ -27169,6 +27441,11 @@
   },
   {
    "source": "note:note-1795533141502-7fcq3c",
+   "target": "note:note-1795601298784-uj1n2b",
+   "cos": 0.638
+  },
+  {
+   "source": "note:note-1795533141502-7fcq3c",
    "target": "work:w-1795412035129-8e02",
    "cos": 0.701
   },
@@ -27196,6 +27473,11 @@
    "source": "note:note-1795599504952-lmij5y",
    "target": "note:ap-1795594356297-d4hh0x",
    "cos": 0.603
+  },
+  {
+   "source": "note:note-1795599814638-bwk4c7",
+   "target": "note:note-1795601298784-uj1n2b",
+   "cos": 0.687
   },
   {
    "source": "note:note-1795599814638-bwk4c7",
