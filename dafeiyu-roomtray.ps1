@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$HomeJson = 'D:\dsh-fish-home\dsh-fish\home.json',
   [string]$SessionsJson = 'C:\Users\14127\.dsh\plugins-data\aurabot\sessions.json',
   [string]$StateFile = 'D:\大肥鱼工具\room-sync-state.json',
@@ -58,6 +58,25 @@ function Sync-FishRoomIfEmpty([string]$sid) {
   $origin = Get-FishRoomOrigin
   $st = Get-FishRoomSession $origin
   if ($st -and -not [string]$st.'会话') { Set-FishRoomSession $sid | Out-Null }
+}
+
+# ---- 鱼铃插件也一起换到新房会话 ----
+# 鱼铃把「接哪间会话」写在插件的 config.sessionId 里，换房后要指到新房，否则会去叫醒已经不用的旧会话。
+# 插件开了本机回环的 /fishworld-harness/retarget（要 x-fishworld-panel:1，不走登录），这里换房那一刻 POST 过去，
+# 当场在插件运行内存里生效、也会尽量写回配置，不用等重启。
+function Set-FishbellSession([string]$sid) {
+  if (-not $sid) { return $false }
+  $origin = Get-FishRoomOrigin
+  if (-not $origin) { Log 'fishbell: 找不到 discovery 文件，跳过'; return $false }
+  try {
+    $body = @{ sessionId = $sid } | ConvertTo-Json -Compress
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+    $r = Invoke-WebRequest -Uri ($origin + '/fishworld-harness/retarget') -Method Post -Body $bytes -ContentType 'application/json; charset=utf-8' -Headers @{ 'x-fishworld-panel' = '1' } -UseBasicParsing -TimeoutSec 10
+    $j = $r.Content | ConvertFrom-Json
+    if ($j.ok) { Log ('fishbell: 会话 -> ' + $sid + ' (persisted=' + $j.persisted + ', ready=' + $j.sessionReady + ')'); return $true }
+    Log ('fishbell: 写了但返回不 ok：' + [string]$r.Content)
+    return $false
+  } catch { Log ('fishbell: 写会话失败 ' + $_.Exception.Message); return $false }
 }
 # ---- 定时任务（每天 23:30 记忆整理这类）也跟着换房改挂到新房 ----
 # DSH 的 schedule 是内存态，改 schedule.json 不生效，只能走 RPC；
@@ -162,6 +181,7 @@ $script:tick = 0
 $script:schedChecked = $false
 $script:schedPending = $false
 $script:qqChecked = $false
+$script:bellT = 0
 
 function Save-State {
   try { ($script:state | ConvertTo-Json) | Set-Content -Path $StateFile -Encoding UTF8 } catch {}
@@ -175,11 +195,12 @@ function Invoke-Check {
   $to = [string]$hdata.rotatedTo
   $sid = [string]$hdata.sessionId
   if (-not $script:state) {
-    $script:state = [pscustomobject]@{ lastRotatedAt = $rot; lastSessionId = $sid }
-    Save-State
+    $script:state = [pscustomobject]@{ lastRotatedAt = $rot; lastSessionId = $sid; lastBellSessionId = '' }
     Log ("init: rotatedAt=$rot session=$sid")
     Sync-FishRoomIfEmpty $sid
     Check-QqOnce $sid $hdata
+    if (Set-FishbellSession $sid) { $script:state.lastBellSessionId = $sid }
+    Save-State
     $script:lastMsg = '已接 ' + (Short $sid)
     return
   }
@@ -194,6 +215,17 @@ function Invoke-Check {
     $script:tick = [int]$script:tick + 1
     if (($script:tick % 3) -eq 0) {
       if (Set-ScheduleTarget $sid) { $script:schedPending = $false; Log 'sched: 重试改挂成功' }
+    }
+  }
+  # 鱼铃的「接收会话」也跟着指到当前房；还没同步成功就每隔几轮再试（POST 本机 retarget，免登录、不用重启）
+  if ($sid -and ([string]$script:state.lastBellSessionId) -ne $sid) {
+    $script:bellT = [int]$script:bellT + 1
+    if (($script:bellT % 3) -eq 1) {
+      if (Set-FishbellSession $sid) {
+        $script:state | Add-Member -NotePropertyName lastBellSessionId -NotePropertyValue $sid -Force
+        Save-State
+        Log 'fishbell: 同步成功'
+      }
     }
   }
   if ($rot -and ($rot -ne [string]$script:state.lastRotatedAt)) {
@@ -211,12 +243,13 @@ function Invoke-Check {
       $tmp = $SessionsJson + '.tmp-roomsync'
       [System.IO.File]::WriteAllText($tmp, $json, (New-Object System.Text.UTF8Encoding($false)))
       Move-Item -Force -Path $tmp -Destination $SessionsJson
-      $script:state = [pscustomobject]@{ lastRotatedAt = $rot; lastSessionId = $newSid }
-      Save-State
       $fishOk = Set-FishRoomSession $newSid
+      $bellOk = Set-FishbellSession $newSid
       $schedOk = Set-ScheduleTarget $newSid
       $script:schedPending = -not $schedOk
-      Log ("rotated -> new room $newSid ; repointed: " + ($changed -join ', ') + " ; fishroom=" + $fishOk + " ; sched=" + $schedOk + " ; backup .bak-roomsync-$stamp")
+      $script:state = [pscustomobject]@{ lastRotatedAt = $rot; lastSessionId = $newSid; lastBellSessionId = $(if ($bellOk) { $newSid } else { '' }) }
+      Save-State
+      Log ("rotated -> new room $newSid ; repointed: " + ($changed -join ', ') + " ; fishroom=" + $fishOk + " ; fishbell=" + $bellOk + " ; sched=" + $schedOk + " ; backup .bak-roomsync-$stamp")
       $script:lastMsg = '已接新房 ' + (Short $newSid)
       try { $script:ni.ShowBalloonTip(4000, '大肥鱼接房', ('换房间啦，QQ、鱼鱼窝、定时任务都接到 ' + (Short $newSid)), [System.Windows.Forms.ToolTipIcon]::Info) } catch {}
     } else {
