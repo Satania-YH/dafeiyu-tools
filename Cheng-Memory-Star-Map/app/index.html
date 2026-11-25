@@ -1556,11 +1556,10 @@
     <button class="nav-item on" data-view="starmap">
       <span class="ico">✦</span><span class="nav-label">记忆星图</span>
     </button>
+    <!-- 2026-11-25：「记忆轨迹和星图轨迹合并成一个，用 Tab 切换」
+         跟「记忆变化」的数据源 Tab 一个做法。 -->
     <button class="nav-item" data-view="timeline">
       <span class="ico">☰</span><span class="nav-label">记忆轨迹</span>
-    </button>
-    <button class="nav-item" data-view="startrack">
-      <span class="ico">✧</span><span class="nav-label">星图轨迹</span>
     </button>
     <button class="nav-item" data-view="excluded">
       <span class="ico">⊘</span><span class="nav-label">未成之星</span>
@@ -1646,47 +1645,56 @@
   </aside>
 
   <!-- ══════ 记忆时间轴：铺满中间 ══════ -->
+  <!-- ══════ 记忆轨迹（含星图轨迹 Tab）══════
+       2026-11-25 爸爸：「记忆轨迹和星图轨迹 合并成记忆轨迹 和记忆变化一样 用个Tab来切换」
+       原来这是两个左侧导航项，页面结构几乎一样（只差前缀 tl / srt）。
+       现在合成一页，顶部两个 Tab。 -->
   <section id="timeline">
    <div class="tl-page">
     <div class="tl-head">
       <h1>记 忆 轨 迹</h1>
       <span class="tl-count" id="tlCount"></span>
     </div>
-    <p class="tl-sub">按时间倒序 · 每天点开看当天说过的话、写过的东西</p>
-    <!-- 分类筛选：点一下只看这一类，再点一下取消 -->
-    <div class="tl-filter" id="tlFilter"></div>
-    <!-- 日期筛选：三个下拉（年 / 月 / 日），不铺按钮。
-         2026-11-24 用户：「要不加个选择器吧 年月日 搞这么多有点臃肿」 -->
-    <div class="tl-picker" id="tlPicker">
-      <select class="tl-sel" id="tlSelYear"><option value="">全部年份</option></select>
-      <select class="tl-sel" id="tlSelMonth"><option value="">全部月份</option></select>
-      <select class="tl-sel" id="tlSelDay"><option value="">全部日期</option></select>
-      <button class="tl-reset" id="tlReset" title="清空日期筛选">✕</button>
-      <span class="tl-pickcount" id="tlPickCount"></span>
+    <!-- Tab：跟「记忆变化」的数据源 Tab 同一个样式，不另造一套 -->
+    <div class="st-srctabs tl-tabs" id="tlTabs">
+      <button class="st-srcbtn on" data-tab="events">记忆轨迹</button>
+      <button class="st-srcbtn" data-tab="graph">星图轨迹</button>
     </div>
-    <div id="tlBody"><div class="tl-empty">正在读取…</div></div>
-   </div>
-  </section>
+    <p class="tl-sub" id="tlSub">按时间倒序 · 每天点开看当天说过的话、写过的东西</p>
 
-  <!-- ══════ 星图轨迹：只看星图里这 400 多颗星的出生记录 ══════
-       2026-11-24 用户：「左边再加一项叫星图轨迹 专门统计星图变化的
-                        和记忆轨迹一样 也要带分类和时间选择」 -->
-  <section id="startrack">
-   <div class="tl-page">
-    <div class="tl-head">
-      <h1>星 图 轨 迹</h1>
-      <span class="tl-count" id="srtCount"></span>
+    <!-- ══════ Tab 1：记忆轨迹（events.jsonl）══════
+         ⚠️ 分类筛选必须放在 pane 里面 —— 两套数据的分类完全不同
+            （记忆轨迹有「流水」，星图轨迹只有星图那 9 类），
+            放在外面就会出现「切到星图还显示记忆的分类」这个 bug。 -->
+    <div id="tlEventsPane">
+      <div class="tl-filter" id="tlFilter"></div>
+      <!-- 日期筛选：三个下拉（年 / 月 / 日），不铺按钮。
+           2026-11-24 用户：「要不加个选择器吧 年月日 搞这么多有点臃肿」 -->
+      <div class="tl-picker" id="tlPicker">
+        <select class="tl-sel" id="tlSelYear"><option value="">全部年份</option></select>
+        <select class="tl-sel" id="tlSelMonth"><option value="">全部月份</option></select>
+        <select class="tl-sel" id="tlSelDay"><option value="">全部日期</option></select>
+        <button class="tl-reset" id="tlReset" title="清空日期筛选">✕</button>
+        <span class="tl-pickcount" id="tlPickCount"></span>
+      </div>
+      <div id="tlBody"><div class="tl-empty">正在读取…</div></div>
     </div>
-    <p class="tl-sub">按时间倒序 · 每天点开看当天成了哪些星</p>
-    <div class="tl-filter" id="srtFilter"></div>
-    <div class="tl-picker" id="srtPicker">
-      <select class="tl-sel" id="srtSelYear"><option value="">全部年份</option></select>
-      <select class="tl-sel" id="srtSelMonth"><option value="">全部月份</option></select>
-      <select class="tl-sel" id="srtSelDay"><option value="">全部日期</option></select>
-      <button class="tl-reset" id="srtReset" title="清空">✕</button>
-      <span class="tl-pickcount" id="srtPickCount"></span>
+
+    <!-- ══════ Tab 2：星图轨迹（graph.json）══════
+         2026-11-24 用户：「左边再加一项叫星图轨迹 专门统计星图变化的
+                          和记忆轨迹一样 也要带分类和时间选择」
+         2026-11-25 合并进本页做 Tab。 -->
+    <div id="tlGraphPane" style="display:none">
+      <div class="tl-filter" id="srtFilter"></div>
+      <div class="tl-picker" id="srtPicker">
+        <select class="tl-sel" id="srtSelYear"><option value="">全部年份</option></select>
+        <select class="tl-sel" id="srtSelMonth"><option value="">全部月份</option></select>
+        <select class="tl-sel" id="srtSelDay"><option value="">全部日期</option></select>
+        <button class="tl-reset" id="srtReset" title="清空">✕</button>
+        <span class="tl-pickcount" id="srtPickCount"></span>
+      </div>
+      <div id="srtBody"><div class="tl-empty">正在读取…</div></div>
     </div>
-    <div id="srtBody"><div class="tl-empty">正在读取…</div></div>
    </div>
   </section>
 
@@ -7161,7 +7169,11 @@ function setView(v){
   const isStarmap = (v === 'starmap');
   const isExcluded = (v === 'excluded');
   const isStats = (v === 'statspage');
-  const isStartrack = (v === 'startrack');
+  /* 2026-11-25：星图轨迹并进记忆轨迹做 Tab 了。
+     老的 'startrack' 视图留着当别名，进来就切到 timeline + 星图 Tab，
+     这样书签、旧链接、setView('startrack') 都还能用。 */
+  const isStartrackAlias = (v === 'startrack');
+  if (isStartrackAlias) { v = 'timeline'; currentView = v; }
   const isDiagnose = (v === 'diagnose');
 
   document.querySelectorAll('.nav-item').forEach(b => {
@@ -7174,8 +7186,7 @@ function setView(v){
   if (exEl) exEl.classList.toggle('shown', isExcluded);
   const stEl = document.getElementById('statspage');
   if (stEl) stEl.classList.toggle('shown', isStats);
-  const srtEl = document.getElementById('startrack');
-  if (srtEl) srtEl.classList.toggle('shown', isStartrack);
+  /* 旧的 #startrack section 已经搬进 #timeline 里了，这里不再单独控制 */
   const dxEl = document.getElementById('diagnose');
   if (dxEl) dxEl.classList.toggle('shown', isDiagnose);
   stage.classList.toggle('asleep', !isStarmap);
@@ -7184,7 +7195,8 @@ function setView(v){
   if (isTimeline) { if (tlEl) tlEl.scrollTop = 0; ensureTimeline(); }
   if (isExcluded) { if (exEl) exEl.scrollTop = 0; ensureExcluded(); }
   if (isStats) { if (stEl) stEl.scrollTop = 0; ensureStats(); }
-  if (isStartrack) { if (srtEl) srtEl.scrollTop = 0; ensureStartrack(); }
+  /* 从旧入口（setView('startrack')）进来时，直接把 Tab 切到星图 */
+  if (isStartrackAlias) { tlSetTab('graph', true); }
   if (isDiagnose) { if (dxEl) dxEl.scrollTop = 0; ensureDiagnose(); }
 
   // 切回星图时重算画布尺寸（导航宽度可能变过）
@@ -8948,6 +8960,76 @@ let SRT_FILTER = null;              // 分类筛选
 let SRT_Y = null, SRT_M = null, SRT_D = null;   // 日期筛选
 let SRT_LOADED = false;
 
+/* ══════════════════════════════════════════════════════════
+   记忆轨迹 / 星图轨迹 的 Tab 切换
+   2026-11-25 爸爸：「记忆轨迹和星图轨迹 合并成记忆轨迹 和记忆变化一样
+                     用个Tab来切换」
+   两套数据不一样：
+     记忆轨迹 = events.jsonl（原始事件流，1200 条左右）
+     星图轨迹 = graph.json（清洗后的 420 颗星）
+   所以两个 pane 各管各的，切 Tab 时按需加载。
+   ══════════════════════════════════════════════════════════ */
+let TL_TAB = 'events';     // 'events' | 'graph'
+
+function tlSetTab(tab, quiet) {
+  TL_TAB = (tab === 'graph') ? 'graph' : 'events';
+  const evPane = document.getElementById('tlEventsPane');
+  const grPane = document.getElementById('tlGraphPane');
+  if (evPane) evPane.style.display = (TL_TAB === 'events') ? '' : 'none';
+  if (grPane) grPane.style.display = (TL_TAB === 'graph') ? '' : 'none';
+
+  document.querySelectorAll('#tlTabs .st-srcbtn').forEach(b => {
+    b.classList.toggle('on', b.dataset.tab === TL_TAB);
+  });
+
+  const sub = document.getElementById('tlSub');
+  if (sub) {
+    sub.textContent = (TL_TAB === 'events')
+      ? '按时间倒序 · 每天点开看当天说过的话、写过的东西'
+      : '按时间倒序 · 每天点开看当天成了哪些星';
+  }
+
+  /* 标题旁那个总数跟着 Tab 走（原来它是记忆轨迹的数，星图轨迹另有 srtCount） */
+  syncTlHeadCount();
+
+  if (TL_TAB === 'events') { if (!quiet) ensureTimeline(); }
+  else { ensureStartrack(); }
+}
+
+/* 标题旁的总数跟着 Tab 走。
+   两个来源不一样：记忆轨迹 = TL_DATA（events），星图轨迹 = DATA.nodes（graph）。 */
+function setTlHeadCount(txt) {
+  const el = document.getElementById('tlCount');
+  if (el) el.textContent = txt || '';
+}
+
+function syncTlHeadCount() {
+  const el = document.getElementById('tlCount');
+  if (!el) return;
+  if (TL_TAB === 'graph') {
+    const n = (DATA && DATA.nodes) ? DATA.nodes.length : 0;
+    el.textContent = n ? (n + ' 颗星') : '';
+    // 星图那侧渲染完会自己覆盖成带筛选信息的版本
+    if (typeof ensureStartrack === 'function') { /* 由 renderStartrack 里 setTlHeadCount 覆盖 */ }
+  } else {
+    if (!TL_DATA) { el.textContent = ''; return; }
+    const n = (TL_DATA.days || []).reduce((a, x) => a + (x.items || []).length, 0);
+    el.textContent = n ? (n + ' 条') : '';
+  }
+}
+
+/* 绑定 Tab 点击（只绑一次） */
+(function bindTlTabs(){
+  const box = document.getElementById('tlTabs');
+  if (!box || box.dataset.bound) return;
+  box.dataset.bound = '1';
+  box.addEventListener('click', (ev) => {
+    const b = ev.target.closest('.st-srcbtn');
+    if (!b) return;
+    tlSetTab(b.dataset.tab);
+  });
+})();
+
 function ensureStartrack() {
   if (!SRT_LOADED) SRT_LOADED = true;
   renderStartrack();
@@ -9082,13 +9164,13 @@ function renderStartrack() {
     return { date: g.date, count: items.length, items };
   }).filter(g => g.items.length > 0);
 
-  const cntEl = document.getElementById('srtCount');
-  if (cntEl) {
+  /* 计数统一写到标题旁（两页合并后只有一个 tlCount 了） */
+  {
     const tot = groups.reduce((a, g) => a + g.count, 0);
     const fb = [];
     if (SRT_FILTER) fb.push(KIND_CN[SRT_FILTER] || SRT_FILTER);
     if (SRT_D) fb.push(SRT_D); else if (SRT_M) fb.push(SRT_M); else if (SRT_Y) fb.push(SRT_Y + ' 年');
-    cntEl.textContent = tot + ' 条 · ' + groups.length + ' 天' + (fb.length ? '（' + fb.join(' + ') + '）' : '');
+    setTlHeadCount(tot + ' 颗星 · ' + groups.length + ' 天' + (fb.length ? '（' + fb.join(' + ') + '）' : ''));
   }
 
   if (!groups.length) {
