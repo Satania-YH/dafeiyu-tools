@@ -38,6 +38,7 @@ import { P, RUNTIME, FISH_ROOT, exists, ensureDir, statOf, describePaths } from 
 import { GraphState, LINK_THRESHOLD } from './incremental.mjs';
 import { EventWatcher, readAll } from './watcher.mjs';
 import { readAllContent } from './sources.mjs';
+import { makeZip } from './zip.mjs';
 import { check as checkSchema, loadSaved, saveSnapshot } from './schema-watch.mjs';
 import { cleanEvent } from './clean.mjs';
 import { buildDateMap, applyDateMap } from './backfill-dates.mjs';
@@ -56,6 +57,9 @@ const HOST = '127.0.0.1';
 const NO_WATCH = hasFlag('no-watch');
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+/* memory-graph 目录（导出的 graph.json / vectors.json 在那儿）。
+   2026-11-25 备份功能要用。 */
+const MEMGRAPH_DIR = path.resolve(HERE, '..', '..', 'memory-graph');
 
 /* 导出目录：export-graph.py 把 graph.json / graph-excluded.json 写在这里。
    跟记忆根目录不是一处，所以单独定。 */
@@ -595,6 +599,116 @@ const server = http.createServer(async (req, res) => {
       REEXPORTING = false;
       return json(res, { ok: false, error: String(e.message || e) }, 500);
     }
+  }
+
+  /* ---------- 完整备份：把原始数据全打包成一个 zip ----------
+     2026-11-25 爸爸：「当前记忆是不是缺一个备份导出的功能」
+
+     这个项目从第一天起就写明「只读、不写回记忆」。
+     只读的好处是不会弄坏她的东西；坏处是万一磁盘坏了，
+     连一份能恢复的副本都没有。所以给一个「把原始数据打包带走」的出口。
+
+     打包的是原件，不是整理后的结果：
+       events.jsonl / mnemon.db / memories.json   ← 原始数据
+       graph.json / graph-excluded.json / vectors.json  ← 导出产物（对照用）
+     mnemon.db 是 SQLite（已压缩）、vectors.json 是浮点二进制 → 都 store 不压。 */
+  if (url.pathname === '/api/backup' && req.method === 'GET') {
+    try {
+      const stamp = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const base = 'cheng-memory-'
+        + stamp.getFullYear() + '-' + pad(stamp.getMonth() + 1) + '-' + pad(stamp.getDate())
+        + '-' + pad(stamp.getHours()) + pad(stamp.getMinutes()) + pad(stamp.getSeconds());
+
+      const items = [];
+      const report = [];
+      const add = (srcPath, arcName, store) => {
+        try {
+          if (!fs.existsSync(srcPath)) {
+            report.push({ name: arcName, ok: false, why: 'not found' });
+            return;
+          }
+          const data = fs.readFileSync(srcPath);
+          items.push({ name: base + '/' + arcName, data, store: !!store });
+          report.push({ name: arcName, ok: true, bytes: data.length });
+        } catch (ex) {
+          report.push({ name: arcName, ok: false, why: String(ex && ex.message || ex) });
+        }
+      };
+
+      const readme = [
+        '澄的记忆 · 完整备份',
+        '导出时间：' + stamp.toLocaleString('zh-CN'),
+        '',
+        '这份 zip 装的是原始数据，不是整理后的结果。',
+        '要恢复或搬到别处，把这些文件按下面的位置放回去就行。',
+        '',
+        '文件                    原始位置',
+        '-'.repeat(70),
+        'events.jsonl            ' + P.events,
+        'mnemon.db               ' + P.mnemonDb,
+        'memories.json           ' + P.memories,
+        'graph.json              ' + path.join(MEMGRAPH_DIR, 'graph.json'),
+        'graph-excluded.json     ' + path.join(MEMGRAPH_DIR, 'graph-excluded.json'),
+        'vectors.json            ' + path.join(MEMGRAPH_DIR, 'vectors.json'),
+        '',
+        '注意：',
+        '  · graph / excluded / vectors 三份是「导出产物」，不是原始数据。',
+        '    真要恢复，应该拿 events.jsonl + mnemon.db 重跑 export-graph.py 重建。',
+        '    留着这三份只是为了对照「当时是什么样」。',
+        '  · 这是只读快照。恢复时请先停掉 DSH，别让两边同时写。',
+      ].join(String.fromCharCode(10));
+
+      add(P.events, 'events.jsonl', false);
+      add(P.mnemonDb, 'mnemon.db', true);
+      add(P.memories, 'memories.json', false);
+      add(path.join(MEMGRAPH_DIR, 'graph.json'), 'graph.json', false);
+      add(path.join(MEMGRAPH_DIR, 'graph-excluded.json'), 'graph-excluded.json', false);
+      add(path.join(MEMGRAPH_DIR, 'vectors.json'), 'vectors.json', true);
+      items.push({ name: base + '/README.txt', data: Buffer.from(readme, 'utf8'), store: false });
+
+      const zip = makeZip(items, stamp);
+      const fname = base + '.zip';
+      res.writeHead(200, {
+        'Content-Type': 'application/zip',
+        'Content-Length': zip.length,
+        'Content-Disposition': 'attachment; filename="' + fname + '"',
+        'X-Backup-Ok': String(report.filter(r => r.ok).length),
+        'X-Backup-Missing': String(report.filter(r => !r.ok).length),
+      });
+      res.end(zip);
+      console.log('[备份] ' + fname + ' · ' + (zip.length / 1024 / 1024).toFixed(2) + 'MB · '
+        + report.filter(r => r.ok).length + '/' + report.length + ' 个文件');
+      return;
+    } catch (ex) {
+      console.error('[备份] 失败', ex);
+      return json(res, { ok: false, error: String(ex && ex.message || ex) }, 500);
+    }
+  }
+
+  /* ---------- 备份清单：打包前先看看有什么、多大 ---------- */
+  if (url.pathname === '/api/backup-info') {
+    const spec = [
+      { key: 'events',        label: '原始事件', path: P.events,                              raw: true },
+      { key: 'mnemonDb',      label: '记忆库',   path: P.mnemonDb,                            raw: true },
+      { key: 'memoriesJson',  label: '常驻记忆', path: P.memories,                            raw: true },
+      { key: 'graph',         label: '星图',     path: path.join(MEMGRAPH_DIR, 'graph.json'), raw: false },
+      { key: 'graphExcluded', label: '剔掉的',   path: path.join(MEMGRAPH_DIR, 'graph-excluded.json'), raw: false },
+      { key: 'vectors',       label: '向量',     path: path.join(MEMGRAPH_DIR, 'vectors.json'), raw: false },
+    ];
+    const out = [];
+    let total = 0, rawTotal = 0;
+    for (const it of spec) {
+      let size = 0, mtime = null, exists = false;
+      try {
+        const st = fs.statSync(it.path);
+        exists = true; size = st.size; mtime = st.mtime.toISOString();
+        total += size;
+        if (it.raw) rawTotal += size;
+      } catch {}
+      out.push({ key: it.key, label: it.label, path: it.path, exists, size, mtime, raw: it.raw });
+    }
+    return json(res, { ok: true, files: out, totalBytes: total, rawBytes: rawTotal });
   }
 
   if (url.pathname === '/api/reload' && req.method === 'POST') {

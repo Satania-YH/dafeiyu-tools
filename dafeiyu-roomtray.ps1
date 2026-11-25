@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$HomeJson = 'D:\dsh-fish-home\dsh-fish\home.json',
   [string]$SessionsJson = 'C:\Users\14127\.dsh\plugins-data\aurabot\sessions.json',
   [string]$StateFile = 'D:\大肥鱼工具\room-sync-state.json',

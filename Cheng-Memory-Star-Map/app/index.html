@@ -1239,6 +1239,54 @@
     font-family:ui-monospace,Consolas,monospace;
   }
 
+  /* 备份区占位 —— 真正的逻辑在下面 buildPanel 之后（bindBackup） */
+
+  /* ── 备份区（设置页里）── */
+  .bk-hint{
+    font-size:10.5px; color:#5d6a82; line-height:1.75; margin:2px 0 10px;
+    letter-spacing:.02em;
+  }
+  .bk-files{
+    display:flex; flex-direction:column; gap:3px; margin-bottom:11px;
+  }
+  .bk-file{
+    display:flex; align-items:baseline; gap:7px;
+    font-size:10.5px; color:#8b9ab8; letter-spacing:.01em;
+  }
+  .bk-file .bk-d{
+    flex:none; width:5px; height:5px; border-radius:50%;
+    background:#5a9d75; box-shadow:0 0 5px rgba(90,157,117,.7);
+  }
+  .bk-file.miss .bk-d{ background:#a76b6b; box-shadow:0 0 5px rgba(167,107,107,.7); }
+  .bk-file.miss{ color:#7d6b6b; }
+  .bk-file .bk-n{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bk-file .bk-s{ flex:none; color:#4e5a76; font-variant-numeric:tabular-nums; }
+  .bk-file.raw .bk-n::after{
+    content:'原始'; margin-left:6px; font-size:8.5px; color:#5a9d75;
+    border:1px solid rgba(90,157,117,.3); border-radius:3px; padding:0 3px;
+  }
+  .bk-loading{ font-size:10.5px; color:#4e5a76; padding:6px 0; }
+
+  .bk-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .bk-btn{
+    font-family:inherit; font-size:11.5px; letter-spacing:.03em;
+    padding:7px 14px; border-radius:8px; cursor:pointer;
+    background:rgba(122,180,255,.10); border:1px solid rgba(122,180,255,.26);
+    color:#a8d0ff; transition:.15s;
+  }
+  .bk-btn:hover:not(:disabled){
+    background:rgba(122,180,255,.20); border-color:rgba(122,180,255,.44); color:#d6e8ff;
+  }
+  .bk-btn:disabled{ opacity:.45; cursor:default; }
+  .bk-btn.busy{ opacity:.7; cursor:wait; }
+  .bk-note{ font-size:10.5px; color:#5d6a82; letter-spacing:.02em; }
+  .bk-note.ok{ color:#8fd7a0; }
+  .bk-note.bad{ color:#ff9d9d; }
+  .bk-warn{
+    font-size:10px; color:#6b5a45; line-height:1.7; margin:9px 0 0;
+    padding-left:9px; border-left:2px solid rgba(255,200,120,.24);
+  }
+
   /* ── 从这颗星出发 ── */
   .wk-box{
     margin-top:12px; padding-top:11px;
@@ -1875,6 +1923,22 @@
           <button id="openSrcDir">📂 打开目录</button>
         </div>
         <p class="srchint">只读 · 这里只决定显示哪些源，不会改动记忆文件</p>
+      </div>
+
+      <div class="sec">
+        <div class="h">备份</div>
+        <p class="bk-hint">
+          把原始数据（事件流 / 记忆库 / 常驻记忆）和导出产物一起打包成一个 zip。
+          这是唯一能把她的记忆整个搬走的出口 —— 页面其它地方都是只读。
+        </p>
+        <div class="bk-files" id="bkFiles"><div class="bk-loading">正在读取…</div></div>
+        <div class="bk-row">
+          <button class="bk-btn" id="bkBtn">⤓ 导出完整备份</button>
+          <span class="bk-note" id="bkNote"></span>
+        </div>
+        <p class="bk-warn">
+          备份是只读快照。真要恢复，先停掉 DSH —— 别让两边同时写。
+        </p>
       </div>
 
       <div class="sec">
@@ -7180,6 +7244,105 @@ function buildPanel(){
   });
   renderPresets();
 
+  bindBackup();     // 2026-11-25 备份区
+}
+
+/* ══════════════════════════════════════════════════════════
+   备份导出（设置页）
+   2026-11-25 爸爸：「当前记忆是不是缺一个备份导出的功能」
+   页面其它地方全是只读 —— 这是唯一能把记忆整个搬走的出口。
+   走 /api/backup，服务端现打 zip 直接下载（不落盘，不占空间）。
+   ══════════════════════════════════════════════════════════ */
+let BK_INFO = null;
+
+function fmtBytes(n) {
+  if (!Number.isFinite(n) || n < 0) return '—';
+  if (n < 1024) return n + 'B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(0) + 'KB';
+  return (n / 1024 / 1024).toFixed(2) + 'MB';
+}
+
+async function loadBackupInfo() {
+  const box = document.getElementById('bkFiles');
+  if (!box) return;
+  box.innerHTML = '<div class="bk-loading">正在读取…</div>';
+  try {
+    const r = await fetch('/api/backup-info');
+    const j = await r.json();
+    if (!j || !j.ok) throw new Error(j && j.error || '读取失败');
+    BK_INFO = j;
+    box.innerHTML = '';
+    for (const f of j.files) {
+      const d = document.createElement('div');
+      d.className = 'bk-file' + (f.exists ? '' : ' miss') + (f.raw ? ' raw' : '');
+      const name = f.label + '  ' + (f.path.split(/[\\/]/).pop() || '');
+      d.innerHTML = '<i class="bk-d"></i>'
+        + '<span class="bk-n" title="' + esc(f.path) + '">' + esc(name) + '</span>'
+        + '<span class="bk-s">' + (f.exists ? fmtBytes(f.size) : '缺失') + '</span>';
+      box.appendChild(d);
+    }
+    const note = document.getElementById('bkNote');
+    if (note) {
+      note.textContent = '原始数据 ' + fmtBytes(j.rawBytes) + ' · 连导出产物共 ' + fmtBytes(j.totalBytes);
+      note.className = 'bk-note';
+    }
+  } catch (e) {
+    box.innerHTML = '<div class="bk-loading">读取失败：' + esc(String(e.message || e)) + '</div>';
+  }
+}
+
+function bindBackup() {
+  const btn = document.getElementById('bkBtn');
+  if (!btn) return;
+  loadBackupInfo();
+
+  if (btn.dataset.bound) return;
+  btn.dataset.bound = '1';
+
+  btn.onclick = async () => {
+    const note = document.getElementById('bkNote');
+    btn.disabled = true;
+    btn.classList.add('busy');
+    const old = btn.textContent;
+    btn.textContent = '⤓ 正在打包…';
+    if (note) { note.textContent = '打包中（约 6-8MB）…'; note.className = 'bk-note'; }
+
+    try {
+      const r = await fetch('/api/backup');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const okN = r.headers.get('X-Backup-Ok');
+      const missN = r.headers.get('X-Backup-Missing');
+      const blob = await r.blob();
+
+      // 从 Content-Disposition 抠文件名，抠不到就自己拼
+      let fname = 'cheng-memory-backup.zip';
+      const cd = r.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename="([^"]+)"/);
+      if (m) fname = m[1];
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+      if (note) {
+        note.textContent = '✓ 已下载 ' + fname + '（' + fmtBytes(blob.size) + '）'
+          + (missN && missN !== '0' ? ' · ' + missN + ' 个文件缺失' : ' · ' + okN + ' 个文件');
+        note.className = 'bk-note ok';
+      }
+      toast('备份已下载：' + fname);
+    } catch (e) {
+      if (note) { note.textContent = '✕ 导出失败：' + String(e.message || e); note.className = 'bk-note bad'; }
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('busy');
+      btn.textContent = old;
+    }
+  };
 }
 
 /* ---------------- 预设 ---------------- */
