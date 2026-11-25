@@ -16,34 +16,23 @@ function Log($msg) {
     Add-Content -Path $LogFile -Value $line -Encoding UTF8
 }
 
-# 打开页面。
-# 2026-11-25 踩到的坑：这台机器默认浏览器是 egoliteHTM（ego-browser，自动化用的），
-# 不是给人看网页的那个。所以 Start-Process $Url 把页面交给 ego 了，
-# 界面上什么都不出现 —— 看起来像"没打开"。
-# 所以这里按顺序试：系统默认 → Edge → Chrome，谁能用就用谁。
+# 打开页面 —— 只用系统默认浏览器，只开一次。
+#
+# 2026-11-25 走过一段弯路，记在这里免得再犯：
+#   我以为默认浏览器 egoliteHTM（ego-browser）不显示页面，
+#   就加了「默认 → Edge → Chrome」的回退。
+#   结果爸爸双击快捷方式，Edge 弹一个、ego 弹一个 —— 两个窗口。
+#   真相是 ego 就是他日常用的浏览器，默认那条一直是好的；
+#   是我用「msedge 命令行里有没有 17800」去判断，才误以为没打开
+#   （Edge 多进程，URL 在子进程里，命令行看不到）。
+# 所以现在：认系统默认，一次就好。别再自作聪明加回退。
 function Open-Page {
-    $tries = @(
-        @{ how = 'shell-default'; act = { Start-Process $Url } },
-        @{ how = 'edge';   exe = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' },
-        @{ how = 'chrome'; exe = 'C:\Program Files\Google\Chrome\Application\chrome.exe' }
-    )
-    foreach ($t in $tries) {
-        try {
-            if ($t.exe) {
-                if (-not (Test-Path $t.exe)) { continue }
-                Start-Process -FilePath $t.exe -ArgumentList "`"$Url`""
-                Log ("Open-Page via " + $t.how)
-                return
-            } else {
-                & $t.act
-                Log ("Open-Page via " + $t.how)
-                return
-            }
-        } catch {
-            Log ("Open-Page " + $t.how + " 失败: " + $_)
-        }
+    try {
+        Start-Process $Url
+        Log 'Open-Page via system default'
+    } catch {
+        Log ("Open-Page 失败: " + $_)
     }
-    Log 'Open-Page 全部失败'
 }
 
 # 2026-11-25 爸爸：「你在桌面做一个快捷方式之类的 一点开就自动启动托盘并打开浏览器」
@@ -56,12 +45,10 @@ $lockFile = Join-Path $Root 'data\tray.lock'
 try {
     $script:lock = [System.IO.File]::Open($lockFile, 'OpenOrCreate', 'ReadWrite', 'None')
 } catch {
-    # 已经在跑：只打开页面
+    # 已经在跑：只打开页面（用系统默认浏览器，只开一次）
+    # 这里 Open-Page 还没定义（脚本在上面就 exit 了），所以直接写这一句。
     Write-Host '托盘已经在运行，打开页面'
-    # 这里函数还没定义（脚本在上面就 exit 了），所以直接走同样的回退顺序
     try { Start-Process $Url } catch {}
-    $edge = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
-    if (Test-Path $edge) { try { Start-Process -FilePath $edge -ArgumentList "`"$Url`"" } catch {} }
     exit 0
 }
 
