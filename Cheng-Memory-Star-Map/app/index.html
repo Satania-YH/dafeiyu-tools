@@ -1209,6 +1209,39 @@
   }
   .tl-more:hover{ color:#a8c8ff; }
 
+  /* ── 话题聚类（左侧导航里的那一块）── */
+  .tp-box{
+    margin-top:14px; padding-top:12px;
+    border-top:1px solid rgba(140,170,255,.09);
+    max-height:38vh; overflow-y:auto; overflow-x:hidden;
+  }
+  .tp-box.hide{ display:none; }
+  .tp-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:0 10px 7px; font-size:10.5px; letter-spacing:.10em;
+    color:#4e5a76; text-transform:uppercase;
+  }
+  .tp-head .tp-n{ color:#3d4759; font-variant-numeric:tabular-nums; }
+  .tp-item{
+    width:100%; display:flex; align-items:center; gap:8px;
+    font-family:inherit; font-size:11.5px; letter-spacing:.02em;
+    padding:6px 10px; border-radius:7px; cursor:pointer; text-align:left;
+    background:transparent; border:1px solid transparent; color:#8b9ab8;
+    transition:.13s;
+  }
+  .tp-item:hover{ background:rgba(140,170,255,.06); color:#c3cde6; }
+  .tp-item.on{
+    background:rgba(122,180,255,.14); border-color:rgba(122,180,255,.26); color:#a8d0ff;
+  }
+  .tp-item .tp-name{
+    flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .tp-item .tp-c{
+    flex:none; font-size:10px; color:#4e5a76; font-variant-numeric:tabular-nums;
+  }
+  .tp-item.on .tp-c{ color:#7fb3e8; }
+  .tp-more{ padding:7px 10px 3px; font-size:10px; color:#3d4759; }
+
   /* 空态 */
   .tl-empty{
     text-align:center; padding:60px 20px; color:#4d5871; font-size:12.5px; line-height:1.9;
@@ -1614,6 +1647,12 @@
     <button class="nav-item" data-view="settings">
       <span class="ico">⚙</span><span class="nav-label">通用设置</span>
     </button>
+
+    <!-- 2026-11-25：话题聚类。只出现在「记忆星图」视图里 ——
+         别的页面不需要它，摆着反而碍事。 -->
+    <div class="tp-box" id="topicWrap">
+      <div id="topicList"></div>
+    </div>
   </nav>
 
   <!-- ══════ 设置抽屉：只在「通用设置」时出现 ══════ -->
@@ -2477,6 +2516,83 @@ let userZoomed = false;
 let yaw = 0.6, pitch = -0.18, zoom = 1;
 let dragging=false, dragMoved=false, lastX=0, lastY=0;
 let proj = new Float32Array(4);
+
+/* ══════════════════════════════════════════════════════════
+   话题聚类
+   2026-11-25：431 个节点里 88 个带 topic，分成 64 个话题
+   （「记忆怎么接」7 颗、「唱歌管线」5 颗、「画得快」4 颗…）。
+   这些星本来就是同一件事，但图上只能靠余弦连线看出来，
+   人看着是一团乱麻。所以：
+     · 左侧列话题，点一下 → 那个话题的星亮起来 + 画一个半透明圈把它们圈住
+     · 再点一下 → 取消
+   只做「亮起来 + 圈住」，不改布局 —— 挪星位置会破坏她记住的地形。
+   ══════════════════════════════════════════════════════════ */
+let TOPIC_SEL = null;          // 当前选中的话题名
+let TOPIC_IDX = new Map();     // topic → [nodeIndex...]
+let TOPIC_LIST = [];           // [{name, n, kinds:{}}]
+
+function buildTopicIndex() {
+  TOPIC_IDX = new Map();
+  for (let i = 0; i < nodes.length; i++) {
+    const t = nodes[i].scope;
+    if (!t) continue;
+    if (!TOPIC_IDX.has(t)) TOPIC_IDX.set(t, []);
+    TOPIC_IDX.get(t).push(i);
+  }
+  TOPIC_LIST = [...TOPIC_IDX.entries()]
+    .map(([name, idxs]) => {
+      const kinds = {};
+      for (const i of idxs) { const k = nodes[i].k || '?'; kinds[k] = (kinds[k] || 0) + 1; }
+      return { name, n: idxs.length, kinds };
+    })
+    .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+}
+
+function setTopic(name) {
+  TOPIC_SEL = (TOPIC_SEL === name) ? null : name;
+  renderTopicList();
+  if (TOPIC_SEL) {
+    const idxs = TOPIC_IDX.get(TOPIC_SEL) || [];
+    const names = idxs.slice(0, 6).map(i => KIND_CN[nodes[i].k] || nodes[i].k).filter(Boolean);
+    const uniq = [...new Set(names)];
+    toast('话题「' + TOPIC_SEL + '」' + idxs.length + ' 颗 · ' + uniq.join('/'));
+  }
+}
+
+function renderTopicList() {
+  const box = document.getElementById('topicList');
+  if (!box) return;
+  if (!TOPIC_LIST.length) { box.innerHTML = ''; return; }
+  const shown = TOPIC_LIST.slice(0, 20);
+  box.innerHTML = '';
+
+  const head = document.createElement('div');
+  head.className = 'tp-head';
+  head.innerHTML = '<span>话题</span><span class="tp-n">' + TOPIC_LIST.length + '</span>';
+  box.appendChild(head);
+
+  for (const t of shown) {
+    const b = document.createElement('button');
+    b.className = 'tp-item' + (TOPIC_SEL === t.name ? ' on' : '');
+    b.innerHTML = '<span class="tp-name">' + esc(t.name) + '</span>'
+      + '<span class="tp-c">' + t.n + '</span>';
+    b.onclick = () => setTopic(t.name);
+    box.appendChild(b);
+  }
+  if (TOPIC_LIST.length > shown.length) {
+    const more = document.createElement('div');
+    more.className = 'tp-more';
+    more.textContent = '还有 ' + (TOPIC_LIST.length - shown.length) + ' 个话题（只列前 20）';
+    box.appendChild(more);
+  }
+}
+
+/* 当前话题的节点下标集合（画布绘制要用） */
+function topicSet() {
+  if (!TOPIC_SEL) return null;
+  const idxs = TOPIC_IDX.get(TOPIC_SEL);
+  return idxs ? new Set(idxs) : null;
+}
 let selected = -1, hovered = -1;
 /* 鼠标当前悬浮在哪条线上（-1 = 没有）。
    2026-11-24 用户纠正：「不是说线上的字平时不显示吗 我点击子星后
@@ -4095,6 +4211,59 @@ function draw(){
       ctx.stroke();
     }
   }
+  /* ══════ 话题光圈 ══════
+     2026-11-25：选中的话题，把它的几颗星圈起来。
+     画在连线之前 —— 它是一层「地面」，不该盖在星和线上。
+     用椭圆而不是圆：透视下屏幕上的星团本来就是扁的，
+     画正圆会像贴了个圆规图章。 */
+  const tpSel = (typeof topicSet === 'function') ? topicSet() : null;
+  if (tpSel && tpSel.size >= 2) {
+    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9, cnt = 0;
+    for (const i of tpSel) {
+      if (tbV(i) <= 0.004) continue;            // 时间滑条还没长出来的不算
+      const sx = proj[i*4], sy = proj[i*4+1];
+      if (!Number.isFinite(sx) || !Number.isFinite(sy)) continue;
+      if (sx < minX) minX = sx; if (sx > maxX) maxX = sx;
+      if (sy < minY) minY = sy; if (sy > maxY) maxY = sy;
+      cnt++;
+    }
+    if (cnt >= 2) {
+      const cxx = (minX + maxX) / 2, cyy = (minY + maxY) / 2;
+      const rx = Math.max(46, (maxX - minX) / 2 + 34);
+      const ry = Math.max(34, (maxY - minY) / 2 + 28);
+      ctx.save();
+      // 内部一层极淡的填充，让它像「一块地盘」
+      const g = ctx.createRadialGradient(cxx, cyy, 0, cxx, cyy, Math.max(rx, ry));
+      g.addColorStop(0, 'rgba(122,180,255,.055)');
+      g.addColorStop(1, 'rgba(122,180,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(cxx, cyy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // 边线：虚线，一眼看出是「人为圈出来的」不是自然现象
+      ctx.setLineDash([5, 7]);
+      ctx.strokeStyle = 'rgba(140,190,255,.36)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.ellipse(cxx, cyy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // 左上角挂个话题名
+      const nm = TOPIC_SEL || '';
+      ctx.font = '600 11px ' + (getComputedStyle(document.body).fontFamily || 'sans-serif');
+      const tw2 = ctx.measureText(nm).width;
+      const lx = cxx - rx + 4, ly = cyy - ry - 8;
+      ctx.fillStyle = 'rgba(10,14,24,.86)';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(lx - 5, ly - 12, tw2 + 14, 18, 5);
+      else ctx.rect(lx - 5, ly - 12, tw2 + 14, 18);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(168,208,255,.92)';
+      ctx.fillText(nm, lx + 2, ly + 1);
+      ctx.restore();
+    }
+  }
+
   // —— 连线
   ctx.lineCap='round';
   const focus = selected>=0 ? selected : hovered;
@@ -4374,6 +4543,10 @@ function draw(){
   // —— 节点
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
+  /* 2026-11-25 话题：选中的话题里，星亮一点、外面暗一档。
+     圈是「范围」，这个才是「这一群值得先看」。 */
+  const tpSet2 = (typeof topicSet === 'function') ? topicSet() : null;
+
   for (const i of order){
     const n = nodes[i];
     const x=proj[i*4], y=proj[i*4+1], persp=proj[i*4+2], z=proj[i*4+3];
@@ -4386,6 +4559,10 @@ function draw(){
        用 0.05 的结果就是"只有领悟看得见、其他全糊成小灰点"。
        0.45 相当于"普通大小"，和 insight 的最低档（imp=3 → 0.56）接近。 */
     const imp = (n.imp == null || !Number.isFinite(n.imp)) ? 0.45 : Math.max(0.05, n.imp);
+    /* 话题高亮：圈内的星提亮，圈外的压暗。
+       不改变大小/位置 —— 地形还是她记住的那个。 */
+    const inTopic = tpSet2 ? tpSet2.has(i) : null;
+
     // n.use 可能没有（服务端没给这条字段），别让 Math.log 吃 undefined 变 NaN
     const useBoost = 1 + 0.16*Math.log(1 + (Number(n.use) || 0));
 
@@ -4430,6 +4607,12 @@ function draw(){
     if (n.arch) alpha *= 0.35;
     if (isNote && !noteOpen) alpha *= 0.42;     // 了结的：明显暗下去
     if (focus>=0 && i!==focus && !focusSet.has(i)) alpha *= 0.42;
+
+    /* 话题高亮：圈内提亮 + 微微放大，圈外压暗。
+       幅度要克制 —— 太狠会让整张图像坏了；这里圈内 ×1.45，
+       圈外 ×0.34，够看出「就这一群」又不至于别的全黑掉。 */
+    if (inTopic === true) { alpha = Math.min(1, alpha * 1.45); size *= 1.18; }
+    else if (inTopic === false) { alpha *= 0.34; }
 
     /* 新推来的星要"跳出来"一下，否则它悄悄出现在星团里根本看不见。
        freshAt 是加入时刻：前 0.5 秒放大 1.9 倍并加白光晕，2.4 秒内收回。
@@ -6427,6 +6610,8 @@ function applyPreset(o){
   pairCache = null;
   edges = buildEdges();
   computeLayout(); buildAdj(); applyShape();
+  /* 2026-11-25：话题索引要在节点和位置都就位之后建 */
+  buildTopicIndex(); renderTopicList();
   focusCache = { i:-1, list:[] };
   updateHud(); buildPanel(); syncSpinBtn();
 }
@@ -7263,6 +7448,9 @@ function setView(v){
   const dxEl = document.getElementById('diagnose');
   if (dxEl) dxEl.classList.toggle('shown', isDiagnose);
   stage.classList.toggle('asleep', !isStarmap);
+  /* 话题面板只在星图视图出现 —— 别的页面用不上 */
+  const tw = document.getElementById('topicWrap');
+  if (tw) tw.classList.toggle('hide', !isStarmap);
 
   if (isSettings) panel.scrollTop = 0;
   if (isTimeline) { if (tlEl) tlEl.scrollTop = 0; ensureTimeline(); }
@@ -11543,6 +11731,12 @@ async function boot(){
 
   // 接实时推送
   initLive();
+
+  /* 2026-11-25：话题索引在这里显式建一次。
+     原来只在 useSource 那条链里建，那会儿 nodes 还是空的 ——
+     结果是「64 个话题一个也看不见」，但手动调一次就有。
+     数据真正就位的地方是这里（useSource 已经 await 完了）。 */
+  try { buildTopicIndex(); renderTopicList(); } catch(e) { console.warn('topic index', e); }
 
   requestAnimationFrame(loop);
 }
