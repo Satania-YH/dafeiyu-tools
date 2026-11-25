@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-25T10:38:24",
+  "generatedAt": "2026-11-25T10:44:24",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,11 +11,11 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 3530,
+   "events_total": 3532,
    "event_types": {
-    "meta": 2089,
+    "meta": 2090,
     "seed": 1,
-    "utterance": 1088,
+    "utterance": 1089,
     "heard": 330,
     "voice": 18,
     "ask": 1,
@@ -38,20 +38,22 @@
    "edges": 3881,
    "excluded": 173,
    "isolated_nodes": 15,
+   "inferredEdges": 32,
+   "measuredEdges": 3849,
    "max_degree": 70,
    "embed_dim": 1024
   },
   "excluded_reasons": {
-   "mojibake": 1,
-   "schedule": 45,
-   "mirror-of-ins": 15,
-   "self-said": 4,
-   "system-text": 9,
-   "system-report": 3,
+   "injection-wrapped": 20,
    "house-event": 2,
+   "schedule": 45,
    "self-said-likely-question": 1,
-   "injection-command": 73,
-   "injection-wrapped": 20
+   "system-text": 9,
+   "mojibake": 1,
+   "system-report": 3,
+   "self-said": 4,
+   "mirror-of-ins": 15,
+   "injection-command": 73
   },
   "merged": [
    {
@@ -24592,194 +24594,290 @@
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "utt:ev_01M7XV9KNDPRYNQ21559E6PHYV",
-   "cos": 0.666,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.566,
+   "cosRaw": 0.666,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "utt:ev_01M7XZNZ93JD0WR5DQ7E7Z0PWG",
-   "cos": 0.677,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.576,
+   "cosRaw": 0.677,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "utt:ev_01M7Y1KE856ME8BY7C8A59SAV9",
-   "cos": 0.629,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.535,
+   "cosRaw": 0.629,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "utt:ev_01M7Z5D6DBZP54QYD6AW7EXTYM",
-   "cos": 0.656,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.557,
+   "cosRaw": 0.656,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "utt:ev_01M7Z8Y5YPJPVA6Z6P5G5WXZ94",
-   "cos": 0.641,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.544,
+   "cosRaw": 0.641,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "heard:ev_01M811VCDR94TB8VNBA22ETYC9",
-   "cos": 0.63,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.535,
+   "cosRaw": 0.63,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "heard:ev_01M813DZFE47BR9JKJ0KZ9MBDA",
-   "cos": 0.624,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.531,
+   "cosRaw": 0.624,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "heard:ev_01M81F9902ZQAB51473YAN8AMB",
-   "cos": 0.645,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.548,
+   "cosRaw": 0.645,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "heard:ev_01M81N0MT224JRCY4J377JPAFV",
-   "cos": 0.656,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.558,
+   "cosRaw": 0.656,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "rule:ev_01M7Z613JH4GFPTT2RBEV2CH0W",
-   "cos": 0.693,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.589,
+   "cosRaw": 0.693,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "ins:2105a3cf-869f-4e03-b554-b111446496a7",
-   "cos": 0.611,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.519,
+   "cosRaw": 0.611,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "ins:aeb61225-202a-405b-a317-3f2387ba479b",
-   "cos": 0.67,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.57,
+   "cosRaw": 0.67,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "ins:181c80de-0d84-460e-a887-df24e38fc957",
-   "cos": 0.657,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.558,
+   "cosRaw": 0.657,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "ins:26e861f4-0e76-47df-966c-3cb27da22ca3",
-   "cos": 0.676,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.574,
+   "cosRaw": 0.676,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "ins:55ecc132-3da3-4c90-8e3f-cfa67ef196d1",
-   "cos": 0.734,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.624,
+   "cosRaw": 0.734,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795269098900-381py3",
-   "cos": 0.64,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.544,
+   "cosRaw": 0.64,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795270742462-fmvp4o",
-   "cos": 0.657,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.558,
+   "cosRaw": 0.657,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795345430134-j28eta",
-   "cos": 0.65,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.552,
+   "cosRaw": 0.65,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795346347987-o2m2rw",
-   "cos": 0.641,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.545,
+   "cosRaw": 0.641,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795442139635-qkttk7",
-   "cos": 0.651,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.554,
+   "cosRaw": 0.651,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795495202718-9ipmpn",
-   "cos": 0.647,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.55,
+   "cosRaw": 0.647,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795495623183-n3abln",
-   "cos": 0.644,
-   "viaMirror": "mem:20261121T134222234Z"
+   "cos": 0.548,
+   "cosRaw": 0.644,
+   "viaMirror": "mem:20261121T134222234Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "utt:ev_01M7Y31W15774QYARCQ6NNAPRK",
-   "cos": 0.606,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.515,
+   "cosRaw": 0.606,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "utt:ev_01M7YN2RJTQ62EVR3DVDM46N7V",
-   "cos": 0.601,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.511,
+   "cosRaw": 0.601,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "utt:ev_01M887T40Z0W8SVG2PQ5K459N6",
-   "cos": 0.613,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.521,
+   "cosRaw": 0.613,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "heard:ev_01M81W0HSSNG64Z7Q0VXJBGD2W",
-   "cos": 0.611,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.519,
+   "cosRaw": 0.611,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "rule-stated:voice-chunked",
-   "cos": 0.602,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.512,
+   "cosRaw": 0.602,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "ins:2aac6465-c44a-4767-9475-df9b34470db3",
-   "cos": 0.611,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.519,
+   "cosRaw": 0.611,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "ins:e1a9aed2-c8b1-44ce-b72d-5489a4921650",
-   "cos": 0.611,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.519,
+   "cosRaw": 0.611,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795225142044-jsnq9c",
-   "cos": 0.626,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.532,
+   "cosRaw": 0.626,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795275806780-ubp6t3",
-   "cos": 0.608,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.516,
+   "cosRaw": 0.608,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   },
   {
    "source": "ins:bda07cf8-08f6-4225-94d2-6d7378f262d7",
    "target": "note:note-1795499022591-tnyx77",
-   "cos": 0.727,
-   "viaMirror": "mem:20261124T054722937Z"
+   "cos": 0.618,
+   "cosRaw": 0.727,
+   "viaMirror": "mem:20261124T054722937Z",
+   "inferred": true,
+   "basis": "mirror-vector"
   }
  ]
 }

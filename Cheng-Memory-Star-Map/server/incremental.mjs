@@ -87,7 +87,15 @@ export class GraphState {
 
     // 3. 载入边
     for (const e of edges) {
-      this._addEdge(e.source, e.target, Number(e.cos) || 0);
+      /* 2026-11-25：推出来的边（inferred）跟实测边分开带。
+         澄：「『像』别滑成『有关』……别混进实测边里，
+                不然以后顺着它找过来，会撞上一个其实是猜出来的连接。」 */
+      this._addEdge(e.source, e.target, Number(e.cos) || 0, {
+        inferred: !!e.inferred,
+        basis: e.basis || null,
+        viaMirror: e.viaMirror || null,
+        cosRaw: e.cosRaw != null ? e.cosRaw : null,
+      });
     }
 
     return {
@@ -177,12 +185,20 @@ export class GraphState {
     return a < b ? `${a}|${b}` : `${b}|${a}`;
   }
 
-  _addEdge(a, b, cos) {
+  _addEdge(a, b, cos, extra) {
     if (!a || !b || a === b) return false;
     const k = this._edgeKey(a, b);
     if (this.edgeIdx.has(k)) return false;    // 已有
     this.edgeIdx.set(k, this.edges.length);
-    this.edges.push({ source: a, target: b, cos });
+    const ed = { source: a, target: b, cos };
+    // 2026-11-25：推出来的边带上标记，前端才能把它跟实测边分开画
+    if (extra && extra.inferred) {
+      ed.inferred = true;
+      if (extra.basis) ed.basis = extra.basis;
+      if (extra.viaMirror) ed.viaMirror = extra.viaMirror;
+      if (extra.cosRaw != null) ed.cosRaw = extra.cosRaw;
+    }
+    this.edges.push(ed);
     if (!this.adj.has(a)) this.adj.set(a, new Set());
     if (!this.adj.has(b)) this.adj.set(b, new Set());
     this.adj.get(a).add(b);

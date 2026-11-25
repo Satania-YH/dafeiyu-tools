@@ -996,6 +996,13 @@ if vecs and len(vecs)==len(nodes):
 # 但同一段文字算出来的邻居本来就几乎一样（实测 8 组重合 78%–96%），
 # 真正会丢的只有 mem 独有的那几条。这里按文本重新算一遍：
 # 对每个被折掉的镜像，用它自己的向量去比所有节点，把 ins: 还没有的邻居补上。
+#
+# ⚠️ 2026-11-25 澄第五轮提醒（原话）：
+#   「你按向量相似把 mem 独有的边补回 32 条——相似度高不等于原来就是同一根线，
+#     『像』别滑成『有关』。这 32 条建议单独标个 inferred（或把 weight 调低），
+#     别混进实测边里；不然以后顺着它找过来，会撞上一个其实是猜出来的连接。」
+# → 补出来的边一律带 inferred: True + basis: 'mirror-vector'，
+#   cos 也打个折（×0.85），别跟实测边一个身价。UI 上单独画法。
 if mirror_folded and 'embed_all' in dir():
     try:
         _mf_texts = [m['text'] for m in mirror_folded]
@@ -1015,8 +1022,13 @@ if mirror_folded and 'embed_all' in dir():
                     if nid == tgt or nid in have: continue
                     c = sum(a*b for a, b in zip(v, nv))
                     if c >= THRESH:
+                        # 澄：'像' 别滑成 '有关' —— 这根系是推出来的，不是实测的。
                         edges.append({'source': tgt, 'target': nid,
-                                      'cos': round(c, 3), 'viaMirror': m['id']})
+                                      'cos': round(c * 0.85, 3),
+                                      'cosRaw': round(c, 3),
+                                      'viaMirror': m['id'],
+                                      'inferred': True,
+                                      'basis': 'mirror-vector'})
                         _restored += 1
             print('mirror edges restored: %d' % _restored, file=sys.stderr)
     except Exception as ex:
@@ -1049,6 +1061,9 @@ meta={
    'edges': len(edges),
    'excluded': len(excluded),
    'isolated_nodes': sum(1 for x in nodes if x.get('degree',0)==0),
+   # 2026-11-25：推出来的边（镜向量补的）跟实测边分开报，别混成一个数
+   'inferredEdges': sum(1 for e in edges if e.get('inferred')),
+   'measuredEdges': sum(1 for e in edges if not e.get('inferred')),
    'max_degree': max([x.get('degree',0) for x in nodes] or [0]),
    'embed_dim': (len(vecs[0]) if vecs else 0),
  },

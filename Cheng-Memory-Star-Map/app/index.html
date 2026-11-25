@@ -2064,7 +2064,13 @@
       note: '只读 · 本机 · 不联网',
       nodes,
       // 边直接给前端（前端会按 linkMode 决定用不用）
-      precomputedEdges: (g.edges || []).map(e => ({ source: e.source, target: e.target, cos: e.cos })),
+      /* 2026-11-25 澄：「『像』别滑成『有关』……这 32 条建议单独标个 inferred，
+         别混进实测边里。」 所以标记要一路带到画布。 */
+      precomputedEdges: (g.edges || []).map(e => ({
+        source: e.source, target: e.target, cos: e.cos,
+        inferred: !!e.inferred, basis: e.basis || null,
+        cosRaw: e.cosRaw != null ? e.cosRaw : null,
+      })),
       linkMode: 'edges',            // 新标记：边是服务端算好的
       linkThreshold: g.linkThreshold ?? 0.6,
       /* meta 透传：统计页要用 meta.revisions（改口记录）和 counts。
@@ -2581,7 +2587,7 @@ function buildEdges(){
       if (a == null || b == null || a === b) continue;
       const w = Number(e.cos) || 0;
       if (w < OPTS.linkThreshold) continue;      // 阈值滑条生效
-      raw.push({ a, b, w });
+      raw.push({ a, b, w, inferred: !!e.inferred });
     }
 
     /* ── 度数上限剪枝 ──
@@ -4049,12 +4055,20 @@ function draw(){
       if (isF){ a = Math.min(0.92, a*4 + 0.30); lw = lw*1.8 + 0.5; col = focusColor; }
       else { a *= 0.18; }
     }
+    /* 2026-11-25 澄：「相似度高不等于原来就是同一根线，『像』别滑成『有关』。
+       这 32 条建议单独标个 inferred（或把 weight 调低），别混进实测边里；
+       不然以后顺着它找过来，会撞上一个其实是猜出来的连接。」
+       → 推出来的边一律更淡更细，颜色偏冷，一眼能跟实测边分开。 */
+    if (e.inferred) { a *= 0.42; lw *= 0.72; }
     /* 当鼠标指着某条线时，其余聚焦线再退一档 ——
        不是靠"把这条弄得特别亮"，是靠"让别的让开"。
        这是让一样东西显得重要的更省事的办法，也不刺眼。 */
     if (hoverEdge >= 0 && !isF) a *= 0.55;
     if (nodeGroup.length && nodeGroup[e.a] >= 0 && nodeGroup[e.b] >= 0 && nodeGroup[e.a] !== nodeGroup[e.b]) a *= 0.40;
     if (a <= 0.02) continue;
+
+    /* 推出来的边被指到时，用冷色，别跟实测边一个颜色 */
+    if (isHoveredEdge && e.inferred) col = [130, 160, 210];
 
     /* ══════ 悬浮到这条线时的"选中效果" ══════
        2026-11-24 用户：「怎么只有虚线有选中效果 实线也要有啊 然后选中效果不够高级」
@@ -9241,6 +9255,9 @@ function dxCompute() {
 
   const short = nodes.filter(n => (n.t || n.text || '').trim().length <= 2);
   const weak = edges.filter(e => (e.cos ?? e.w ?? 0) < 0.65).length;
+  /* 2026-11-25 澄：推出来的边（镜像的向量补的）跟实测边分开数，
+     不能混成一个总数 —— 「『像』别滑成『有关』」。 */
+  const inferredEdges = edges.filter(e => e.inferred);
 
   /* ── 澄 2026-11-25 提的三样 ──
      ① 改过口的旧判断还在不在图上
@@ -9284,6 +9301,7 @@ function dxCompute() {
     isolated, isolatedVoice, heavy, dupGroups, dupExtra, short,
     weak, deg,
     revMeta, stillThere, voiceCount, saidCount, withUse, neverUsed, hasUseField,
+    inferredEdges,
   };
 }
 
@@ -9462,6 +9480,30 @@ function renderDiagnose() {
       d.heavy.map(n => dxRow(n, (d.deg[n.id] || 0) + ' 条线')),
       '', 'rgba(255,150,150,.50)'));
   }
+  /* 推出来的边（不是实测的）
+     澄：「相似度高不等于原来就是同一根线，『像』别滑成『有关』。
+           这 32 条建议单独标个 inferred（或把 weight 调低），别混进实测边里；
+           不然以后顺着它找过来，会撞上一个其实是猜出来的连接。」 */
+  if (d.inferredEdges.length) {
+    const rows = d.inferredEdges.map(e => {
+      const A = nodes.find(n => n.id === e.source), B = nodes.find(n => n.id === e.target);
+      const nm = (x) => x ? ((x.t || x.text || '').slice(0, 30) || x.id.slice(0, 14)) : (e.target || e.source).slice(0, 14);
+      const raw = e.cosRaw != null ? e.cosRaw : e.cos;
+      return '<div class="dx-dup">'
+        + '<div class="dx-dup-n">推出来的 <span style="color:#5d6a82;font-weight:400">cos '
+          + (raw != null ? Number(raw).toFixed(2) : '?') + ' → 折成 '
+          + (e.cos != null ? Number(e.cos).toFixed(2) : '?') + '</span></div>'
+        + '<div class="dx-dup-t">' + esc(nm(A)) + ' ↔ ' + esc(nm(B)) + '</div>'
+        + '</div>';
+    });
+    blocks.push(dxBlock('推出来的连线',
+      '这 ' + d.inferredEdges.length + ' 条不是实测的 —— 是合并重复星之后，按被合掉那份的向量反推回来的。'
+      + '权重已经打过折（×0.85），画布上也画得更淡更细。'
+      + '看到它别当成「她们之间真有这条线」，那只是「像」。',
+      rows, d.inferredEdges.length > 8 ? '还有 ' + (d.inferredEdges.length - 8) + ' 条' : '',
+      'rgba(140,170,210,.45)'));
+  }
+
   // 弱边
   if (d.weak) {
     const pct = Math.round(d.weak / d.E * 100);
