@@ -636,6 +636,11 @@ const server = http.createServer(async (req, res) => {
         }
       };
 
+      /* .mnemon 根。
+         mnemon.db 在 .mnemon/data/default/mnemon.db，
+         documents/ 直接在 .mnemon/documents —— 要往上退三层，不是两层。 */
+      const MNEMON_HOME = path.resolve(path.dirname(P.mnemonDb), '..', '..');
+
       const readme = [
         '澄的记忆 · 完整备份',
         '导出时间：' + stamp.toLocaleString('zh-CN'),
@@ -644,18 +649,21 @@ const server = http.createServer(async (req, res) => {
         '要恢复或搬到别处，把这些文件按下面的位置放回去就行。',
         '',
         '【原始数据 —— 这些缺了就是真丢了】',
-        '文件                    原始位置',
-        '-'.repeat(70),
+        '文件 / 目录             原始位置',
+        '-'.repeat(74),
         'events.jsonl            ' + P.events,
         'mnemon.db               ' + P.mnemonDb,
-        'mnemon.db-wal           ' + P.mnemonDb + '-wal',
-        'mnemon.db-shm           ' + P.mnemonDb + '-shm',
+        '                        （用 SQLite backup() 出的一致性快照，不是直拷文件）',
         'memories.json           ' + P.memories,
         'notes.json              ' + path.join(FISH_ROOT, 'notes.json'),
         'works.json              ' + path.join(FISH_ROOT, 'works.json'),
         'appointments.json       ' + path.join(FISH_ROOT, 'appointments.json'),
         'home.json               ' + path.join(FISH_ROOT, 'home.json'),
-        'diary/*.md              ' + path.join(FISH_ROOT, 'diary') + path.sep,
+        'inbox.md                ' + path.join(FISH_ROOT, 'inbox.md'),
+        'inbox-state.json        ' + path.join(FISH_ROOT, 'inbox-state.json'),
+        'diary/                  ' + path.join(FISH_ROOT, 'diary') + path.sep,
+        'works/                  ' + path.join(FISH_ROOT, 'works') + path.sep,
+        'documents/              ' + path.join(MNEMON_HOME, 'documents') + path.sep,
         '',
         '【导出产物 —— 对照用，不是原件】',
         'graph.json              ' + path.join(MEMGRAPH_DIR, 'graph.json'),
@@ -663,25 +671,47 @@ const server = http.createServer(async (req, res) => {
         'vectors.json            ' + path.join(MEMGRAPH_DIR, 'vectors.json'),
         '',
         '注意：',
-        '  · mnemon.db 的三个文件（.db / -wal / -shm）必须一起拿。',
-        '    SQLite 的未提交事务写在 -wal 里，只拿主库会丢掉那一刻的写入。',
-        '    恢复时三个一起放回同目录。',
+        '  · mnemon.db 是「快照」，不是文件拷贝。恢复时直接放回原位置即可，',
+        '    不需要带 -wal / -shm（快照本身已经自洽）。',
+        '  · documents/ 是她写得最完整的一套项目记录，比 events 流水成体系，',
+        '    这一块别漏。',
+        '  · works/ 里是真作品文件（带图），体积最大的一部分。',
         '  · graph / excluded / vectors 是「导出产物」。真要恢复，',
         '    应该拿 events.jsonl + mnemon.db + 本子重跑 export-graph.py 重建。',
         '    留着这三份只是为了对照「当时是什么样」。',
+        '  · home.json 不算记忆，但换房要用（pressureRoomLinks 记着换房史）。',
         '  · 这是只读快照。恢复时请先停掉 DSH，别让两边同时写。',
       ].join(String.fromCharCode(10));
 
       /* ── 原始数据 ── */
       add(P.events, 'events.jsonl', false);
 
-      /* mnemon.db 必须连 -wal / -shm 一起拿。
-         2026-11-25 自查发现：-wal 现在是 0 字节看着没事，但 SQLite 的
-         未提交事务就写在 -wal 里 —— 只拿主库，那一刻的写入会丢。
-         备份的意义就是「万一」，不能赌它刚好是空的。 */
-      add(P.mnemonDb, 'mnemon.db', true);
-      add(P.mnemonDb + '-wal', 'mnemon.db-wal', true);
-      add(P.mnemonDb + '-shm', 'mnemon.db-shm', true);
+      /* mnemon.db：不再直接拷文件，改成 VACUUM INTO / .backup 快照。
+         2026-11-25 澄指出（原话）：
+           「稳妥做法是别拷文件，在服务跑着的时候用 sqlite3 mnemon.db
+             '.backup out.db' 或 VACUUM INTO，出来的是一份完整快照。」
+           因为 journal_mode=wal，直接拷主库在 WAL 没落盘时会丢最后几笔。
+         没有 sqlite3 命令 → 用 node:sqlite 的 backup()（Node 22+ 内置）。
+         快照出来是单文件、自洽的，不需要再带 -wal / -shm。 */
+      try {
+        const os = await import('node:os');
+        const { DatabaseSync, backup } = await import('node:sqlite');
+        const tmpDir = os.tmpdir();
+        const snapPath = path.join(tmpDir, 'cheng-mnemon-snap-' + Date.now() + '.db');
+        const srcDb = new DatabaseSync(P.mnemonDb, { readOnly: true });
+        await backup(srcDb, snapPath);
+        srcDb.close();
+        const snapBuf = fs.readFileSync(snapPath);
+        try { fs.unlinkSync(snapPath); } catch {}
+        items.push({ name: base + '/mnemon.db', data: snapBuf, store: true });
+        report.push({ name: 'mnemon.db', ok: true, bytes: snapBuf.length, note: 'backup() 快照' });
+      } catch (ex) {
+        // 快照失败就退回直拷（总比没有强），并在 README 里标出来
+        add(P.mnemonDb, 'mnemon.db', true);
+        add(P.mnemonDb + '-wal', 'mnemon.db-wal', true);
+        add(P.mnemonDb + '-shm', 'mnemon.db-shm', true);
+        report.push({ name: 'mnemon.db', ok: false, why: '快照失败已退回直拷: ' + String(ex && ex.message || ex) });
+      }
 
       add(P.memories, 'memories.json', false);
 
@@ -694,18 +724,59 @@ const server = http.createServer(async (req, res) => {
       add(path.join(FISH_ROOT, 'appointments.json'), 'appointments.json', false);
       add(path.join(FISH_ROOT, 'home.json'), 'home.json', false);
 
-      /* diary/ 整个目录：一天一个 md，逐份打进去 */
-      try {
-        const diaryDir = path.join(FISH_ROOT, 'diary');
-        if (fs.existsSync(diaryDir)) {
-          const files = fs.readdirSync(diaryDir).filter(f => f.endsWith('.md')).sort();
-          for (const f of files) {
-            add(path.join(diaryDir, f), 'diary/' + f, false);
+      /* ── 目录递归打包（diary / documents / works）──
+         2026-11-25 澄指出还漏了两块：
+           documents/  76 篇 active 文档 + index.json —— 「比 events 流水更成体系」
+           works/      真作品文件（图在里面，8.7MB）
+         都要整块带走。 */
+      const addDir = (dirPath, prefix, opts) => {
+        const opt = opts || {};
+        try {
+          if (!fs.existsSync(dirPath)) {
+            report.push({ name: prefix + '/', ok: false, why: 'not found' });
+            return 0;
           }
+          let n = 0;
+          const walk = (cur, rel) => {
+            const entries = fs.readdirSync(cur, { withFileTypes: true });
+            for (const en of entries) {
+              const full = path.join(cur, en.name);
+              const relPath = rel ? (rel + '/' + en.name) : en.name;
+              if (en.isDirectory()) {
+                walk(full, relPath);
+              } else if (en.isFile()) {
+                const ext = path.extname(en.name).toLowerCase();
+                if (opt.only && !opt.only.includes(ext)) continue;
+                try {
+                  const data = fs.readFileSync(full);
+                  // 图片/压缩包这类已压缩的别浪费 CPU
+                  const store = ['.png','.jpg','.jpeg','.webp','.gif','.mp4','.mp3','.wav','.zip','.7z','.rar','.pdf'].includes(ext);
+                  items.push({ name: base + '/' + prefix + '/' + relPath, data, store });
+                  n++;
+                } catch (e1) {
+                  report.push({ name: prefix + '/' + relPath, ok: false, why: String(e1 && e1.message || e1) });
+                }
+              }
+            }
+          };
+          walk(dirPath, '');
+          report.push({ name: prefix + '/', ok: true, files: n });
+          return n;
+        } catch (ex) {
+          report.push({ name: prefix + '/', ok: false, why: String(ex && ex.message || ex) });
+          return 0;
         }
-      } catch (ex) {
-        report.push({ name: 'diary/', ok: false, why: String(ex && ex.message || ex) });
-      }
+      };
+
+      addDir(path.join(FISH_ROOT, 'diary'), 'diary', { only: ['.md'] });
+      addDir(path.join(FISH_ROOT, 'works'), 'works');          // 作品带图，全要
+
+      /* documents：澄的成篇项目记录（MNEMON_HOME 在上面定义过了） */
+      addDir(path.join(MNEMON_HOME, 'documents'), 'documents');
+
+      /* inbox：爸爸留的话 + 她读到哪了 */
+      add(path.join(FISH_ROOT, 'inbox.md'), 'inbox.md', false);
+      add(path.join(FISH_ROOT, 'inbox-state.json'), 'inbox-state.json', false);
 
       /* ── 导出产物（对照用，不是原件）── */
       add(path.join(MEMGRAPH_DIR, 'graph.json'), 'graph.json', false);
@@ -734,17 +805,19 @@ const server = http.createServer(async (req, res) => {
 
   /* ---------- 备份清单：打包前先看看有什么、多大 ---------- */
   if (url.pathname === '/api/backup-info') {
+    const mh = path.resolve(path.dirname(P.mnemonDb), '..', '..');
     const spec = [
       { key: 'events',        label: '原始事件', path: P.events,                              raw: true },
-      { key: 'mnemonDb',      label: '记忆库',   path: P.mnemonDb,                            raw: true },
-      { key: 'mnemonWal',     label: '库·预写',  path: P.mnemonDb + '-wal',                   raw: true },
-      { key: 'mnemonShm',     label: '库·索引',  path: P.mnemonDb + '-shm',                   raw: true },
+      { key: 'mnemonDb',      label: '记忆库',   path: P.mnemonDb,                            raw: true, note: 'backup() 快照' },
       { key: 'memoriesJson',  label: '常驻记忆', path: P.memories,                            raw: true },
       { key: 'notes',         label: '便条',     path: path.join(FISH_ROOT, 'notes.json'),     raw: true },
-      { key: 'works',         label: '作品',     path: path.join(FISH_ROOT, 'works.json'),     raw: true },
+      { key: 'worksJson',     label: '作品簿',   path: path.join(FISH_ROOT, 'works.json'),     raw: true },
+      { key: 'worksDir',      label: '作品文件', path: path.join(FISH_ROOT, 'works'),          raw: true, isDir: true },
       { key: 'appointments',  label: '约定',     path: path.join(FISH_ROOT, 'appointments.json'), raw: true },
       { key: 'home',          label: '鱼鱼窝',   path: path.join(FISH_ROOT, 'home.json'),      raw: true },
+      { key: 'inbox',         label: '信箱',     path: path.join(FISH_ROOT, 'inbox.md'),       raw: true },
       { key: 'diary',         label: '日记',     path: path.join(FISH_ROOT, 'diary'),          raw: true, isDir: true },
+      { key: 'documents',     label: '文档',     path: path.join(mh, 'documents'),             raw: true, isDir: true },
       { key: 'graph',         label: '星图',     path: path.join(MEMGRAPH_DIR, 'graph.json'), raw: false },
       { key: 'graphExcluded', label: '剔掉的',   path: path.join(MEMGRAPH_DIR, 'graph-excluded.json'), raw: false },
       { key: 'vectors',       label: '向量',     path: path.join(MEMGRAPH_DIR, 'vectors.json'), raw: false },
@@ -755,13 +828,21 @@ const server = http.createServer(async (req, res) => {
       let size = 0, mtime = null, exists = false, count = null;
       try {
         if (it.isDir) {
-          // 目录：累加里面文件的大小，顺便报个份数
-          const names = fs.readdirSync(it.path).filter(f => f.endsWith('.md'));
+          /* 目录要递归统计 —— documents/ 有 active + archived 两层，
+             works/ 每个作品一个子目录，只看顶层会报 0 份。 */
           exists = true;
-          count = names.length;
-          for (const n of names) {
-            try { size += fs.statSync(path.join(it.path, n)).size; } catch {}
-          }
+          count = 0;
+          const walk = (cur) => {
+            for (const en of fs.readdirSync(cur, { withFileTypes: true })) {
+              const full = path.join(cur, en.name);
+              if (en.isDirectory()) walk(full);
+              else if (en.isFile()) {
+                count++;
+                try { size += fs.statSync(full).size; } catch {}
+              }
+            }
+          };
+          walk(it.path);
           try { mtime = fs.statSync(it.path).mtime.toISOString(); } catch {}
         } else {
           const st = fs.statSync(it.path);
