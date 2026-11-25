@@ -553,6 +553,18 @@
   .dx-row:hover .dx-copy{ opacity:1; }
   .dx-copy:hover{ background:rgba(140,170,255,.14); border-color:rgba(140,170,255,.22); color:#cfdcf7; }
   .dx-copy.ok{ color:#8fd7a0; opacity:1; }
+
+  /* 2026-11-25 爸爸：「记忆诊断 加一个复制诊断意见的功能」
+     —— 一条一条复制太碎，要能一次把整份带走。 */
+  .dx-copyall{
+    margin-left:auto; font-family:inherit; font-size:11.5px; letter-spacing:.02em;
+    padding:6px 13px; border-radius:8px; cursor:pointer;
+    background:rgba(140,170,255,.07); border:1px solid rgba(140,170,255,.16);
+    color:#9db4d8; transition:.15s; display:inline-flex; align-items:center; gap:5px;
+  }
+  .dx-copyall:hover{ background:rgba(140,170,255,.14); border-color:rgba(140,170,255,.28); color:#cfdcf7; }
+  .dx-copyall.ok{ background:rgba(90,200,140,.12); border-color:rgba(90,200,140,.32); color:#8fd7a0; }
+  .dx-copyall.bad{ background:rgba(255,120,120,.12); border-color:rgba(255,120,120,.32); color:#ff9d9d; }
   .dx-copy.bad{ color:#ff9d9d; opacity:1; }
 
   .dx-row{
@@ -1089,6 +1101,10 @@
     background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a99'/%3E%3C/svg%3E");
     background-repeat:no-repeat; background-position:right 9px center;
   }
+  /* 2026-11-25：数据里新长出来的分类（动态项），加一点虚线边区分，
+     让人看得出「这个是数据自己冒出来的，不是预设的」 */
+  .tl-fbtn.dyn{ border-style:dashed; border-color:rgba(160,200,255,.24); }
+
   .tl-sel:hover{ background-color:rgba(140,170,255,.10); border-color:rgba(140,170,255,.26); color:#cfdcf7; }
   .tl-sel:focus{ outline:none; border-color:rgba(122,180,255,.5); box-shadow:0 0 0 2px rgba(122,180,255,.10); }
   .tl-sel option{ background:#121826; color:#c8d4ec; }
@@ -1716,6 +1732,7 @@
     <div class="dx-head">
       <h1><span class="dx-title-star">✦</span>记 忆 诊 断</h1>
       <span class="dx-count" id="dxCount"></span>
+      <button class="dx-copyall" id="dxCopyAll" title="把整份诊断结果复制出来，可以直接发给澄看">⧉ 复制诊断意见</button>
     </div>
     <p class="dx-sub">只报，不改。每一项扣多少分都写在明面上。</p>
 
@@ -2864,17 +2881,44 @@ function toast(msg){
   clearTimeout(toast._t);
   toast._t = setTimeout(()=> el.classList.remove('on'), 2200);
 }
+/* 复制到剪贴板。
+   2026-11-25 修：原来是同步的、不返回值，而且把整段文本塞进 toast ——
+   复制一份两千多字的诊断报告时，toast 会被撑爆、页面像卡死。
+   现在：返回 Promise<boolean>，长文本只提示字数，不把正文倒出来。 */
 function copyText(s){
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = s;
-    ta.style.position = 'fixed'; ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(ta);
-    toast(ok ? ('已复制：' + s) : ('复制失败，手动记：' + s));
-  } catch(e){ toast('复制失败，手动记：' + s); }
+  const brief = (typeof s === 'string' && s.length > 60)
+    ? ('已复制 ' + s.length + ' 字')
+    : ('已复制：' + s);
+  const failMsg = (typeof s === 'string' && s.length > 60)
+    ? '复制失败，文本太长可能被拦了'
+    : ('复制失败，手动记：' + s);
+  const doFallback = () => {
+    // 老办法：临时 textarea + execCommand。非聚焦时 execCommand 也会失败，
+    // 所以这里只当兜底，成败如实返回。
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = s;
+      ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) { return false; }
+  };
+  // 优先用异步剪贴板 API（需要页面聚焦；失败自动回落）
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(s)
+      .then(() => { toast(brief); return true; })
+      .catch(() => {
+        const ok = doFallback();
+        toast(ok ? brief : failMsg);
+        return ok;
+      });
+  }
+  const ok = doFallback();
+  toast(ok ? brief : failMsg);
+  return Promise.resolve(ok);
 }
 function openSeedLoader(){
   let v = '';
@@ -7317,13 +7361,56 @@ const TL_CATS = [
    上次 isHoveredEdge 那个 bug 就是同一个坑，这次先摆好。 */
 const TL_CAT_KEYS = new Set(TL_CATS.map(c => c.key));
 
+/* ══════════════════════════════════════════════════════════
+   2026-11-25 爸爸：「这个标签不会动态增加吗」
+   —— 确实不会。原来分类栏是写死 TL_CATS 那 8 项，
+      而实际数据里还有 revise / answer / ask / seed / diary-revision
+      这些没在上面（共 6 条），被兜底归进「说的」了，标签上永远看不见。
+
+   改成：分类栏 = 固定那 8 项（有数的）+ 数据里真出现的新类型（自动加）。
+   这样她以后真干了新花样（发弹幕、写评论回复…），标签自己会长出来，
+   不用等人改代码。
+   ══════════════════════════════════════════════════════════ */
+
+/* 这些 kind 的中文名。数据里冒出 TL_CATS 没有的，就查这张表；
+   表里也没有，就把英文原样显示但加个问号，至少能看出是「没见过的」。 */
+const KIND_CN_EXTRA = {
+  revise: '改口',
+  answer: '回答',
+  ask: '提问',
+  seed: '种子',
+  'diary-revision': '日记修订',
+  heard: '听到',
+  voice: '读到的话',
+  comment: '评论',
+  judgment: '我的判断',
+  insight: '领悟',
+  rule: '规则',
+  memory: '常驻记忆',
+  spoken: '说出去的',
+};
+
+function tlCatLabel(key) {
+  const hit = TL_CATS.find(c => c.key === key);
+  if (hit) return hit.label;
+  return KIND_CN_EXTRA[key] || (key + ' ?');
+}
+
+/* ══════════════════════════════════════════════════════════
+   2026-11-25 改口径：不再把没见过的 kind 一律吞进「说的」。
+   那会让分类标签永远长不出来 —— 爸爸问「这个标签不会动态增加吗」，
+   答案是原来那个兜底做法下确实不会。
+
+   现在：
+     · 已知的（TL_CATS 里有）→ 原样返回
+     · 没见过的 → 也原样返回，由分类栏动态给它开一格
+       （中文名查 KIND_CN_EXTRA，查不到就显示「英文 ?」，
+         至少能看见「出现了个新东西」，而不是被悄悄并掉）
+     · 唯一的例外：diary-revision 归到日记，它是日记的修订版，不是新类
+   ══════════════════════════════════════════════════════════ */
 function tlCatOf(it) {
   const k = it.kind || it.layer || 'stream';
-  // diary-revision 归到日记里
-  if (k === 'diary-revision') return 'diary';
-  // 2026-11-25：兜底。TL_CATS 里没有的 kind 一律当「说的」，
-  // 绝不让英文类型名漏到页面上（comment 那次就是这么露出来的）。
-  if (!TL_CAT_KEYS.has(k)) return 'utterance';
+  if (k === 'diary-revision') return 'diary';   // 日记的修订版，归日记
   return k;
 }
 
@@ -7566,10 +7653,11 @@ function renderStats() {
        2026-11-25 用户：「记忆里面不是有这么多分类吗 怎么你里面只要几个」
        轨迹的分类是：约定 / 说的 / 便条 / 日记 / 作品 / 纪录 / 流水
        我自己映射成了 said/note/meta/... 结果只剩四五个。 */
-    const TL_MAP = {
-      appointment: '约定', utterance: '说的', note: '便条', diary: '日记',
-      work: '作品', meta: '纪录', stream: '流水', comment: '说的',
-    };
+    /* 记忆变化页的分类名 —— 跟记忆轨迹共用一份表，别各写各的
+       （copy 过一份就会随数据长大时漏掉新类型） */
+    const TL_MAP = new Proxy({}, {
+      get: (_, k) => (k === 'all' ? '全部' : tlCatLabel(String(k))),
+    });
     for (const d of days) {
       for (const it of (d.items || [])) {
         const cat = tlCatOf(it);                       // 用轨迹同一套口径
@@ -9470,6 +9558,25 @@ function dxCompute() {
   };
 }
 
+/* 算分。页面和「复制诊断意见」都走这里，不许各算各的。 */
+function dxScoreOf(d) {
+  const vals = {
+    isolated: (d.isolated || []).length,
+    dup: d.dupExtra || 0,
+    short: (d.short || []).length,
+    heavy: (d.heavy || []).length,
+    weak: d.weak || 0,
+  };
+  const penalties = {};
+  let total = 100;
+  for (const r of DX_RULES) {
+    const p = r.penalty(vals[r.key], r.key === 'weak' ? d.E : d.N);
+    penalties[r.key] = p;
+    total -= p;
+  }
+  return { vals, penalties, total: Math.max(0, Math.round(total)) };
+}
+
 function renderDiagnose() {
   const listEl = document.getElementById('dxList');
   if (!listEl) return;
@@ -9479,23 +9586,10 @@ function renderDiagnose() {
   }
 
   const d = dxCompute();
-  const vals = {
-    isolated: d.isolated.length,
-    dup: d.dupExtra,
-    short: d.short.length,
-    heavy: d.heavy.length,
-    weak: d.weak,
-  };
 
-  // 每项扣分
-  const penalties = {};
-  let total = 100;
-  for (const r of DX_RULES) {
-    const p = r.penalty(vals[r.key], r.key === 'weak' ? d.E : d.N);
-    penalties[r.key] = p;
-    total -= p;
-  }
-  total = Math.max(0, Math.round(total));
+  /* 算分逻辑抽出来一份（dxScoreOf），页面和「复制诊断意见」共用 ——
+     两边各算各的迟早会对不上。 */
+  const { vals, penalties, total } = dxScoreOf(d);
 
   /* ── 分数 ── */
   const numEl = document.getElementById('dxScoreNum');
@@ -9749,6 +9843,10 @@ function renderDiagnose() {
     }
   });
 
+  // 2026-11-25 爸爸：「记忆诊断 加一个复制诊断意见的功能」
+  // 一条一条复制不够用 —— 要能一次把整份意见带走（发给澄看的场景）。
+  bindDxCopyAll();
+
   // 整块"复制这一组"的按钮
   document.querySelectorAll('.dx-block-copy').forEach(b => {
     b.onclick = async (ev) => {
@@ -9771,6 +9869,138 @@ function renderDiagnose() {
 /* 每行的完整信息存在这个 map 里，复制时直接取 ——
    2026-11-25 用户：「后面如果有问题可以复制详细 我复制给澄 让他确认和修复」
    所以要带够信息：id、分类、全文、时间、度数、以及"为什么被判成问题"。 */
+/* ══════════════════════════════════════════════════════════
+   整份诊断意见 → 一次复制
+   2026-11-25 爸爸：「记忆诊断 加一个复制诊断意见的功能」
+   场景：页面看完，要整份发给澄，让她对着改。
+   所以要带全：分数构成 + 每一项的明细 + 做不了的那项也说清楚。
+   ══════════════════════════════════════════════════════════ */
+function dxFullReport() {
+  const d = dxCompute();
+  const { vals, penalties, total } = dxScoreOf(d);
+  const NL = String.fromCharCode(10);
+  const SEP = NL + '─'.repeat(30) + NL;
+  const L = [];
+  const today = stLocalDate(new Date().toISOString());
+
+  L.push('【澄的记忆诊断】' + today);
+  L.push('（只报不改 · 数字全部从 graph.json 现算，没有一个是估的）');
+  L.push('');
+  L.push('健康度 ' + total + ' 分');
+  L.push('');
+  L.push('── 该动手的（扣分）──');
+
+  let lines = 0;
+  for (const r of DX_RULES) {
+    if (r.noPenalty) continue;
+    const v = vals[r.key] || 0;
+    if (!v) continue;
+    L.push('  ' + r.label + '  ' + v + ' 处  −' + (penalties[r.key] || 0));
+    lines++;
+  }
+  if (!lines) L.push('  （没有）');
+  L.push('  ──────────────');
+  L.push('  合计  ' + total);
+
+  L.push('');
+  L.push('── 只是数据的形状（不扣分）──');
+  const free = [];
+  for (const r of DX_RULES) {
+    if (!r.noPenalty) continue;
+    const v = vals[r.key] || 0;
+    if (v) free.push('  ' + r.label + '  ' + v + (r.key === 'weak' ? ' / ' + d.E + ' 条' : ' 处') + '  [不扣]');
+  }
+  L.push(...(free.length ? free : ['  （没有）']));
+
+  L.push(SEP);
+
+  // ── 明细 ──
+  const blocks = [];
+  const pick = (arr) => (arr || []).map(n => n.t || n.text || '');
+
+  if (d.stillThere && d.stillThere.length) {
+    const rows = [];
+    for (const x of d.stillThere) {
+      const edges = (DATA && (DATA.precomputedEdges || DATA.edges)) || [];
+      const links = edges.filter(e => (e.source ?? e.a) === x.old.id || (e.target ?? e.b) === x.old.id);
+      rows.push('  · ' + (x.old.t || x.old.text || '').slice(0, 50) + '…');
+      rows.push('    已压暗，但还通着 ' + links.length + ' 根线 —— 要的是「剪」，不是分数');
+    }
+    blocks.push({ t: '改口后，线还通着', s: '这一项不算分，它要的是一个动作', rows });
+  }
+  if (d.isolated && d.isolated.length) {
+    blocks.push({ t: '孤立（她自己的）', s: '一条线都没有',
+      rows: d.isolated.map(n => '  · ' + (KIND_CN[n.k] || n.k) + '｜' + (n.t || n.text || '').slice(0, 56)) });
+  }
+  if (d.isolatedVoice && d.isolatedVoice.length) {
+    blocks.push({ t: '读到的话 · 孤立', s: '别人的弹幕/评论，孤立是对的，不是病，不扣分',
+      rows: d.isolatedVoice.map(n => '  · ' + (n.t || n.text || '').slice(0, 56)) });
+  }
+  const mirNodes = ((DATA && DATA.nodes) || []).filter(n => n.sources && n.sources.length > 1);
+  if (mirNodes.length) {
+    blocks.push({ t: '俩人都写过的那几句', s: '同一句话两边各一份，已合成一颗星，来源都留着',
+      rows: mirNodes.map(n => '  · 来源 ' + (n.sources || []).join(' + ') + '（合掉 ' + ((n.mirrorOf || []).length) + ' 份）｜' + (n.t || n.text || '').slice(0, 40)) });
+  }
+  if (d.short && d.short.length) {
+    blocks.push({ t: '太短', s: '≤2 个字，没有信息量',
+      rows: d.short.map(n => '  · 「' + (n.t || n.text || '') + '」') });
+  }
+  if (d.heavy && d.heavy.length) {
+    blocks.push({ t: '超重', s: '连了 60 条以上线',
+      rows: d.heavy.map(n => '  · ' + ((d.deg && d.deg[n.id]) || 0) + ' 条线｜' + (n.t || n.text || '').slice(0, 50)) });
+  }
+  if (d.inferredEdges && d.inferredEdges.length) {
+    blocks.push({ t: '推出来的连线', s: '不是实测的，是按被合掉那份的向量反推的，「像」不等于「有关」',
+      rows: d.inferredEdges.slice(0, 10).map(e => '  · cos ' + (e.cosRaw != null ? Number(e.cosRaw).toFixed(2) : '?')
+        + ' → 折成 ' + (e.cos != null ? Number(e.cos).toFixed(2) : '?')) });
+    if (d.inferredEdges.length > 10) blocks.push({ t: '', s: '', rows: ['  …还有 ' + (d.inferredEdges.length - 10) + ' 条'] });
+  }
+  if (d.weak) {
+    blocks.push({ t: '弱边', s: '字面接近度 <0.65，只是「词像」，只报不扣',
+      rows: ['  · ' + d.weak + ' / ' + d.E + ' 条（' + Math.round(d.weak / d.E * 100) + '%）'] });
+  }
+  if (d.neverUsed && d.neverUsed.length) {
+    blocks.push({ t: '从没被召回过的', s: '记了但一次都没用上',
+      rows: d.neverUsed.map(n => '  · ' + (n.t || n.text || '').slice(0, 56)) });
+  }
+
+  for (const b of blocks) {
+    if (b.t) {
+      L.push('【' + b.t + '】' + (b.s ? ' ' + b.s : ''));
+    }
+    L.push(...b.rows);
+    L.push('');
+  }
+
+  L.push('── 页面上还有这些数字 ──');
+  L.push('  节点 ' + d.N + ' · 连线 ' + d.E + ' 条');
+  L.push('  有「被回想次数」的 ' + d.withUse + ' 条');
+  L.push('  读到的话 ' + d.voiceCount + ' 条 · 说出去的 ' + d.saidCount + ' 条');
+  L.push('');
+  L.push('（生成于 ' + new Date().toLocaleString('zh-CN') + '）');
+
+  return L.join(NL);
+}
+
+function bindDxCopyAll() {
+  const b = document.getElementById('dxCopyAll');
+  if (!b || b.dataset.bound) return;
+  b.dataset.bound = '1';
+  b.onclick = async (ev) => {
+    ev.stopPropagation();
+    let txt = '';
+    try { txt = dxFullReport(); } catch (e) {
+      b.textContent = '✕ 生成失败'; b.classList.add('bad');
+      setTimeout(() => { b.textContent = '⧉ 复制诊断意见'; b.classList.remove('bad'); }, 1600);
+      return;
+    }
+    const ok = await copyText(txt).then(() => true).catch(() => false);
+    b.textContent = ok ? ('✓ 已复制 ' + txt.length + ' 字') : '✕ 复制失败';
+    b.classList.add(ok ? 'ok' : 'bad');
+    setTimeout(() => { b.textContent = '⧉ 复制诊断意见'; b.classList.remove('ok', 'bad'); }, 1800);
+  };
+}
+
 const DX_DETAIL = new Map();
 
 function dxRow(n, right, why) {
@@ -10224,12 +10454,32 @@ function renderTimeline(days) {
   const fEl = document.getElementById('tlFilter');
   if (fEl) {
     fEl.innerHTML = '';
+    /* 按钮清单 = 「全部」+ 固定 8 项 + 数据里真有的新类型。
+       固定项即使为 0 也留着（位置稳定，扫一眼就知道今天没便条）；
+       新类型只有真出现过才长出来，不会凭空多一堆 0。 */
+    const rows = [{ key: 'all', label: '全部' }];
     for (const c of TL_CATS) {
+      if (c.key === 'all') continue;
+      rows.push({ key: c.key, label: c.label });
+    }
+    // 动态补：counts 里有、但固定项里没有的
+    for (const k of Object.keys(counts)) {
+      if (k === 'all') continue;
+      if (TL_CAT_KEYS.has(k)) continue;
+      rows.push({ key: k, label: tlCatLabel(k), dyn: true });
+    }
+    // 动态项按数量从多到少排，免得冒出十几个乱序
+    const fixedCount = rows.filter(r => !r.dyn).length;
+    const dynRows = rows.slice(fixedCount).sort((a, b) => (counts[b.key] || 0) - (counts[a.key] || 0));
+    const finalRows = rows.slice(0, fixedCount).concat(dynRows);
+
+    for (const c of finalRows) {
       const n = c.key === 'all' ? ranged.length : (counts[c.key] || 0);
       const b = document.createElement('button');
       b.className = 'tl-fbtn' + (TL_FILTER === (c.key === 'all' ? null : c.key) ? ' on' : '')
-        + (n === 0 ? ' zero' : '');
+        + (n === 0 ? ' zero' : '') + (c.dyn ? ' dyn' : '');
       b.innerHTML = esc(c.label) + `<span class="n">${n}</span>`;
+      if (c.dyn) b.title = '数据里新出现的类型：' + c.key;
       if (n > 0) {
         b.onclick = () => {
           const next = (c.key === 'all') ? null : c.key;
