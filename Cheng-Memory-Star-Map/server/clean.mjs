@@ -183,6 +183,11 @@ const TYPE_TO_KIND = {
   refusal: 'refusal',
   narration: 'narration',
   diary: 'diary',
+  /* 2026-11-25：澄开始在抖音评论区说话，events.jsonl 里出现了 type=comment。
+     忘了加这一条 → kindOfEvent 兜底返回原字符串 'comment'，
+     前端 TL_CATS 里没有它，页面上就直接露出英文「comment」了。
+     她自己在评论区说的话，性质同 utterance（说的）。 */
+  comment: 'utterance',
 };
 
 export function kindOfEvent(e) {

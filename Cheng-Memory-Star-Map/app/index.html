@@ -7313,11 +7313,17 @@ const TL_CATS = [
   { key: 'meta',       label: '纪录' },
   { key: 'stream',     label: '流水' },
 ];
+/* TL_CATS 的 key 集合。放在这里（定义之前会 TDZ）——
+   上次 isHoveredEdge 那个 bug 就是同一个坑，这次先摆好。 */
+const TL_CAT_KEYS = new Set(TL_CATS.map(c => c.key));
 
 function tlCatOf(it) {
   const k = it.kind || it.layer || 'stream';
   // diary-revision 归到日记里
   if (k === 'diary-revision') return 'diary';
+  // 2026-11-25：兜底。TL_CATS 里没有的 kind 一律当「说的」，
+  // 绝不让英文类型名漏到页面上（comment 那次就是这么露出来的）。
+  if (!TL_CAT_KEYS.has(k)) return 'utterance';
   return k;
 }
 
@@ -7562,7 +7568,7 @@ function renderStats() {
        我自己映射成了 said/note/meta/... 结果只剩四五个。 */
     const TL_MAP = {
       appointment: '约定', utterance: '说的', note: '便条', diary: '日记',
-      work: '作品', meta: '纪录', stream: '流水',
+      work: '作品', meta: '纪录', stream: '流水', comment: '说的',
     };
     for (const d of days) {
       for (const it of (d.items || [])) {
