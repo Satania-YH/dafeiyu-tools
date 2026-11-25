@@ -1076,6 +1076,11 @@
   }
   .tl-sel{
     font-family:inherit; font-size:11.5px; letter-spacing:.02em;
+    /* 2026-11-25 爸爸：「记忆轨迹页和星图轨迹页的时间筛选区域 宽度要一致」
+       原来没定宽，宽度跟着内容走 —— 「2026 年（1192）」比「2026 年（423）」宽，
+       于是两页的三个下拉各是 128/115/126 vs 121/109/111，肉眼能看出错位。
+       定成一样的宽度，两页就对齐了。 */
+    width:132px; box-sizing:border-box;
     padding:5px 26px 5px 10px; border-radius:7px; cursor:pointer;
     background:rgba(140,170,255,.05); border:1px solid rgba(140,170,255,.14);
     color:#a8b6d4; transition:.15s;
