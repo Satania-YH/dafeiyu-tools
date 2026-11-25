@@ -528,15 +528,24 @@ import sqlite3
 ins_nodes=[]
 try:
     con=sqlite3.connect(DB); con.row_factory=sqlite3.Row; cur=con.cursor()
-    for r in cur.execute("select id,content,category,importance,effective_importance,created_at from insights where deleted_at is null"):
+    # 2026-11-25：补 access_count / last_accessed_at。
+    # 澄第三轮说「从没被召回过的死线」查不到 —— 我一查发现字段一直都在
+    # （insights 表有 access_count、last_accessed_at），是我没导出来。
+    # 实测 84 条未删除里：3 条 0 次召回、74 条有 last_accessed_at。
+    for r in cur.execute("select id,content,category,importance,effective_importance,created_at,access_count,last_accessed_at from insights where deleted_at is null"):
         c=(r['content'] or '').strip()
         if not c: continue
         # 2026-11-24：insight 之前没带 ts，导致 46 条 insight 在时间滑条上全是"无日期"。
         # mnemon.db 里 created_at 是有值的，补上。重路由成 rule/memory 的也跟着有日期了。
         _ts = (r['created_at'] or '').strip() or None
+        _ac = r['access_count']
+        _la = (r['last_accessed_at'] or '').strip() or None
         ins_nodes.append({'id':'ins:'+r['id'],'kind':'insight','text':c,'category':r['category'],
                           'importance':r['importance'],'eff_importance':r['effective_importance'],
-                          'ts':_ts, 'day':(_ts[:10] if _ts else None)})
+                          'ts':_ts, 'day':(_ts[:10] if _ts else None),
+                          # 被召回了几次 / 最后一次是什么时候。0 或 None 就是从来没被碰过。
+                          'use':(_ac if _ac is not None else 0),
+                          'lastUse':_la})
     con.close()
 except Exception as ex:
     print('DB ERR', ex, file=sys.stderr)

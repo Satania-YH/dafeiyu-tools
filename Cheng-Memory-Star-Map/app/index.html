@@ -2020,7 +2020,12 @@
       imp: normImp(n.importance),
       impRaw: n.importance != null ? n.importance : null,
       conf: null,
-      use: Number(n.use) || 0,     // 被回想次数：服务端有就给，没有就 0（不能留 undefined）
+      /* 2026-11-25：必须是 null 不是 0。
+         之前写 Number(n.use) || 0，服务端没给这边也变 0，
+         结果 428 个节点全被当成「从没被召回」—— 算出了 354 条的假死线。
+         没有这个字段 = 这类节点根本不记召回次数（便条/作品/说出去的），
+         该是「不适用」，不是 0。 */
+      use: (n.use == null ? null : Number(n.use)),
       scope: n.topic || '',
       tags: n.topic ? [n.topic] : [],
       degree: n.degree || 0,
@@ -5923,7 +5928,10 @@ function openCard(i){
     push('时间', n.ts ? fmtLocalTs(n.ts, true) : '—');
     push('分类', myLabel + (myCluster ? '（' + myCluster.count + ' 条）' : ''));
     push('重要度', n.imp == null ? '—（未提供）' : (n.impRaw != null ? String(n.impRaw) : Number(n.imp).toFixed(2)));
-    push('被回想', ((Number(n.use) || 0)) + ' 次');
+    /* 2026-11-25：只有 insight 系列才记召回次数（mnemon.db 的 access_count）。
+       便条/作品/说出去的这些根本没这个数，别显示「0 次」——
+       那是「不适用」，不是「一次都没被碰过」。 */
+    if (n.use != null) push('被回想', Number(n.use) + ' 次' + (n.lastUse ? '（最后 ' + String(n.lastUse).slice(0, 10) + '）' : ''));
     push('连线', ((typeof adj !== 'undefined' && adj[i]) ? adj[i].length : 0) + ' 条');
     push('主题', n.scope || '—');
     push('来源', n.src || '—');
@@ -9237,10 +9245,10 @@ function dxCompute() {
         统计口径上确实混着：饼图/柱状图把 voice 和 said 一起算。
         这里只报出来有多少，不改统计（那是另一件事）。
      ③ 从没被召回过的死线
-        ⚠️ 做不了：graph.json 和 /api/graph 里**都没有 use 字段**
-        （实测 423 个节点里 0 个带 use）。
-        要做得先改 export-graph.py 把 use 导出来。
-        → 这一项记成"缺数据"，不编数字。
+        ✅ 2026-11-25 做完了。原以为是"缺字段做不了"，
+        一查 mnemon.db 发现 insights 表一直有 access_count / last_accessed_at，
+        只是 export-graph.py 没 select 它们、incremental.mjs 也没透传。
+        两处补上后：84 条未删除里 3 条 0 次召回、74 条有 last_accessed_at。
   */
 
   // ① 被改口后、原判断是否还在
@@ -9259,13 +9267,17 @@ function dxCompute() {
   const saidCount = nodes.filter(n => n.k === 'said').length;
 
   // ③ use 字段覆盖情况
+  /* 2026-11-25：use 字段终于导出来了（export-graph.py + incremental.mjs 两处都补上）。
+     access_count=0 的就是从建库起一次都没被回想过的。 */
   const withUse = nodes.filter(n => n.use != null && Number(n.use) > 0).length;
+  const neverUsed = nodes.filter(n => n.use != null && Number(n.use) === 0);
+  const hasUseField = nodes.some(n => n.use != null);
 
   return {
     nodes, edges, N: nodes.length, E: edges.length,
     isolated, isolatedVoice, heavy, dupGroups, dupExtra, short,
     weak, deg,
-    revMeta, stillThere, voiceCount, saidCount, withUse,
+    revMeta, stillThere, voiceCount, saidCount, withUse, neverUsed, hasUseField,
   };
 }
 
@@ -9459,16 +9471,27 @@ function renderDiagnose() {
       '', 'rgba(140,180,255,.45)'));
   }
 
-  // ③ 死线：数据不够，只报"缺什么"
-  blocks.push(dxBlock('从没被召回过的',
-    '查不了 —— 需要每条记忆的"被回想次数"，但导出的数据里没有这个字段',
-    ['<div class="dx-weak">'
-      + '<div class="dx-weak-t">'
-        + '节点总数 ' + d.N + ' &nbsp;·&nbsp; 带「被回想次数」的 <b style="color:#ff9d9d">' + d.withUse + '</b> 条'
-      + '</div>'
-      + '<div class="dx-block-more">要查这个，得先改 export-graph.py，把 use 字段一起导出来</div>'
-    + '</div>'],
-    '', 'rgba(200,200,200,.30)'));
+  // ③ 从没被召回过的
+  //    2026-11-25 之前这一栏写的是「查不了」，理由是导出数据里没 use 字段。
+  //    澄要查这个，我一查 mnemon.db —— access_count 和 last_accessed_at 一直都在，
+  //    是我没导出来。现在 export-graph.py 和 incremental.mjs 两处都补上了。
+  if (d.hasUseField) {
+    const rows = d.neverUsed.map(n => {
+      const age = n.ts ? Math.round((Date.now() - new Date(n.ts).getTime()) / 86400000) : null;
+      return dxRow(n, (age != null ? '存了 ' + age + ' 天，' : '') + '0 次召回');
+    });
+    const total = nodes.filter(n => n.use != null).length;
+    blocks.push(dxBlock('从没被召回过的',
+      '建库起一次都没被回想过的 —— 记了，但从来没用上。'
+      + '（有「被回想次数」的是 ' + d.withUse + ' / ' + total + ' 条）',
+      rows.length ? [rows.join('')] : ['<div class="dx-block-more">没有 —— 每条至少被回想过去一次</div>'],
+      '', 'rgba(200,200,200,.40)'));
+  } else {
+    blocks.push(dxBlock('从没被召回过的',
+      '查不了 —— 导出的数据里没有「被回想次数」这个字段',
+      ['<div class="dx-block-more">要查这个，得改 export-graph.py 把 use 导出来</div>'],
+      '', 'rgba(200,200,200,.30)'));
+  }
 
   listEl.innerHTML = blocks.join('') || '<div class="dx-empty">没发现问题</div>';
 
@@ -10429,7 +10452,7 @@ function addStarToScene(node, edges) {
     })(node.importance),
     impRaw: node.importance != null ? node.importance : null,
     conf: null,
-    use: Number(node.use) || 0,
+    use: (node.use == null ? null : Number(node.use)),   // 同上：没有就 null，别乱填 0
     scope: node.topic || '',
     tags: node.topic ? [node.topic] : [],
     degree: (edges || []).length,

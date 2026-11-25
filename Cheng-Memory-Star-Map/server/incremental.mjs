@@ -155,6 +155,11 @@ export class GraphState {
     if (n.channel) out.channel = String(n.channel);
     if (n.sourceFile) out.sourceFile = String(n.sourceFile);
     if (n.revised) out.revised = n.revised;
+    /* 2026-11-25：召回次数 / 最后一次召回时间。
+       export-graph.py 从 insights.access_count / last_accessed_at 导出来，
+       这里之前没透传 —— 结果诊断页「从没被召回过的」只能写"查不了"。 */
+    if (n.use !== undefined) out.use = Number(n.use) || 0;
+    if (n.lastUse) out.lastUse = String(n.lastUse);
 
     // voice 单独一层
     if (kind === 'voice') out.layer = 'voice';
@@ -399,6 +404,9 @@ export class GraphState {
         ...(n.channel ? { channel: n.channel } : {}),
         ...(n.sourceFile ? { sourceFile: n.sourceFile } : {}),
         ...(n.revised ? { revised: n.revised } : {}),
+        // 2026-11-25：召回次数（0 就是从来没被碰过）
+        ...(n.use !== undefined ? { use: Number(n.use) || 0 } : {}),
+        ...(n.lastUse ? { lastUse: n.lastUse } : {}),
       });
     }
     // 边必须两端都在 nodes 里，否则前端按 id 找索引会落空
