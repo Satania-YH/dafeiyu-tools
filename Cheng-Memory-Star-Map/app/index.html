@@ -9588,6 +9588,83 @@ let ST_SF_DATA = [];
 let ST_SF_PAGE = 0;         // 星空当前第几页（每页 7 颗）
 let ST_SF_T0 = 0;
 
+/* ══════════════════════════════════════════════════════════
+   点击特效
+   2026-11-25 爸爸：「加点点击特效吧」
+
+   点一颗分类星，炸开三样东西：
+     ① 冲击波环    一圈从中心快速扩散、边扩散边变淡的环
+     ② 粒子爆发    十几粒火星往外飞，带重力和阻尼
+     ③ 环内增亮    被炸的那颗短暂亮一下（用 uClick.pulse）
+
+   为什么做这三样而不是只做个缩放：
+     缩放是「按钮反馈」，冲击波才是「星被点亮了」。
+     这一页是看星星的地方，反馈也该是光的语言。
+   ══════════════════════════════════════════════════════════ */
+const STAR_BURSTS = [];      // 进行中的爆发 { x, y, t0, hue, r }
+
+function stBurst(x, y, hueArr, R) {
+  STAR_BURSTS.push({
+    x, y, t0: performance.now(),
+    hue: hueArr,
+    r: R,
+    /* 每个粒子：随机角度 + 速度，带一点差异免得像整齐的伞 */
+    parts: Array.from({ length: 16 }, (_, k) => {
+      const a = (k / 16) * Math.PI * 2 + Math.random() * 0.5;
+      const sp = 0.12 + Math.random() * 0.20;
+      return { a, sp, sz: 0.9 + Math.random() * 1.6, ph: Math.random() * 6.28 };
+    }),
+  });
+  /* 只留最近 6 次，点太多次别把内存堆起来 */
+  if (STAR_BURSTS.length > 6) STAR_BURSTS.shift();
+}
+
+function drawBursts(T) {
+  const now = performance.now();
+  for (let bi = STAR_BURSTS.length - 1; bi >= 0; bi--) {
+    const b = STAR_BURSTS[bi];
+    const el = now - b.t0;
+    const LIFE = 900;
+    if (el > LIFE) { STAR_BURSTS.splice(bi, 1); continue; }
+    const p = el / LIFE;              // 0 → 1
+    const ease = 1 - Math.pow(1 - p, 2.2);   // 先快后慢
+    const cs = b.hue[0] + ',' + b.hue[1] + ',' + b.hue[2];
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    /* ① 冲击波环：两道，一快一慢 */
+    for (let w = 0; w < 2; w++) {
+      const pd = Math.max(0, p - w * 0.18);          // 第二道晚一点
+      if (pd <= 0) continue;
+      const rr = b.r * (0.8 + pd * 3.6);
+      const alpha = (1 - pd) * (w === 0 ? 0.55 : 0.28);
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, rr, 0, 7);
+      ctx.strokeStyle = 'rgba(' + cs + ',' + alpha + ')';
+      ctx.lineWidth = (w === 0 ? 2.0 : 1.1) * (1 - pd * 0.6);
+      ctx.stroke();
+    }
+
+    /* ② 粒子：往外飞 + 轻微下坠，像星火 */
+    for (const pt of b.parts) {
+      const dist = b.r * (0.6 + ease * 3.8 * pt.sp * 3.2);
+      const px = b.x + Math.cos(pt.a) * dist;
+      const py = b.y + Math.sin(pt.a) * dist * 0.72 + ease * ease * 14;  // 下坠
+      const alpha = (1 - p) * 0.85;
+      if (alpha <= 0.02) continue;
+      const gg = ctx.createRadialGradient(px, py, 0, px, py, pt.sz * 3.0);
+      gg.addColorStop(0, 'rgba(255,255,255,' + alpha + ')');
+      gg.addColorStop(0.40, 'rgba(' + cs + ',' + (alpha * 0.55) + ')');
+      gg.addColorStop(1, 'rgba(' + cs + ',0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.arc(px, py, pt.sz * 3.0, 0, 7); ctx.fill();
+    }
+
+    ctx.restore();
+  }
+}
+
 function drawStatsStarfield(allNodes, byKindAdded) {
   const cv = document.getElementById('stStarCv');
   const host = document.getElementById('stStarfield');
@@ -9705,6 +9782,35 @@ function drawStatsStarfield(allNodes, byKindAdded) {
     }
   }
 
+  /* ── 点击绑定 ──
+     点中哪颗星：算它中心到鼠标的距离，落在 R*1.6 以内算点中。
+     R*1.6 而不是 R：星周围有光晕，眼睛觉得"那里就是它"。
+
+     ⚠️ 监听器只绑一次（dataset.clickBound），但 pageItems 每次重绘都换。
+     所以不能闭包捕获 pageItems —— 那会锁死第一次那一页，翻页后就点不中了。
+     改成从 window.ST_SF_CURPAGE 现取。 */
+  window.ST_SF_CURPAGE = pageItems;
+  if (!cv.dataset.clickBound) {
+    cv.dataset.clickBound = '1';
+    cv.addEventListener('click', (ev) => {
+      const rect = cv.getBoundingClientRect();
+      const mx = ev.clientX - rect.left;
+      const my = ev.clientY - rect.top;
+      const cur = window.ST_SF_CURPAGE || [];
+      let hit = null, bestD = 1e9;
+      for (const it of cur) {
+        const d = Math.hypot(mx - it.x, my - it.y);
+        const reach = it.r * 1.6 + 12;
+        if (d < reach && d < bestD) { bestD = d; hit = it; }
+      }
+      if (!hit) return;
+      stBurst(hit.x, hit.y, hit.hue, hit.r);
+      hit.clickAt = performance.now();     // 标记：刚被点过，会短暂增亮
+      const addTxt = hit.added > 0 ? (' · 这段时间 +' + hit.added) : '';
+      toast(hit.name + ' · 共 ' + hit.total + ' 颗' + addTxt);
+    });
+  }
+
   const loop = (now) => {
     const T = (now - ST_SF_T0) / 1000;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -9719,7 +9825,14 @@ function drawStatsStarfield(allNodes, byKindAdded) {
 
     for (const it of pageItems) {
       const breath = 0.72 + 0.28 * Math.sin(T * 0.85 + it.phase);
-      const R = it.r * (0.96 + 0.07 * breath);
+      /* 被点过的星短暂"放大呼吸"一下 —— 跟爆发同时开始，一起收 */
+      let clickBoost = 0;
+      if (it.clickAt) {
+        const el = performance.now() - it.clickAt;
+        if (el < 620) clickBoost = (1 - el / 620) * 0.30;
+        else it.clickAt = 0;
+      }
+      const R = it.r * (0.96 + 0.07 * breath) * (1 + clickBoost);
       const c = it.hue;
       const cs = c[0] + ',' + c[1] + ',' + c[2];
 
@@ -9971,6 +10084,9 @@ function drawStatsStarfield(allNodes, byKindAdded) {
         ctx.fillText('共 ' + it.total + ' 颗', it.x, lineY);
       }
     }
+
+    /* 爆发画在最后 —— 它是"刚刚发生的事"，该压在星上面 */
+    drawBursts(T);
 
     ST_SF_ANIM = requestAnimationFrame(loop);
   };
