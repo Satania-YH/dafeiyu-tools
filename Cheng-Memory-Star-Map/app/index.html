@@ -9738,10 +9738,30 @@ function drawStatsStarfield(allNodes, byKindAdded) {
       ctx.fillStyle = 'rgba(' + cs + ',.95)';
       ctx.fillText(it.name, it.x, it.y + R + 13);
 
+      /* 2026-11-25 爸爸问：「为什么有2个+ 分别是什么？」
+         原来是 '+31 / 166 (+11)' —— 三个数字没一个说明白，谁看都懵。
+
+         拆成两行说人话：
+           上面：这段时间新增 +31（有新增才显示）
+           下面：共 166 颗
+         overflow（被折叠没画出来的）不硬塞数字了 ——
+         它是「画布太小、装不下」，不是她记忆里的事，
+         塞在这里只会让人以为自己漏看了什么。真要知道，
+         看左边的总数就行。 */
       ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
-      ctx.fillStyle = 'rgba(158,176,204,.72)';
-      const extra = it.overflow ? ' (+' + it.overflow + ')' : '';
-      ctx.fillText('+' + it.added + ' / ' + it.total + extra, it.x, it.y + R + 29);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const lineY = it.y + R + 27;
+
+      if (it.added > 0) {
+        ctx.fillStyle = 'rgba(140,220,160,.82)';
+        ctx.fillText('这段时间 +' + it.added, it.x, lineY);
+        ctx.fillStyle = 'rgba(150,168,196,.60)';
+        ctx.fillText('共 ' + it.total + ' 颗', it.x, lineY + 13);
+      } else {
+        ctx.fillStyle = 'rgba(150,168,196,.60)';
+        ctx.fillText('共 ' + it.total + ' 颗', it.x, lineY);
+      }
     }
 
     ST_SF_ANIM = requestAnimationFrame(loop);
@@ -10545,24 +10565,24 @@ async function dxDoRefresh(opts) {
     setLabel('刷新中');
   }
 
-  /* 最短转这么久。
-     2026-11-25 爸爸：「手动点击之后也要出现刷新旋转和不可点 刷新完再开放」
-              然后：「而且这么快就刷新完了？」
-     第一版给了 600ms，他说还是太快。本地拉一次 /api/graph 只要 200ms ——
-     人眼对「一个动作有没有发生」的判断大概要 1 秒左右，
-     低于这个数就只觉得「闪了一下」。
-     提到 1200ms：转够一圈半，能看清它真的在转。 */
-  const MIN_SPIN_MS = 1200;
-  const t0 = Date.now();
-  const waitAtLeast = async () => {
-    const left = MIN_SPIN_MS - (Date.now() - t0);
-    if (left > 0) await new Promise(r => setTimeout(r, left));
-  };
+  /* 2026-11-25 爸爸：「不要定死时间啊 要按真实的刷新速度来」
+     —— 之前用 MIN_SPIN_MS 硬等，那是假动作：不管活儿多快都拖到 1.2 秒，
+        活真慢的时候又看不出区别。现在让它诚实地跑完，
+        只是在跑的过程中把「正在做什么」写出来，让人知道它没卡住。
+
+     步骤也是真的：拉服务端 → 重算 → 重绘，每步都报。 */
+  const step = (txt) => { if (b) setLabel(txt); };
 
   try {
+    step('拉数据');
     await refreshGraphQuiet();        // 拉服务端最新
+
+    /* renderDiagnose() 是同步的，跑起来会占满主线程 ——
+       如果直接调到它后面，浏览器没机会把「重算」这两个字画出来。
+       用两层 rAF 让它先渲染一帧，再开始算。 */
+    step('重算');
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     renderDiagnose();                 // 重算 + 重绘
-    await waitAtLeast();              // 别闪一下就没了
     if (b) {
       b.classList.remove('spin');
       b.disabled = false;
@@ -10572,7 +10592,6 @@ async function dxDoRefresh(opts) {
       }, 1400);
     }
   } catch (e) {
-    await waitAtLeast();
     if (b) {
       b.classList.remove('spin');
       b.disabled = false;
