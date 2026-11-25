@@ -448,6 +448,16 @@
      撑到 547px，把右栏整个顶出容器 158px，被 overflow:hidden 裁掉 ——
      数字列就看不见了。改成可收缩，下限 300px。 */
   .dx-score-txt{ flex:1 1 300px; min-width:300px; max-width:560px; }
+  /* 心电图：刷新时替分数出镜，跳 1 秒 */
+  .dx-ecg{
+    display:block; width:200px; height:52px;
+    margin:2px 0 6px;
+    filter:drop-shadow(0 0 8px rgba(120,220,170,.35));
+  }
+  /* 分数切走 / 心电图切进来时给一点点淡入，别硬切 */
+  .dx-score-num{ transition:opacity .18s; }
+  .dx-score-num.hidden{ display:none; }
+
   .dx-score-num{
     font-size:46px; font-weight:300; line-height:1;
     color:#eef3ff; font-variant-numeric:tabular-nums;
@@ -2121,6 +2131,11 @@
     <div class="dx-score-box">
       <div class="dx-score-ring"><canvas id="dxRing"></canvas></div>
       <div class="dx-score-txt">
+        <!-- 2026-11-25 爸爸：「刷新的是 98那边变成一个类似心电图跳动的心动画，
+             1s时间过了 再出评分」
+             分数位置放一块心电图 canvas，刷新时它跳、分数藏起来；
+             跳完了分数再出来。 -->
+        <canvas class="dx-ecg" id="dxEcg" width="200" height="52" style="display:none"></canvas>
         <div class="dx-score-num" id="dxScoreNum">—</div>
         <div class="dx-score-lab">记忆健康度</div>
         <div class="dx-score-note" id="dxScoreNote"></div>
@@ -10541,6 +10556,104 @@ let DX_LOADED = false;
      1. 从服务端重拉 /api/graph（会话可能有新星，前端 DATA 还停在旧的）
      2. 重算并重绘
    ══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════
+   心电图（刷新时替分数出镜）
+   2026-11-25 爸爸：「刷新这么快 那就让他转1s 然后刷新的是
+                     98那边变成一个类似心电图跳动的心动画 懂我意思吗
+                     1s时间过了 再出评分」
+
+   为什么单独做这个而不是直接转圈：
+     转圈只是「在忙」，心电图是「在量」。这一页量的是她的记忆健康度，
+     所以跳动应该长在分数那个位置上，而不是按钮上。
+     1 秒是给眼睛的节奏，不是假装在计算 —— 按钮上仍然诚实写着
+     「拉数据 / 重算」这些真实的步骤。
+   ══════════════════════════════════════════════════════════ */
+function startEcg(durationMs) {
+  const cvs = document.getElementById('dxEcg');
+  const numEl = document.getElementById('dxScoreNum');
+  if (!cvs) return () => {};
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = 200, H = 52;
+  cvs.width = W * dpr; cvs.height = H * dpr;
+  cvs.style.display = 'block';
+  if (numEl) numEl.classList.add('hidden');
+
+  const g = cvs.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const t0 = performance.now();
+  let raf = 0;
+  /* 基线往右滚，波形固定 —— 看起来像仪器在扫 */
+  const SPEED = 150;          // px/s
+
+  const beat = (x) => {
+    /* 一个心搏的波形：P 波 → QRS 尖峰 → T 波。
+       尖峰只占很窄一段，跟真心电图一样。 */
+    const p = ((x % 62) + 62) % 62;   // 每 62px 一次心跳
+    if (p < 6) return Math.sin(p / 6 * Math.PI) * 0.16;          // P
+    if (p < 10) return 0;
+    if (p < 13) return -0.22;                                     // Q
+    if (p < 17) return 1.0;                                       // R 尖
+    if (p < 21) return -0.42;                                     // S
+    if (p < 26) return 0;
+    if (p < 34) return Math.sin((p - 26) / 8 * Math.PI) * 0.30;   // T
+    return 0;
+  };
+
+  const draw = (now) => {
+    const el = now - t0;
+    g.clearRect(0, 0, W, H);
+
+    const mid = H / 2;
+    const amp = H * 0.40;
+    const offset = (el / 1000) * SPEED;
+
+    /* 淡的网格（像仪器底纹），太亮会抢戏，用 4% */
+    g.strokeStyle = 'rgba(120,220,170,.045)';
+    g.lineWidth = 1;
+    for (let x = 0; x <= W; x += 25) {
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
+    }
+    for (let y = 0; y <= H; y += 13) {
+      g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+    }
+
+    /* 波形本身 */
+    g.beginPath();
+    for (let x = 0; x <= W; x++) {
+      const v = beat(x + offset);
+      const y = mid - v * amp;
+      if (x === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.strokeStyle = 'rgba(120,232,178,.92)';
+    g.lineWidth = 1.7;
+    g.lineJoin = 'round';
+    g.stroke();
+
+    /* 扫到最右的那个亮点，像笔尖 */
+    const vEnd = beat(W + offset);
+    const yEnd = mid - vEnd * amp;
+    const rg = g.createRadialGradient(W - 2, yEnd, 0, W - 2, yEnd, 9);
+    rg.addColorStop(0, 'rgba(190,255,220,.95)');
+    rg.addColorStop(1, 'rgba(120,232,178,0)');
+    g.fillStyle = rg;
+    g.beginPath(); g.arc(W - 2, yEnd, 9, 0, 7); g.fill();
+
+    if (el < durationMs) {
+      raf = requestAnimationFrame(draw);
+    }
+  };
+  raf = requestAnimationFrame(draw);
+
+  /* 返回一个「收摊」函数：停动画 + 藏画布 + 把分数放回来 */
+  return () => {
+    cancelAnimationFrame(raf);
+    cvs.style.display = 'none';
+    if (numEl) numEl.classList.remove('hidden');
+  };
+}
+
 /* 执行一次「真刷新」：拉服务端 + 重算 + 重绘。
    按钮状态全包在里面 —— 从哪儿触发都长得一样。
    2026-11-25 爸爸：「进去的时候 刷新按钮要变成刷新中 刷新中不能点击 刷新按钮要旋转」 */
@@ -10565,15 +10678,24 @@ async function dxDoRefresh(opts) {
     setLabel('刷新中');
   }
 
-  /* 2026-11-25 爸爸：「不要定死时间啊 要按真实的刷新速度来」
-     —— 之前用 MIN_SPIN_MS 硬等，那是假动作：不管活儿多快都拖到 1.2 秒，
-        活真慢的时候又看不出区别。现在让它诚实地跑完，
-        只是在跑的过程中把「正在做什么」写出来，让人知道它没卡住。
+  /* 2026-11-25 爸爸：
+       「不要定死时间啊 要按真实的刷新速度来」
+       「那就让他转1s 然后刷新的是 98那边变成一个类似心电图跳动的心动画
+        1s时间过了 再出评分」
 
-     步骤也是真的：拉服务端 → 重算 → 重绘，每步都报。 */
+     这两句不矛盾，分开看：
+       · 按钮上的文字 = 真实步骤（拉数据 / 重算），不编时间
+       · 心电图 = 给眼睛的节奏，固定跳 1 秒，然后才把分数放出来
+     一个管「真的在做什么」，一个管「读起来有没有份量」。 */
+  const ECG_MS = 1000;
   const step = (txt) => { if (b) setLabel(txt); };
+  let stopEcg = null;
 
   try {
+    /* 心电图立刻接管分数位置 —— 先跳起来，再干活 */
+    stopEcg = startEcg(ECG_MS);
+    const tStart = Date.now();
+
     step('拉数据');
     await refreshGraphQuiet();        // 拉服务端最新
 
@@ -10583,6 +10705,13 @@ async function dxDoRefresh(opts) {
     step('重算');
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     renderDiagnose();                 // 重算 + 重绘
+
+    /* 等满 1 秒再收 —— 活儿干得再快，心电图也要跳完这一趟。
+       这就是「让转 1s」的意思：是视觉节奏，不是假装在算。 */
+    const left = ECG_MS - (Date.now() - tStart);
+    if (left > 0) await new Promise(r => setTimeout(r, left));
+
+    if (stopEcg) { stopEcg(); stopEcg = null; }   // 收摊，分数出来
     if (b) {
       b.classList.remove('spin');
       b.disabled = false;
@@ -10592,6 +10721,7 @@ async function dxDoRefresh(opts) {
       }, 1400);
     }
   } catch (e) {
+    if (stopEcg) { stopEcg(); stopEcg = null; }
     if (b) {
       b.classList.remove('spin');
       b.disabled = false;
