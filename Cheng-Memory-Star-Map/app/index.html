@@ -882,6 +882,9 @@
     display:flex; align-items:center; gap:5px; justify-content:center;
     padding:8px 0 12px;
   }
+  /* 只有一页时整个收起 —— 空的 flex 容器还会占 padding 的高度，
+     2026-11-25 查出来的：分类只有 6 类时画布下面多一条 20px 空白。 */
+  .st-sf-pager:empty{ display:none; padding:0; }
   .st-sf-pg{
     min-width:24px; height:22px; padding:0 7px; border-radius:6px;
     font-family:inherit; font-size:11px; cursor:pointer;
