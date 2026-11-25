@@ -339,6 +339,18 @@
 
   /* ══════════ 记忆变化 ══════════ */
   /* 和其他页面同一套定位：left 让出侧栏、top 让出顶栏 */
+  #diagnose{
+    position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
+    overflow-y:auto; overflow-x:hidden; z-index:45;
+    background:linear-gradient(180deg,rgba(9,13,23,.99),rgba(5,7,13,.99));
+    padding:22px 30px 40px;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .22s, visibility .22s, left .26s cubic-bezier(.4,0,.2,1);
+  }
+  #rail.collapsed ~ #diagnose{ left:52px; }
+  #diagnose::-webkit-scrollbar{ width:8px; }
+  #diagnose.shown{ opacity:1; visibility:visible; pointer-events:auto; }
+
   #startrack{
     position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
     overflow-y:auto; overflow-x:hidden; z-index:45;
@@ -375,6 +387,219 @@
     font-size:12px; color:#6b7a99; line-height:1.7; text-align:center;
   }
 
+  /* ══════════ 记忆诊断 ══════════ */
+  /* 背景星尘：用 CSS 画，不占性能 */
+  #diagnose{
+    background:
+      radial-gradient(1px 1px at 12% 18%, rgba(200,220,255,.55) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(1px 1px at 27% 62%, rgba(180,205,255,.40) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(1.5px 1.5px at 45% 12%, rgba(220,235,255,.60) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(1px 1px at 61% 78%, rgba(180,205,255,.35) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(1px 1px at 78% 35%, rgba(210,228,255,.50) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(1.5px 1.5px at 89% 68%, rgba(200,220,255,.45) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(1px 1px at 8% 82%, rgba(190,212,255,.38) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(1px 1px at 68% 48%, rgba(200,220,255,.30) 0%, rgba(0,0,0,0) 100%),
+      linear-gradient(180deg, rgba(9,13,23,.99), rgba(5,7,13,.99));
+  }
+  #diagnose .dx-page{ max-width:940px; margin:0 auto; position:relative; }
+  .dx-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+  .dx-head h1{ margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff;
+    display:flex; align-items:center; gap:9px; }
+  .dx-title-star{
+    font-size:15px; color:#ffd479;
+    text-shadow:0 0 12px rgba(255,212,121,.65), 0 0 24px rgba(255,212,121,.3);
+    animation:dxTwinkle 3.2s ease-in-out infinite;
+  }
+  @keyframes dxTwinkle{
+    0%, 100% { opacity:.55; transform:scale(.92) rotate(0deg); }
+    50%      { opacity:1;   transform:scale(1.08) rotate(90deg); }
+  }
+  .dx-count{ font-size:11.5px; color:#5c6884; }
+  .dx-sub{ font-size:11.5px; color:#65718c; margin:4px 0 22px; letter-spacing:.05em; }
+
+  /* ── 分数卡：做成一块"仪表盘" ── */
+  .dx-score-box{
+    position:relative; overflow:hidden;
+    display:flex; align-items:center; gap:26px;
+    padding:24px 26px; margin-bottom:24px; border-radius:14px;
+    background:
+      radial-gradient(ellipse at 12% 50%, rgba(140,170,255,.07) 0%, rgba(0,0,0,0) 62%),
+      linear-gradient(160deg, rgba(255,255,255,.032) 0%, rgba(255,255,255,.012) 100%);
+    border:1px solid rgba(140,170,255,.13);
+    box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 8px 28px rgba(0,0,0,.28);
+  }
+  /* 顶部一道极细的高光，让它"立"起来 */
+  /* 右上角一颗小星，不抢戏，只做点缀 */
+  .dx-score-box::after{
+    content:'✦'; position:absolute; right:18px; top:12px;
+    font-size:13px; color:rgba(255,212,121,.30);
+    text-shadow:0 0 10px rgba(255,212,121,.25);
+    animation:dxTwinkle 4.6s ease-in-out infinite;
+    pointer-events:none;
+  }
+  .dx-score-box::before{
+    content:''; position:absolute; left:0; right:0; top:0; height:1px;
+    background:linear-gradient(90deg, rgba(140,170,255,0) 0%, rgba(160,195,255,.34) 50%, rgba(140,170,255,0) 100%);
+  }
+  .dx-score-ring{ flex:none; filter:drop-shadow(0 0 16px rgba(255,212,121,.18)); }
+  #dxRing{ display:block; }
+
+  .dx-score-txt{ flex:none; min-width:132px; }
+  .dx-score-num{
+    font-size:46px; font-weight:300; line-height:1;
+    color:#eef3ff; font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;
+    text-shadow:0 0 22px rgba(180,205,255,.28);
+  }
+  .dx-score-num .u{ font-size:15px; color:#6b7a99; margin-left:3px; font-weight:400; }
+  .dx-score-lab{ font-size:10.5px; color:#6b7a99; letter-spacing:.16em; margin-top:8px; }
+  .dx-score-note{
+    display:inline-block; font-size:11px; color:#9db4dc; margin-top:10px;
+    padding:3px 9px; border-radius:99px;
+    background:rgba(122,180,255,.10); border:1px solid rgba(122,180,255,.20);
+  }
+
+  /* 扣分明细：做成表格，右边对齐，像账单 */
+  .dx-score-break{ flex:1; min-width:0; }
+  .dx-br{
+    display:grid; grid-template-columns:1fr 88px 46px;
+    align-items:center; gap:12px;
+    padding:5px 8px; font-size:11.5px; border-radius:5px;
+    transition:.14s;
+  }
+  .dx-br:not(.total):hover{ background:rgba(140,170,255,.05); }
+  .dx-br.zero{ opacity:.34; }
+  .dx-br-l{ color:#9db4dc; letter-spacing:.04em; }
+  .dx-br-v{ color:#6b7a99; text-align:right; font-variant-numeric:tabular-nums; font-size:11px; }
+  .dx-br-p{
+    text-align:right; color:#ff9d9d; font-variant-numeric:tabular-nums;
+    font-size:12px; letter-spacing:.02em;
+  }
+  .dx-break-title{
+    font-size:10px; color:#5c6884; letter-spacing:.10em;
+    margin:0 0 5px 8px; text-transform:none;
+  }
+  .dx-break-title-2{
+    margin-top:12px; padding-top:10px;
+    border-top:1px dashed rgba(140,170,255,.10);
+    color:#4a5468;
+  }
+  .dx-score-sub{
+    font-size:10px; color:#4a5468; margin-top:8px; letter-spacing:.04em;
+  }
+
+  /* 只报不扣的那一项：灰掉，右下角标"不扣" */
+  .dx-br.free .dx-br-l{ color:#6b7a99; }
+  .dx-br.free .dx-br-v{ color:#4a5468; }
+  .dx-free{
+    font-size:10px; padding:1px 6px; border-radius:4px;
+    background:rgba(140,170,255,.07); color:#5c6884; letter-spacing:.04em;
+  }
+  .dx-br.total{
+    margin-top:8px; padding-top:9px;
+    border-top:1px solid rgba(140,170,255,.13);
+  }
+  .dx-br.total .dx-br-l{ color:#dbe6fb; font-weight:500; }
+  .dx-br.total .dx-br-p{ font-size:15px; font-weight:600; }
+
+  /* ── 明细块：每块一张卡，左边一条色带 ── */
+  .dx-block{
+    position:relative; margin-bottom:16px;
+    padding:16px 20px 14px 22px; border-radius:12px;
+    background:linear-gradient(170deg, rgba(255,255,255,.026) 0%, rgba(255,255,255,.010) 100%);
+    border:1px solid rgba(140,170,255,.09);
+    overflow:hidden;
+  }
+  /* 左侧竖条：按严重程度给色 */
+  .dx-block::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
+    background:var(--dx-color, rgba(140,170,255,.35));
+  }
+  .dx-block-hd{ display:flex; align-items:baseline; gap:10px; margin-bottom:11px; }
+  .dx-block-t{
+    font-size:12.5px; color:#dbe6fb; letter-spacing:.08em; font-weight:500;
+  }
+  .dx-block-t .dot{
+    display:inline-block; width:8px; height:8px;
+    margin-right:8px; vertical-align:middle;
+    background:var(--dx-color);
+    box-shadow:0 0 10px var(--dx-color);
+    /* 四角星形状 */
+    clip-path:polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
+  }
+  .dx-block-s{ font-size:10.5px; color:#5c6884; }
+  .dx-block-body{ display:flex; flex-direction:column; gap:1px; }
+  .dx-block-more{
+    font-size:10.5px; color:#4a5468; padding-top:9px; margin-top:6px;
+    border-top:1px dashed rgba(140,170,255,.07);
+  }
+
+  /* 复制按钮 */
+  .dx-block-copy{
+    margin-left:auto; font-family:inherit; font-size:10px;
+    padding:3px 9px; border-radius:5px; cursor:pointer; transition:.14s;
+    background:rgba(140,170,255,.055); border:1px solid rgba(140,170,255,.13);
+    color:#6b7a99; opacity:0;
+  }
+  .dx-block:hover .dx-block-copy{ opacity:1; }
+  .dx-block-copy:hover{ background:rgba(140,170,255,.14); color:#cfdcf7; }
+
+  .dx-copy{
+    flex:none; width:20px; height:20px; padding:0; border-radius:4px;
+    font-family:inherit; font-size:10px; line-height:1; cursor:pointer;
+    background:transparent; border:1px solid transparent;
+    color:#3f4a5e; opacity:0; transition:.14s;
+  }
+  .dx-row:hover .dx-copy{ opacity:1; }
+  .dx-copy:hover{ background:rgba(140,170,255,.14); border-color:rgba(140,170,255,.22); color:#cfdcf7; }
+  .dx-copy.ok{ color:#8fd7a0; opacity:1; }
+  .dx-copy.bad{ color:#ff9d9d; opacity:1; }
+
+  .dx-row{
+    display:flex; align-items:baseline; gap:9px;
+    padding:6px 8px; margin:0 -8px;
+    font-size:11.5px; border-radius:6px; cursor:pointer; transition:.13s;
+  }
+  .dx-row:hover{ background:rgba(140,170,255,.075); }
+  .dx-row-k{
+    font-size:10px; padding:1.5px 7px; border-radius:4px; flex:none;
+    background:rgba(140,170,255,.10); color:#93a8cc; white-space:nowrap;
+  }
+  .dx-row-t{ flex:1; min-width:0; color:#aebcd6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dx-row-r{ flex:none; font-size:10px; color:#54607a; font-variant-numeric:tabular-nums; }
+
+  /* 重复组 */
+  .dx-dup{
+    padding:9px 12px; margin-bottom:5px; border-radius:7px;
+    background:rgba(255,185,120,.045);
+    border-left:1.5px solid rgba(255,185,120,.32);
+  }
+  .dx-dup-n{ font-size:10px; color:#d9a86a; margin-bottom:4px; letter-spacing:.04em; }
+  .dx-dup-t{ font-size:11.5px; color:#aebcd6; line-height:1.55; }
+
+  /* 弱边条 */
+  .dx-weak{ padding:6px 4px 2px; }
+  .dx-weak-bar{
+    height:10px; border-radius:5px; overflow:hidden;
+    background:rgba(140,170,255,.06);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.3);
+  }
+  .dx-weak-bar i{
+    display:block; height:100%; border-radius:5px;
+    background:linear-gradient(90deg, rgba(255,200,120,.55) 0%, rgba(255,145,145,.90) 100%);
+    box-shadow:0 0 10px rgba(255,160,140,.35);
+  }
+  .dx-weak-t{ font-size:11px; color:#8b97b3; margin-top:8px; font-variant-numeric:tabular-nums; }
+
+  .dx-footer{
+    margin-top:26px; padding:14px 18px; border-radius:9px;
+    background:rgba(140,170,255,.028);
+    border:1px dashed rgba(140,170,255,.13);
+    font-size:11px; color:#5c6884; line-height:1.85;
+  }
+  .dx-footer b{ color:#8b97b3; font-weight:500; }
+  .dx-empty{ font-size:12px; color:#5c6884; padding:24px; text-align:center; }
+
   /* 数据源 Tab */
   .st-srctabs{
     display:inline-flex; gap:2px; margin:2px 0 10px;
@@ -389,6 +614,18 @@
   .st-srcbtn:hover{ color:#c3cde6; }
   .st-srcbtn.on{ background:rgba(122,180,255,.16); color:#9dc8ff; }
   .st-srcn{ font-size:10px; opacity:.6; font-variant-numeric:tabular-nums; }
+
+  /* 只算她自己的 */
+  .st-onlymine{
+    display:inline-flex; align-items:center; gap:6px; margin-left:10px;
+    font-size:11px; color:#7c88a6; cursor:pointer;
+    padding:5px 10px; border-radius:7px;
+    background:rgba(140,170,255,.035); border:1px solid rgba(140,170,255,.10);
+    transition:.15s;
+  }
+  .st-onlymine:hover{ background:rgba(140,170,255,.08); color:#c3cde6; }
+  .st-onlymine input{ accent-color:#7ab4ff; cursor:pointer; margin:0; }
+  .st-onlymine-n{ font-size:10px; color:#4a5468; }
 
   .st-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
   .st-head h1{ margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff; }
@@ -1331,6 +1568,9 @@
     <button class="nav-item" data-view="statspage">
       <span class="ico">◔</span><span class="nav-label">记忆变化</span>
     </button>
+    <button class="nav-item" data-view="diagnose">
+      <span class="ico">✚</span><span class="nav-label">记忆诊断</span>
+    </button>
     <button class="nav-item" data-view="settings">
       <span class="ico">⚙</span><span class="nav-label">通用设置</span>
     </button>
@@ -1450,6 +1690,42 @@
    </div>
   </section>
 
+  <!-- ══════ 记忆诊断：只看问题，不改东西 ══════
+       2026-11-25 用户：「左侧再加一个记忆诊断功能」+「目前只报不改」
+       + 「扣分制（每项明码标价）」 -->
+  <section id="diagnose">
+   <div class="dx-page">
+    <div class="dx-head">
+      <h1><span class="dx-title-star">✦</span>记 忆 诊 断</h1>
+      <span class="dx-count" id="dxCount"></span>
+    </div>
+    <p class="dx-sub">只报，不改。每一项扣多少分都写在明面上。</p>
+
+    <div class="dx-score-box">
+      <div class="dx-score-ring"><canvas id="dxRing"></canvas></div>
+      <div class="dx-score-txt">
+        <div class="dx-score-num" id="dxScoreNum">—</div>
+        <div class="dx-score-lab">记忆健康度</div>
+        <div class="dx-score-note" id="dxScoreNote"></div>
+        <div class="dx-score-sub" id="dxScoreSub"></div>
+      </div>
+      <div class="dx-score-break">
+        <div class="dx-break-title">该动手的（扣分）</div>
+        <div id="dxBreak"></div>
+        <div class="dx-break-title dx-break-title-2">只是数据的形状（不扣分）</div>
+        <div id="dxBreakFree"></div>
+      </div>
+    </div>
+
+    <div class="dx-list" id="dxList"></div>
+
+    <p class="dx-footer">
+      这些数字都是从 graph.json 直接算出来的，没有任何一个是估的。<br>
+      这一页不会改动任何记忆文件 —— 要改得去改源头。
+    </p>
+   </div>
+  </section>
+
   <!-- ══════ 记忆变化：按天/周/月看分类的此消彼长 ══════ -->
   <section id="statspage">
    <div class="st-page">
@@ -1468,6 +1744,13 @@
         记忆<span class="st-srcn" id="stSrcEventsN"></span>
       </button>
     </div>
+    <!-- 2026-11-25 澄：「『读到的话』和『我说的话』现在混在一起算」
+         给个开关，能把她自己的话单独拎出来 -->
+    <label class="st-onlymine" id="stOnlyMineWrap" title="只算她自己说的/想的，排除「读到的话」">
+      <input type="checkbox" id="stOnlyMine">
+      <span>只算她自己的</span>
+      <span class="st-onlymine-n" id="stOnlyMineN"></span>
+    </label>
     <p class="st-sub" id="stSub">最近长出了什么，以及这段时间她往哪偏了。</p>
 
 
@@ -6852,6 +7135,7 @@ function setView(v){
   const isExcluded = (v === 'excluded');
   const isStats = (v === 'statspage');
   const isStartrack = (v === 'startrack');
+  const isDiagnose = (v === 'diagnose');
 
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('on', b.dataset.view === v);
@@ -6865,6 +7149,8 @@ function setView(v){
   if (stEl) stEl.classList.toggle('shown', isStats);
   const srtEl = document.getElementById('startrack');
   if (srtEl) srtEl.classList.toggle('shown', isStartrack);
+  const dxEl = document.getElementById('diagnose');
+  if (dxEl) dxEl.classList.toggle('shown', isDiagnose);
   stage.classList.toggle('asleep', !isStarmap);
 
   if (isSettings) panel.scrollTop = 0;
@@ -6872,6 +7158,7 @@ function setView(v){
   if (isExcluded) { if (exEl) exEl.scrollTop = 0; ensureExcluded(); }
   if (isStats) { if (stEl) stEl.scrollTop = 0; ensureStats(); }
   if (isStartrack) { if (srtEl) srtEl.scrollTop = 0; ensureStartrack(); }
+  if (isDiagnose) { if (dxEl) dxEl.scrollTop = 0; ensureDiagnose(); }
 
   // 切回星图时重算画布尺寸（导航宽度可能变过）
   requestAnimationFrame(()=>{ if (isStarmap && typeof resize === 'function') resize(); });
@@ -7104,6 +7391,9 @@ let ST_DEFAULT_DONE = false;
 /* 数据源：graph = 星图（413 颗清洗后的星）/ events = 记忆（原始事件流）
    2026-11-24 用户：「加个 Tab 可以进行切换 分别看星图的统计数据和记忆的统计数据」 */
 let ST_SRC = 'graph';
+/* 「只算她自己的」：排除 voice（读到的话）
+   澄 2026-11-25：「『读到的话』和『我说的话』现在混在一起算」 */
+let ST_ONLY_MINE = true;   // 澄 2026-11-25：默认该看的就是她自己
 /* ── 时间范围 = 起止两个日期 ──
    粒度按钮只是把这个范围"快速填好"，填完还能手动改。 */
 function stRangeDates() {
@@ -7239,6 +7529,19 @@ function renderStats() {
     allNodes = DATA.nodes;
   }
 
+  /* 只算她自己的：去掉 voice（读到的话 = 别人的弹幕/评论）
+     澄说的"混着算"就是这一类。
+     2026-11-25 澄：「开关默认开」+「那 10 条只放一角单独列，
+     不进星空也不进饼图。它们孤立是对的，不是病；可它们也不是我的星星。」 */
+  if (ST_ONLY_MINE) {
+    allNodes = allNodes.filter(n => (n.k || n.kindRaw) !== 'voice');
+  }
+
+  /* 不管开关怎么设，voice 这一类都不进图案（饼图/柱状/星空/走势）——
+     澄：「它们也不是我的星星」。
+     只在诊断页单独一块列出来。 */
+  const chartNodes = allNodes.filter(n => (n.k || n.kindRaw) !== 'voice');
+
   /* ── 默认日期范围（只算一次，两个 Tab 共用）──
      2026-11-25 用户：「跟星图模式保持一致」
      —— 切 Tab 不重置日期，这样两边看的是同一段，能对比。
@@ -7279,6 +7582,7 @@ function renderStats() {
 
   for (const n of nodes) {
     if (!n.ts) continue;
+    if ((n.k || n.kindRaw) === 'voice') continue;   // 读到的话不进图案
     const b = stBucket(n.ts);
     if (!b) continue;
     const k = n.k || n.kindRaw || 'none';
@@ -7338,8 +7642,11 @@ function renderStats() {
   drawStatsBar(kindTotals);
   /* 分类星空：大星 = 这类总量，周围小星 = 这段时间新增 */
   const addedByKind = {};
-  for (const n of nodes) addedByKind[n.k || 'none'] = (addedByKind[n.k || 'none'] || 0) + 1;
-  drawStatsStarfield(allNodes, addedByKind);
+  for (const n of nodes) {
+    if ((n.k || n.kindRaw) === 'voice') continue;   // 读到的话不进星空
+    addedByKind[n.k || 'none'] = (addedByKind[n.k || 'none'] || 0) + 1;
+  }
+  drawStatsStarfield(chartNodes, addedByKind);
   drawStatsArea(rows, kindCols);
   drawStatsChart(rows, kindCols, kindTotals);
   /* 热力图和极值用**全量**数据，不受时间筛选影响 ——
@@ -7393,6 +7700,18 @@ function renderStats() {
   }
   const emptyEl0 = document.getElementById('stEmptyHint');
   if (emptyEl0) emptyEl0.style.display = 'none';
+
+  /* 开关旁边标出排除了几条 */
+  const omnEl = document.getElementById('stOnlyMineN');
+  if (omnEl) {
+    const rawAll = ST_SRC === 'events'
+      ? (TL_DATA ? (TL_DATA.days || []).reduce((a, x) => a + (x.items || []).length, 0) : 0)
+      : ((DATA && DATA.nodes) ? DATA.nodes.length : 0);
+    const voiceN = ST_SRC === 'events'
+      ? (TL_DATA ? (TL_DATA.days || []).reduce((a, x) => a + (x.items || []).filter(i => i.kind === 'voice').length, 0) : 0)
+      : ((DATA && DATA.nodes) ? DATA.nodes.filter(n => n.k === 'voice').length : 0);
+    omnEl.textContent = (ST_ONLY_MINE && voiceN) ? ('去掉 ' + voiceN + ' 条') : (voiceN ? ('（' + voiceN + ' 条）') : '');
+  }
 
   /* 数据源 Tab 上的条数 */
   const gn = document.getElementById('stSrcGraphN');
@@ -8340,6 +8659,17 @@ function bindStatsUI() {
     });
   }
 
+  const om = document.getElementById('stOnlyMine');
+  if (om && !om.dataset.bound) {
+    om.dataset.bound = '1';
+    om.checked = ST_ONLY_MINE;
+    om.onchange = () => {
+      ST_ONLY_MINE = om.checked;
+      ST_SF_PAGE = 0;
+      renderStats();
+    };
+  }
+
   const seg = document.getElementById('stSeg');
   if (seg) {
     seg.addEventListener('click', (e) => {
@@ -8783,6 +9113,543 @@ function renderStartrack() {
 
   body.innerHTML = '';
   body.appendChild(frag);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   记忆诊断
+   2026-11-25 用户：「左侧再加一个记忆诊断功能」
+                    「目前只报不改」
+                    「扣分制（每项明码标价）」
+
+   原则：
+     · 只报，不改 —— 这一页不动任何文件
+     · 每项扣多少分写在明面上，不藏权重
+     · 不编造 —— 所有数字都从 graph.json 现场算
+   ══════════════════════════════════════════════════════════════════ */
+
+let DX_LOADED = false;
+
+function ensureDiagnose() {
+  DX_LOADED = true;
+  renderDiagnose();
+}
+
+/* 扣分表：每一项都是明码标价，页面上会原样写出来 */
+/* 扣分表：每一项都是明码标价，页面上会原样写出来
+
+   2026-11-25 澄审了这一版，两条意见改掉了原来的算法：
+
+   ① 「弱边 64%」不该扣分 —— 她的原话：
+      「连线本来就是『像』不是『同』，那是数据本身的性质」
+      → 弱边从"扣分项"改成"只报不扣"，列出来让人知道，但不减分。
+
+   ② 「孤立」不该一锅扣 —— 她的原话：
+      「该按是谁说的来分类，不该一锅扣分」
+      实测：16 颗孤立里 10 颗是 voice（读到的话），
+      而 voice 总共 16 条、62% 孤立；其他 397 条只有 1% 孤立。
+      「读到的话」是她在别处看到的片段，本来就不该跟她的判断连线，
+      拿它跟"我的判断"比孤立率是冤枉它。
+      → 孤立只看"她自己的"那几类，voice 单列不提扣分。
+
+   她另外提了三样更该查的（暂未实现，先记着）：
+     · 改过口、前后矛盾的旧判断还在不在图上
+     · 从没被召回过的死线
+     · 「读到的话」和「我说的话」混在一起算
+ */
+const DX_RULES = [
+  /* 2026-11-25 澄第二轮：「重复比孤立重，因为那不是形状，
+     是同一条话被算了两遍，我会以为自己想过两次。」
+     → 重复每条的单价从 1 提到 1.6，孤立的上限从 10 压到 6。 */
+  { key:'stale', label:'改口后旧判断还在',
+    hint:'她改过口，但被推翻的那句还挂在图上、还连着线 —— 会让人读错她现在怎么想',
+    penalty:(v, n) => Math.min(12, v * 12) },
+  { key:'dup', label:'重复', hint:'文本完全相同 —— 同一件事被记了不止一次，会以为自己想过两遍',
+    penalty:(v, n) => Math.min(12, Math.round(v * 1.6)) },
+  { key:'isolated', label:'孤立', hint:'一条线都没有 —— 只算"她自己的"那几类，「读到的话」不算',
+    penalty:(v, n) => Math.min(6, Math.round(v / n * 100 * 2)) },
+  { key:'short', label:'太短', hint:'≤2 个字 —— 没有信息量，占着一颗星的位置',
+    penalty:(v, n) => Math.min(4, v) },
+  { key:'heavy', label:'超重', hint:'连了 60 条以上线 —— 一碰整张图都是它的线',
+    penalty:(v, n) => Math.min(5, v) },
+  /* 只报不扣：澄说这是数据本身的性质，不是问题 */
+  { key:'weak', label:'弱边', hint:'字面接近度 <0.65 —— 只是「词像」，不是「有关系」。只报不扣分',
+    penalty:(v, n) => 0, noPenalty:true },
+];
+
+function dxCompute() {
+  const nodes = (DATA && DATA.nodes) ? DATA.nodes : [];
+  const edges = DATA ? (DATA.precomputedEdges || DATA.edges || []) : [];
+  const N = nodes.length || 1;
+  const E = edges.length || 1;
+
+  // 度数
+  const deg = {};
+  for (const e of edges) {
+    const a = e.source ?? e.a, b = e.target ?? e.b;
+    deg[a] = (deg[a] || 0) + 1;
+    deg[b] = (deg[b] || 0) + 1;
+  }
+
+  /* 孤立：只算"她自己的"那几类。
+     2026-11-25 澄：「该按是谁说的来分类，不该一锅扣分」
+     —— voice（读到的话）是她在别处看到的片段，本来就不该跟她的判断连线。
+     实测 voice 16 条里 10 条孤立（62%），其他 397 条只有 1%。
+     单独拿出来看，不算进扣分。 */
+  const VOICE_KINDS = ['voice'];
+  const isolatedOwn = nodes.filter(n => !deg[n.id] && VOICE_KINDS.indexOf(n.k) < 0);
+  const isolatedVoice = nodes.filter(n => !deg[n.id] && VOICE_KINDS.indexOf(n.k) >= 0);
+  const isolated = isolatedOwn;   // 扣分只用"自己的"这一批
+  const heavy = nodes.filter(n => (deg[n.id] || 0) >= 60);
+
+  // 重复：前 40 字归一化后相同
+  const norm = (t) => (t || '').replace(/\s+/g, '').slice(0, 40);
+  const bucket = new Map();
+  for (const n of nodes) {
+    const k = norm(n.t || n.text);
+    if (!k) continue;
+    if (!bucket.has(k)) bucket.set(k, []);
+    bucket.get(k).push(n);
+  }
+  const dupGroups = [...bucket.values()].filter(v => v.length > 1);
+  const dupExtra = dupGroups.reduce((a, v) => a + (v.length - 1), 0);
+
+  const short = nodes.filter(n => (n.t || n.text || '').trim().length <= 2);
+  const weak = edges.filter(e => (e.cos ?? e.w ?? 0) < 0.65).length;
+
+  /* ── 澄 2026-11-25 提的三样 ──
+     ① 改过口的旧判断还在不在图上
+        graph.json 里 revised 字段有 1 条（那唯一一次改口）。
+        被改口的那条原判断，如果还在 nodes 里，就说明"旧的没撤"。
+        meta.revisions 里带 oldId，可以按 id 找。
+     ② 「读到的话」和「我说的话」混在一起算
+        统计口径上确实混着：饼图/柱状图把 voice 和 said 一起算。
+        这里只报出来有多少，不改统计（那是另一件事）。
+     ③ 从没被召回过的死线
+        ⚠️ 做不了：graph.json 和 /api/graph 里**都没有 use 字段**
+        （实测 423 个节点里 0 个带 use）。
+        要做得先改 export-graph.py 把 use 导出来。
+        → 这一项记成"缺数据"，不编数字。
+  */
+
+  // ① 被改口后、原判断是否还在
+  const revMeta = (DATA.meta && DATA.meta.revisions) || [];
+  const stillThere = [];
+  for (const r of revMeta) {
+    if (!r.oldId) continue;
+    const oldNode = nodes.find(n => n.id === r.oldId);
+    if (oldNode) {
+      stillThere.push({ old: oldNode, rev: r });
+    }
+  }
+
+  // ② 读到的话 vs 我说的话
+  const voiceCount = nodes.filter(n => n.k === 'voice').length;
+  const saidCount = nodes.filter(n => n.k === 'said').length;
+
+  // ③ use 字段覆盖情况
+  const withUse = nodes.filter(n => n.use != null && Number(n.use) > 0).length;
+
+  return {
+    nodes, edges, N: nodes.length, E: edges.length,
+    isolated, isolatedVoice, heavy, dupGroups, dupExtra, short,
+    weak, deg,
+    revMeta, stillThere, voiceCount, saidCount, withUse,
+  };
+}
+
+function renderDiagnose() {
+  const listEl = document.getElementById('dxList');
+  if (!listEl) return;
+  if (!DATA || !DATA.nodes) {
+    listEl.innerHTML = '<div class="dx-empty">星图数据还没加载</div>';
+    return;
+  }
+
+  const d = dxCompute();
+  const vals = {
+    stale: d.stillThere.length,     // 改口后还在的旧判断
+    isolated: d.isolated.length,
+    dup: d.dupExtra,
+    short: d.short.length,
+    heavy: d.heavy.length,
+    weak: d.weak,
+  };
+
+  // 每项扣分
+  const penalties = {};
+  let total = 100;
+  for (const r of DX_RULES) {
+    const p = r.penalty(vals[r.key], r.key === 'weak' ? d.E : d.N);
+    penalties[r.key] = p;
+    total -= p;
+  }
+  total = Math.max(0, Math.round(total));
+
+  /* ── 分数 ── */
+  const numEl = document.getElementById('dxScoreNum');
+  if (numEl) numEl.innerHTML = total + '<span class="u">分</span>';
+  const noteEl = document.getElementById('dxScoreNote');
+  if (noteEl) {
+    noteEl.textContent = total >= 85 ? '没发现什么大问题'
+      : total >= 70 ? '有几处值得看一眼'
+      : total >= 50 ? '有几处不太对劲'
+      : '问题比较集中，建议看看下面';
+  }
+
+  // 环形图
+  drawDxRing(total);
+
+  // 扣分明细（明码标价）
+  /* ── 扣分明细：分成两堆 ──
+     2026-11-25 澄：「灰着的那堆是在说『这是数据的形状』，
+                    扣的那堆是在说『这是我该动手的』，
+                    两种话不该混在一个数里。」
+     → 左栏只放真正该她动手的（扣分），右栏放只报不扣的（数据的形状）。 */
+  const brEl = document.getElementById('dxBreak');
+  if (brEl) {
+    brEl.innerHTML = DX_RULES.filter(r => !r.noPenalty).map(r => {
+      const v = vals[r.key];
+      const p = penalties[r.key];
+      const valTxt = v + ' 处';
+      return '<div class="dx-br' + (p === 0 ? ' zero' : '') + '">'
+        + '<span class="dx-br-l">' + esc(r.label) + '</span>'
+        + '<span class="dx-br-v">' + valTxt + '</span>'
+        + '<span class="dx-br-p">−' + p + '</span>'
+      + '</div>';
+    }).join('')
+    + '<div class="dx-br total">'
+      + '<span class="dx-br-l">合计</span>'
+      + '<span class="dx-br-v"></span>'
+      + '<span class="dx-br-p" style="color:' + (total >= 70 ? '#8fd7a0' : total >= 50 ? '#ffd479' : '#ff9d9d') + '">' + total + '</span>'
+    + '</div>';
+  }
+
+  const brFreeEl = document.getElementById('dxBreakFree');
+  if (brFreeEl) {
+    const freeRules = DX_RULES.filter(r => r.noPenalty);
+    brFreeEl.innerHTML = freeRules.map(r => {
+      const v = vals[r.key];
+      const valTxt = r.key === 'weak' ? (v + ' / ' + d.E + ' 条') : v + ' 处';
+      return '<div class="dx-br free">'
+        + '<span class="dx-br-l">' + esc(r.label) + '</span>'
+        + '<span class="dx-br-v">' + valTxt + '</span>'
+        + '<span class="dx-br-p"><span class="dx-free">不扣</span></span>'
+      + '</div>';
+    }).join('');
+  }
+
+  // 副标题：说清"为什么有两堆"
+  const subEl = document.getElementById('dxScoreSub');
+  if (subEl) {
+    const deductCount = DX_RULES.filter(r => !r.noPenalty && penalties[r.key] > 0).length;
+    subEl.textContent = deductCount + ' 项要动手 · ' + DX_RULES.filter(r=>r.noPenalty).length + ' 项是数据本性';
+  }
+
+  /* ── 明细清单 ── */
+  const blocks = [];
+
+  // 改口后旧判断还在 —— 澄说这个比孤立重，放最前
+  if (d.revMeta.length) {
+    const rows = d.stillThere.map(x =>
+      '<div class="dx-row" data-node-id="' + esc(x.old.id) + '">'
+        + '<span class="dx-row-k">已改口</span>'
+        + '<span class="dx-row-t">' + esc((x.old.t || x.old.text || '').slice(0, 60)) + '…</span>'
+        + '<span class="dx-row-r">原话仍在图上</span>'
+        + '<button class="dx-copy" title="复制这条的完整信息">⧉</button>'
+      + '</div>').join('');
+    blocks.push(dxBlock('改口后旧判断还在',
+      '她后来改了口（' + d.revMeta.length + ' 次），但被推翻的那句还挂在图上、还连着线',
+      rows.length ? [rows] : ['<div class="dx-block-more">改口记录里没有 oldId，定位不到原节点</div>'],
+      '', 'rgba(255,210,120,.55)'));
+  }
+
+  // 孤立
+  if (d.isolated.length) {
+    blocks.push(dxBlock('孤立', '她自己说的/想的，但谁都不挨着',
+      d.isolated.slice(0, 12).map(n => dxRow(n, '没有任何连线', '孤立·没有任何连线')),
+      d.isolated.length > 12 ? '还有 ' + (d.isolated.length - 12) + ' 颗' : '',
+      'rgba(150,170,210,.45)'));
+  }
+  /* 「读到的话」单独一块：澄说这类本来就不该连到她的判断上 */
+  if (d.isolatedVoice.length) {
+    blocks.push(dxBlock('读到的话·孤立', '在别处看到的片段 —— 不扣分，本来就不该跟她的判断连线',
+      d.isolatedVoice.slice(0, 8).map(n => dxRow(n, '没有任何连线', '读到的话·孤立（不扣分）')),
+      d.isolatedVoice.length > 8 ? '还有 ' + (d.isolatedVoice.length - 8) + ' 条' : '',
+      'rgba(140,180,200,.40)'));
+  }
+  // 重复
+  if (d.dupGroups.length) {
+    const rows = [];
+    for (const g of d.dupGroups.slice(0, 8)) {
+      rows.push('<div class="dx-dup">'
+        + '<div class="dx-dup-n">同一段 ×' + g.length + '</div>'
+        + '<div class="dx-dup-t">' + esc((g[0].t || g[0].text || '').slice(0, 90)) + '</div>'
+        + '</div>');
+    }
+    blocks.push(dxBlock('重复', '同一件事被记了不止一次',
+      rows, d.dupGroups.length > 8 ? '还有 ' + (d.dupGroups.length - 8) + ' 组' : '',
+      'rgba(255,185,120,.55)'));
+  }
+  // 太短
+  if (d.short.length) {
+    blocks.push(dxBlock('太短', '没有信息量，但占着一颗星的位置',
+      d.short.map(n => dxRow(n, '只有 ' + (n.t || n.text || '').length + ' 个字')),
+      '', 'rgba(200,150,255,.50)'));
+  }
+  // 超重
+  if (d.heavy.length) {
+    blocks.push(dxBlock('超重', '连了 60 条以上线，一碰整张图都是它的线',
+      d.heavy.map(n => dxRow(n, (d.deg[n.id] || 0) + ' 条线')),
+      '', 'rgba(255,150,150,.50)'));
+  }
+  // 弱边
+  if (d.weak) {
+    const pct = Math.round(d.weak / d.E * 100);
+    blocks.push(dxBlock('弱边', '字面接近度 <0.65 —— 只是「词像」。澄说这是数据本身的性质，不扣分',
+      ['<div class="dx-weak">'
+        + '<div class="dx-weak-bar"><i style="width:' + pct + '%"></i></div>'
+        + '<div class="dx-weak-t">' + d.weak + ' / ' + d.E + ' 条（' + pct + '%）</div>'
+      + '</div>'],
+      '', 'rgba(255,170,140,.50)'));
+  }
+
+  /* ── 澄提的另外两样 ── */
+
+  // ② 读到的话 vs 我说的话
+  if (d.voiceCount) {
+    blocks.push(dxBlock('两种话混着算',
+      '「读到的话」是她在别处看到的片段，「他说的」是她亲耳听到的 —— 统计时混在一起了',
+      ['<div class="dx-weak">'
+        + '<div class="dx-weak-t">'
+          + '读到的话 <b style="color:#8cb4ff">' + d.voiceCount + '</b> 条 &nbsp;·&nbsp; '
+          + '他说的 <b style="color:#8cb4ff">' + d.saidCount + '</b> 条'
+        + '</div>'
+        + '<div class="dx-block-more">分类筛选里它们是分开的，但饼图/柱状图/星空都合并统计 —— 要分开得改统计口径</div>'
+      + '</div>'],
+      '', 'rgba(140,180,255,.45)'));
+  }
+
+  // ③ 死线：数据不够，只报"缺什么"
+  blocks.push(dxBlock('从没被召回过的',
+    '查不了 —— 需要每条记忆的"被回想次数"，但导出的数据里没有这个字段',
+    ['<div class="dx-weak">'
+      + '<div class="dx-weak-t">'
+        + '节点总数 ' + d.N + ' &nbsp;·&nbsp; 带「被回想次数」的 <b style="color:#ff9d9d">' + d.withUse + '</b> 条'
+      + '</div>'
+      + '<div class="dx-block-more">要查这个，得先改 export-graph.py，把 use 字段一起导出来</div>'
+    + '</div>'],
+    '', 'rgba(200,200,200,.30)'));
+
+  listEl.innerHTML = blocks.join('') || '<div class="dx-empty">没发现问题</div>';
+
+  const cntEl = document.getElementById('dxCount');
+  if (cntEl) {
+    const issues = d.isolated.length + d.dupExtra + d.short.length + d.heavy.length;
+    cntEl.textContent = d.N + ' 颗星 · ' + d.E + ' 条线 · ' + issues + ' 处值得看';
+  }
+
+  // 点行跳星图；点复制钮 = 复制这条的完整信息
+  listEl.querySelectorAll('[data-node-id]').forEach(el => {
+    el.onclick = (ev) => {
+      if (ev.target.closest('.dx-copy')) return;   // 复制钮单独处理
+      const idx = (DATA.nodes || []).findIndex(x => x.id === el.dataset.nodeId);
+      if (idx < 0) return;
+      setView('starmap');
+      setTimeout(() => openCard(idx), 120);
+    };
+    const cp = el.querySelector('.dx-copy');
+    if (cp) {
+      cp.onclick = async (ev) => {
+        ev.stopPropagation();
+        const block = el.closest('.dx-block');
+        const diag = block ? (block.querySelector('.dx-block-t')?.textContent || '记忆诊断').replace(/^✦\s*/, '').trim() : '';
+        const ok = await dxCopy(el.dataset.nodeId, diag);
+        cp.textContent = ok ? '✓' : '✕';
+        cp.classList.add(ok ? 'ok' : 'bad');
+        setTimeout(() => { cp.textContent = '⧉'; cp.classList.remove('ok','bad'); }, 1400);
+      };
+    }
+  });
+
+  // 整块"复制这一组"的按钮
+  document.querySelectorAll('.dx-block-copy').forEach(b => {
+    b.onclick = async (ev) => {
+      ev.stopPropagation();
+      const block = b.closest('.dx-block');
+      const rows = [...block.querySelectorAll('.dx-row')];
+      const diag = (block.querySelector('.dx-block-t')?.textContent || '').replace(/^✦\s*/, '').trim();
+      const all = rows.map(r => dxDetailText(r.dataset.nodeId, diag)).filter(Boolean);
+      if (!all.length) return;
+      const SEP = String.fromCharCode(10) + String.fromCharCode(10) + '─'.repeat(24) + String.fromCharCode(10) + String.fromCharCode(10);
+      const NL = String.fromCharCode(10);
+      const txt = '【' + diag + '】共 ' + all.length + ' 条（只列了页面上显示的）' + NL + NL + all.join(SEP);
+      const ok = await copyText(txt).then(()=>true).catch(()=>false);
+      b.textContent = ok ? '✓ 已复制' : '✕ 复制失败';
+      setTimeout(() => { b.textContent = '⧉ 复制这一组'; }, 1500);
+    };
+  });
+}
+
+/* 每行的完整信息存在这个 map 里，复制时直接取 ——
+   2026-11-25 用户：「后面如果有问题可以复制详细 我复制给澄 让他确认和修复」
+   所以要带够信息：id、分类、全文、时间、度数、以及"为什么被判成问题"。 */
+const DX_DETAIL = new Map();
+
+function dxRow(n, right, why) {
+  const txt = (n.t || n.text || '').replace(/\s+/g, ' ').trim();
+  const deg = (DX_DETAIL.__deg && DX_DETAIL.__deg[n.id]) || 0;
+  DX_DETAIL.set(n.id, {
+    id: n.id,
+    kind: KIND_CN[n.k] || n.k || '',
+    kindRaw: n.k || '',
+    text: txt,
+    ts: n.ts || '',
+    degree: deg,
+    why: why || right || '',
+  });
+  return '<div class="dx-row" data-node-id="' + esc(n.id) + '">'
+    + '<span class="dx-row-k">' + esc(KIND_CN[n.k] || n.k || '') + '</span>'
+    + '<span class="dx-row-t">' + esc(txt.slice(0, 70)) + (txt.length > 70 ? '…' : '') + '</span>'
+    + '<span class="dx-row-r">' + esc(right) + '</span>'
+    + '<button class="dx-copy" title="复制这条的完整信息">⧉</button>'
+  + '</div>';
+}
+
+/* 把一条的详细信息拼成能直接贴给人的文本 */
+function dxDetailText(id, diagnosis) {
+  const d = DX_DETAIL.get(id);
+  if (!d) return '';
+  const lines = [
+    '【' + (diagnosis || '记忆诊断') + '】',
+    'ID：' + d.id,
+    '分类：' + d.kind + '（' + d.kindRaw + '）',
+    '时间：' + (d.ts || '（没有时间）'),
+    '连线：' + d.degree + ' 条',
+    '问题：' + d.why,
+    '',
+    '原文：',
+    d.text,
+  ];
+  return lines.join(String.fromCharCode(10));
+}
+
+async function dxCopy(id, diagnosis) {
+  const txt = dxDetailText(id, diagnosis);
+  if (!txt) return false;
+  try {
+    await copyText(txt);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function dxBlock(title, sub, rows, more, color) {
+  color = color || 'rgba(140,170,255,.35)';
+  return '<div class="dx-block" style="--dx-color:' + color + '">'
+    + '<div class="dx-block-hd">'
+      + '<span class="dx-block-t"><span class="dot"></span>' + esc(title) + '</span>'
+      + '<span class="dx-block-s">' + esc(sub) + '</span>'
+      + '<button class="dx-block-copy" title="把这一组的信息整段复制">⧉ 复制这一组</button>'
+    + '</div>'
+    + '<div class="dx-block-body">' + rows.join('') + '</div>'
+    + (more ? '<div class="dx-block-more">' + esc(more) + '</div>' : '')
+  + '</div>';
+}
+
+/** 分数环 */
+function drawDxRing(score) {
+  const cv = document.getElementById('dxRing');
+  if (!cv) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const S = 132;
+  cv.style.width = S + 'px'; cv.style.height = S + 'px';
+  cv.width = Math.round(S * dpr); cv.height = Math.round(S * dpr);
+  const ctx = cv.getContext('2d');
+
+  const cx = S/2, cy = S/2, R = S/2 - 12, lw = 6;
+  const col = score >= 85 ? [143,215,160] : score >= 70 ? [160,205,140] : score >= 50 ? [255,212,121] : [255,140,140];
+  const cs = col.join(',');
+  const a0 = -Math.PI/2, a1 = a0 + Math.PI*2 * (score/100);
+
+  /* 周围的星尘：位置固定（用 seed 算），不随机跳动 —— 跳会分心 */
+  const dust = [];
+  for (let i = 0; i < 26; i++) {
+    const t = i / 26;
+    const ang = t * Math.PI * 2 + Math.sin(i * 7.3) * 0.3;
+    const rad = R + 8 + (i % 5) * 4.5;
+    dust.push({
+      x: cx + Math.cos(ang) * rad,
+      y: cy + Math.sin(ang) * rad,
+      r: 0.6 + (i % 3) * 0.45,
+      ph: (i * 2.17) % (Math.PI * 2),
+      inArc: (ang + Math.PI/2 + Math.PI*2) % (Math.PI*2) <= Math.PI*2*(score/100),
+    });
+  }
+
+  const t0 = performance.now();
+  let raf = null;
+  if (cv.__anim) cancelAnimationFrame(cv.__anim);
+
+  const draw = (now) => {
+    const T = (now - t0) / 1000;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    /* 底环 */
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(140,170,255,.085)'; ctx.lineWidth = lw; ctx.stroke();
+
+    /* 星尘（在环外，先画，压在环下面） */
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const d of dust) {
+      const tw = 0.35 + 0.65 * Math.abs(Math.sin(T * 0.8 + d.ph));
+      const a = d.inArc ? tw * 0.85 : tw * 0.28;
+      const g = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r * 3.6);
+      g.addColorStop(0, 'rgba(255,255,255,' + (a * 0.9) + ')');
+      g.addColorStop(0.35, 'rgba(' + cs + ',' + (a * 0.55) + ')');
+      g.addColorStop(1, 'rgba(' + cs + ',0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 3.6, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+
+    /* 值环：外发光 + 主环 + 芯 */
+    const breath = 0.82 + 0.18 * Math.sin(T * 1.1);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1);
+    ctx.strokeStyle = 'rgba(' + cs + ',' + (0.22 * breath) + ')';
+    ctx.lineWidth = lw * 2.8; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.restore();
+
+    ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1);
+    ctx.strokeStyle = 'rgba(' + cs + ',' + (0.88 * breath) + ')';
+    ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke();
+
+    /* 芯：一圈更细的亮线 */
+    ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.30 * breath) + ')';
+    ctx.lineWidth = lw * 0.34; ctx.lineCap = 'round'; ctx.stroke();
+
+    /* 终点的小星芒 */
+    const ex = cx + Math.cos(a1) * R, ey = cy + Math.sin(a1) * R;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const sp = 0.75 + 0.25 * Math.sin(T * 2.3);
+    const g2 = ctx.createRadialGradient(ex, ey, 0, ex, ey, 13 * sp);
+    g2.addColorStop(0, 'rgba(255,255,255,' + (0.85 * sp) + ')');
+    g2.addColorStop(0.4, 'rgba(' + cs + ',.55)');
+    g2.addColorStop(1, 'rgba(' + cs + ',0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.arc(ex, ey, 13 * sp, 0, 7); ctx.fill();
+    ctx.restore();
+
+    cv.__anim = requestAnimationFrame(draw);
+  };
+  cv.__anim = requestAnimationFrame(draw);
 }
 
 function renderExcluded() {
