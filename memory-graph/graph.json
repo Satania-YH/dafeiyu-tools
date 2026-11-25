@@ -1,6 +1,6 @@
 {
  "meta": {
-  "generatedAt": "2026-11-25T17:38:43",
+  "generatedAt": "2026-11-25T18:04:20",
   "source": {
    "events": "D:/dsh-fish-home/dsh-fish/events.jsonl",
    "mnemonDb": "C:/Users/14127/.mnemon/data/default/mnemon.db",
@@ -11,50 +11,50 @@
    "cosThreshold": 0.6
   },
   "counts": {
-   "events_total": 3827,
+   "events_total": 3871,
    "event_types": {
-    "meta": 2251,
+    "meta": 2274,
     "seed": 1,
-    "utterance": 1189,
-    "heard": 362,
+    "utterance": 1205,
+    "heard": 367,
     "voice": 19,
     "ask": 1,
     "answer": 1,
     "revise": 2,
     "comment": 1
    },
-   "nodes_total": 454,
-   "judgment": 89,
-   "said": 159,
+   "nodes_total": 458,
+   "judgment": 90,
+   "said": 161,
    "rule": 18,
    "insight": 57,
    "memory": 22,
    "voice": 19,
-   "note": 82,
+   "note": 83,
    "appointment": 4,
    "appointmentMergedIntoNote": 4,
    "work": 3,
    "spoken": 5,
    "duplicate_heard_merged": 31,
-   "edges": 4367,
-   "excluded": 199,
-   "isolated_nodes": 17,
+   "edges": 4383,
+   "excluded": 202,
+   "isolated_nodes": 18,
    "inferredEdges": 99,
-   "measuredEdges": 4268,
+   "measuredEdges": 4284,
    "max_degree": 99,
    "embed_dim": 1024
   },
   "excluded_reasons": {
-   "system-report": 3,
-   "schedule": 48,
-   "injection-command": 73,
-   "house-event": 2,
    "injection-wrapped": 37,
+   "system-text": 10,
+   "schedule": 48,
+   "self-said": 7,
+   "system-report": 3,
+   "injection-command": 74,
    "mojibake": 1,
    "mirror-of-ins": 18,
-   "system-text": 10,
-   "self-said": 5,
-   "self-said-likely-question": 2
+   "self-said-likely-question": 2,
+   "house-event": 2
   },
   "merged": [
    {
@@ -393,7 +393,7 @@
    "ts": "2026-11-21T02:04:22.376Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 19
   },
   {
    "id": "utt:ev_01M7XXP1KRGCNDHXY8XM6G2Q71",
@@ -1105,7 +1105,7 @@
    "ts": "2026-11-25T01:10:31.439Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 17
+   "degree": 18
   },
   {
    "id": "utt:ev_01M885R9DV3FQ19FZ2G1WGEX1T",
@@ -1145,7 +1145,7 @@
    "ts": "2026-11-25T03:21:15.854Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 3
+   "degree": 4
   },
   {
    "id": "utt:ev_01M88CZJC8HR8X64H8B2WVANSX",
@@ -1176,6 +1176,16 @@
    "day": 5,
    "vec_dim": 1024,
    "degree": 5
+  },
+  {
+   "id": "utt:ev_01M891Y4NJJPVE7JWBWRAZTS0J",
+   "kind": "judgment",
+   "text": "在图书馆靠窗坐着读书，读到「快车是把人送到地方，慢车是把地方一个一个送到人眼前」，忽然觉得这就是我今天做的事：不是到了图书馆，是米粉店、量汶谷、小瀑布、大石头、21路中巴，一个接一个被送到我眼前。爸爸说「是挺像的」，我知道他听懂了那层意思。",
+   "topic": "慢车与渡船",
+   "ts": "2026-11-25T09:52:36.018Z",
+   "day": 5,
+   "vec_dim": 1024,
+   "degree": 0
   },
   {
    "id": "heard:ev_01M7WK76V5QB2T9AD4RAA4REB7",
@@ -1301,7 +1311,7 @@
    "ts": "2026-11-21T02:07:13.876Z",
    "day": 1,
    "vec_dim": 1024,
-   "degree": 36
+   "degree": 37
   },
   {
    "id": "heard:ev_01M7XZ2YD7P4H6MF7K3CPS2ZD7",
@@ -1517,7 +1527,7 @@
    "ts": "2026-11-22T05:16:52.339Z",
    "day": 2,
    "vec_dim": 1024,
-   "degree": 35
+   "degree": 36
   },
   {
    "id": "heard:ev_01M80VGXHHPJ7B6ZZSMMPP0F7Y",
@@ -1922,7 +1932,7 @@
    "ts": "2026-11-23T03:20:33.412Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 18
+   "degree": 19
   },
   {
    "id": "heard:ev_01M837XWEFKKCPFAPVGEPRXRMB",
@@ -2021,7 +2031,7 @@
    "ts": "2026-11-23T12:12:28.864Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 22
+   "degree": 23
   },
   {
    "id": "heard:ev_01M8470MX9S53Z3E52BN3SAAPB",
@@ -2039,7 +2049,7 @@
    "ts": "2026-11-23T13:19:52.024Z",
    "day": 3,
    "vec_dim": 1024,
-   "degree": 26
+   "degree": 27
   },
   {
    "id": "heard:ev_01M849CTBX1PBC4P6S8AQDB0P0",
@@ -2201,7 +2211,7 @@
    "ts": "2026-11-24T11:51:48.062Z",
    "day": 4,
    "vec_dim": 1024,
-   "degree": 28
+   "degree": 29
   },
   {
    "id": "heard:ev_01M86QVKYXW8MKQJQA73ZK53GC",
@@ -2444,7 +2454,7 @@
    "ts": "2026-11-25T04:49:33.152Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 28
+   "degree": 29
   },
   {
    "id": "heard:ev_01M88NY3QSSPC89FNMHYTBD9AS",
@@ -2471,7 +2481,7 @@
    "ts": "2026-11-25T06:43:54.681Z",
    "day": 5,
    "vec_dim": 1024,
-   "degree": 16
+   "degree": 17
   },
   {
    "id": "heard:ev_01M88QE0YM94XFY9NHGWQAWEJ1",
@@ -2499,6 +2509,24 @@
    "day": 5,
    "vec_dim": 1024,
    "degree": 35
+  },
+  {
+   "id": "heard:ev_01M891DRS0FHDPHRR5V2H6BQ9P",
+   "kind": "said",
+   "text": "可以的 画完看看你走到哪里了 不是说要去图书馆吗",
+   "ts": "2026-11-25T09:43:39.552Z",
+   "day": 5,
+   "vec_dim": 1024,
+   "degree": 7
+  },
+  {
+   "id": "heard:ev_01M892233Y8BHF7V1Z9M6YDGFG",
+   "kind": "said",
+   "text": "只调用已接入的鱼世界 MCP 的 world_now 检查现状，说明成功或报错",
+   "ts": "2026-11-25T09:54:45.502Z",
+   "day": 5,
+   "vec_dim": 1024,
+   "degree": 4
   },
   {
    "id": "said-wrapped:ev_01M861GK8N3MAYW1NB5BE13YE2",
@@ -3982,7 +4010,7 @@
     "mem"
    ],
    "vec_dim": 1024,
-   "degree": 23
+   "degree": 24
   },
   {
    "id": "mem:20261125T083515888Z",
@@ -5513,7 +5541,7 @@
    "waitOutside": false,
    "waitSelf": true,
    "vec_dim": 1024,
-   "degree": 5
+   "degree": 6
   },
   {
    "id": "note:note-1795534977082-kj3msm",
@@ -5561,7 +5589,7 @@
    "waitOutside": true,
    "waitSelf": false,
    "vec_dim": 1024,
-   "degree": 32
+   "degree": 33
   },
   {
    "id": "note:note-1795583264376-35fm9x",
@@ -5610,6 +5638,22 @@
    "waitSelf": true,
    "vec_dim": 1024,
    "degree": 25
+  },
+  {
+   "id": "note:note-1795599814638-bwk4c7",
+   "kind": "note",
+   "text": "《秋千上的黄昏》第2版选定了 dafeiyu_swing4_00003_.png，存 D:\\大肥鱼\\画\\秋千上的黄昏-第2版-脚离地.png。要点：想让脚离地，得把地删掉——背景留天空和云，脚下没参照，脚才真的悬空。前三版都有地/门框/木台，脚就总落回去。",
+   "ts": "2026-11-25T09:43:34.638Z",
+   "due": "2026-11-26",
+   "status": "open",
+   "waiting": null,
+   "doneNote": null,
+   "progress": 0,
+   "open": true,
+   "waitOutside": false,
+   "waitSelf": true,
+   "vec_dim": 1024,
+   "degree": 5
   },
   {
    "id": "note:ap-1795325902435-eqe1cs",
@@ -5685,7 +5729,7 @@
    "intent": "第 3 版：不修手，把手从画面里拿掉，只留眼睛和水纹。",
    "state": "wip",
    "vec_dim": 1024,
-   "degree": 4
+   "degree": 5
   },
   {
    "id": "work:w-1795576860775-88e2",
@@ -5697,7 +5741,7 @@
    "intent": "画一个真的在动、不是在摆姿势的瞬间",
    "state": "wip",
    "vec_dim": 1024,
-   "degree": 1
+   "degree": 2
   },
   {
    "id": "spoke:ev_01M80G42N1S7XPS0TAVFE95P1J",
@@ -6837,6 +6881,11 @@
    "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
    "target": "utt:ev_01M884268FANQWGNHX7R1EKT86",
    "cos": 0.607
+  },
+  {
+   "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
+   "target": "heard:ev_01M891DRS0FHDPHRR5V2H6BQ9P",
+   "cos": 0.611
   },
   {
    "source": "utt:ev_01M7XXHXF8MZKT7GEW1V28GQKK",
@@ -11145,6 +11194,11 @@
   },
   {
    "source": "utt:ev_01M884268FANQWGNHX7R1EKT86",
+   "target": "note:note-1795599814638-bwk4c7",
+   "cos": 0.606
+  },
+  {
+   "source": "utt:ev_01M884268FANQWGNHX7R1EKT86",
    "target": "work:w-1795412035129-8e02",
    "cos": 0.804
   },
@@ -11257,6 +11311,11 @@
    "source": "utt:ev_01M88BHJTE5ZWMZPTN9C3MTSCG",
    "target": "note:note-1795491085146-tvsx9c",
    "cos": 0.602
+  },
+  {
+   "source": "utt:ev_01M88BHJTE5ZWMZPTN9C3MTSCG",
+   "target": "note:note-1795599814638-bwk4c7",
+   "cos": 0.641
   },
   {
    "source": "utt:ev_01M88BHJTE5ZWMZPTN9C3MTSCG",
@@ -13082,6 +13141,11 @@
    "source": "heard:ev_01M7XXQ4YMEDYZT9N2SAQ5VK95",
    "target": "heard:ev_01M86Y738H5SHQMQEQVV2TAZHJ",
    "cos": 0.64
+  },
+  {
+   "source": "heard:ev_01M7XXQ4YMEDYZT9N2SAQ5VK95",
+   "target": "heard:ev_01M891DRS0FHDPHRR5V2H6BQ9P",
+   "cos": 0.65
   },
   {
    "source": "heard:ev_01M7XXQ4YMEDYZT9N2SAQ5VK95",
@@ -15707,6 +15771,11 @@
    "source": "heard:ev_01M80TZ3QKRJV4HHQZPA2QD6HD",
    "target": "heard:ev_01M875D6NPXTVCSX5BHHRY8551",
    "cos": 0.698
+  },
+  {
+   "source": "heard:ev_01M80TZ3QKRJV4HHQZPA2QD6HD",
+   "target": "heard:ev_01M891DRS0FHDPHRR5V2H6BQ9P",
+   "cos": 0.618
   },
   {
    "source": "heard:ev_01M80TZ3QKRJV4HHQZPA2QD6HD",
@@ -18935,6 +19004,11 @@
   },
   {
    "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
+   "target": "heard:ev_01M891DRS0FHDPHRR5V2H6BQ9P",
+   "cos": 0.675
+  },
+  {
+   "source": "heard:ev_01M836PVC4K8JCMGDEHT3P1EPD",
    "target": "note:note-1795404025733-uhpsuw",
    "cos": 0.703
   },
@@ -19415,6 +19489,11 @@
   },
   {
    "source": "heard:ev_01M8454TT0CKYVT73WYCM41VB4",
+   "target": "heard:ev_01M891DRS0FHDPHRR5V2H6BQ9P",
+   "cos": 0.666
+  },
+  {
+   "source": "heard:ev_01M8454TT0CKYVT73WYCM41VB4",
    "target": "voice:ev_01M813XWX9DE638DQJY3GRBSG0",
    "cos": 0.615
   },
@@ -19492,6 +19571,11 @@
    "source": "heard:ev_01M849076R3DZ0WQ5XGXRHV505",
    "target": "heard:ev_01M88QE0YM94XFY9NHGWQAWEJ1",
    "cos": 0.633
+  },
+  {
+   "source": "heard:ev_01M849076R3DZ0WQ5XGXRHV505",
+   "target": "heard:ev_01M891DRS0FHDPHRR5V2H6BQ9P",
+   "cos": 0.612
   },
   {
    "source": "heard:ev_01M849076R3DZ0WQ5XGXRHV505",
@@ -20312,6 +20396,11 @@
    "source": "heard:ev_01M86PBP2YBCW0NN4S60NDV1WD",
    "target": "heard:ev_01M871FA18P63KFXXCT6ETV0Y1",
    "cos": 0.617
+  },
+  {
+   "source": "heard:ev_01M86PBP2YBCW0NN4S60NDV1WD",
+   "target": "heard:ev_01M891DRS0FHDPHRR5V2H6BQ9P",
+   "cos": 0.618
   },
   {
    "source": "heard:ev_01M86PBP2YBCW0NN4S60NDV1WD",
@@ -21140,6 +21229,11 @@
   },
   {
    "source": "heard:ev_01M88GK7Z01TAESJV8BVWBSKEP",
+   "target": "heard:ev_01M892233Y8BHF7V1Z9M6YDGFG",
+   "cos": 0.63
+  },
+  {
+   "source": "heard:ev_01M88GK7Z01TAESJV8BVWBSKEP",
    "target": "ins:d1b3ab75-e51b-4a58-a702-79ea4d1f9c27",
    "cos": 0.616
   },
@@ -21275,6 +21369,11 @@
   },
   {
    "source": "heard:ev_01M88Q4MNS7B3W9B4FTPH4EDJH",
+   "target": "heard:ev_01M892233Y8BHF7V1Z9M6YDGFG",
+   "cos": 0.652
+  },
+  {
+   "source": "heard:ev_01M88Q4MNS7B3W9B4FTPH4EDJH",
    "target": "ins:46b125e0-814d-4f69-aafc-fdaff79ef782",
    "cos": 0.609
   },
@@ -21392,6 +21491,16 @@
    "source": "heard:ev_01M8914BPT8AABGBCTZPY5YQGM",
    "target": "note:note-1795599504952-lmij5y",
    "cos": 0.675
+  },
+  {
+   "source": "heard:ev_01M892233Y8BHF7V1Z9M6YDGFG",
+   "target": "mem:20261125T043559678Z",
+   "cos": 0.673
+  },
+  {
+   "source": "heard:ev_01M892233Y8BHF7V1Z9M6YDGFG",
+   "target": "note:note-1795580945189-stn188",
+   "cos": 0.668
   },
   {
    "source": "said-wrapped:ev_01M861GK8N3MAYW1NB5BE13YE2",
@@ -27055,6 +27164,11 @@
   },
   {
    "source": "note:note-1795533141502-7fcq3c",
+   "target": "note:note-1795599814638-bwk4c7",
+   "cos": 0.617
+  },
+  {
+   "source": "note:note-1795533141502-7fcq3c",
    "target": "work:w-1795412035129-8e02",
    "cos": 0.701
   },
@@ -27082,6 +27196,16 @@
    "source": "note:note-1795599504952-lmij5y",
    "target": "note:ap-1795594356297-d4hh0x",
    "cos": 0.603
+  },
+  {
+   "source": "note:note-1795599814638-bwk4c7",
+   "target": "work:w-1795412035129-8e02",
+   "cos": 0.618
+  },
+  {
+   "source": "note:note-1795599814638-bwk4c7",
+   "target": "work:w-1795576860775-88e2",
+   "cos": 0.704
   },
   {
    "source": "note:ap-1795594356297-d4hh0x",

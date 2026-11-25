@@ -1241,6 +1241,48 @@
 
   /* 备份区占位 —— 真正的逻辑在下面 buildPanel 之后（bindBackup） */
 
+  /* ══════════ 记忆备份页（独立整页）══════════ */
+  #backup{
+    position:absolute; left:var(--rail-w); right:0; top:var(--top-h); bottom:0;
+    overflow-y:auto; overflow-x:hidden; z-index:45;
+    background:linear-gradient(180deg,rgba(9,13,23,.99),rgba(5,7,13,.99));
+    padding:22px 30px 40px;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .22s, visibility .22s, left .26s cubic-bezier(.4,0,.2,1);
+  }
+  #backup.shown{ opacity:1; visibility:visible; pointer-events:auto; }
+  #rail.collapsed ~ #backup{ left:52px; }
+  #backup::-webkit-scrollbar{ width:8px; }
+  #backup::-webkit-scrollbar-thumb{ background:rgba(140,170,255,.18); border-radius:4px; }
+  #backup .bk-page{ max-width:860px; margin:0 auto; }
+  #backup .bk-head-main{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+  #backup .bk-head-main h1{ margin:0; font-size:19px; font-weight:600; letter-spacing:.14em; color:#e8eeff; }
+  #backup .bk-count{ font-size:11.5px; color:#5c6884; }
+  #backup .bk-sub{
+    font-size:11.5px; color:#65718c; margin:4px 0 22px;
+    letter-spacing:.05em; line-height:1.75;
+  }
+  .bk-sec{
+    margin-bottom:20px; padding:14px 16px 13px; border-radius:11px;
+    background:linear-gradient(160deg,rgba(255,255,255,.026),rgba(255,255,255,.010));
+    border:1px solid rgba(140,170,255,.10);
+  }
+  .bk-sec-h{
+    display:flex; align-items:baseline; justify-content:space-between;
+    font-size:12px; color:#b8c8e4; letter-spacing:.06em; margin-bottom:5px;
+  }
+  .bk-sec-h .bk-sec-n{
+    font-size:10.5px; color:#5c6884; font-variant-numeric:tabular-nums; letter-spacing:.02em;
+  }
+  .bk-sec-s{
+    font-size:10.5px; color:#5a6784; margin:0 0 11px;
+    letter-spacing:.02em; line-height:1.7;
+  }
+  .bk-actions{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    margin:24px 0 14px;
+  }
+
   /* ── 备份区（设置页里）── */
   .bk-hint{
     font-size:10.5px; color:#5d6a82; line-height:1.75; margin:2px 0 10px;
@@ -1898,6 +1940,10 @@
     <button class="nav-item" data-view="diagnose">
       <span class="ico">✚</span><span class="nav-label">记忆诊断</span>
     </button>
+    <!-- 2026-11-25 爸爸：「左侧单独多一个选项用来导出 不要放在通用设置里面」 -->
+    <button class="nav-item" data-view="backup">
+      <span class="ico">⤓</span><span class="nav-label">记忆备份</span>
+    </button>
     <button class="nav-item" data-view="settings">
       <span class="ico">⚙</span><span class="nav-label">通用设置</span>
     </button>
@@ -1923,22 +1969,6 @@
           <button id="openSrcDir">📂 打开目录</button>
         </div>
         <p class="srchint">只读 · 这里只决定显示哪些源，不会改动记忆文件</p>
-      </div>
-
-      <div class="sec">
-        <div class="h">备份</div>
-        <p class="bk-hint">
-          把原始数据（事件流 / 记忆库 / 常驻记忆）和导出产物一起打包成一个 zip。
-          这是唯一能把她的记忆整个搬走的出口 —— 页面其它地方都是只读。
-        </p>
-        <div class="bk-files" id="bkFiles"><div class="bk-loading">正在读取…</div></div>
-        <div class="bk-row">
-          <button class="bk-btn" id="bkBtn">⤓ 导出完整备份</button>
-          <span class="bk-note" id="bkNote"></span>
-        </div>
-        <p class="bk-warn">
-          备份是只读快照。真要恢复，先停掉 DSH —— 别让两边同时写。
-        </p>
       </div>
 
       <div class="sec">
@@ -2282,6 +2312,42 @@
     <div class="tl-filter" id="tpFilter"></div>
     <div class="tp-grid" id="tpGrid"></div>
     <div class="tp-pager" id="tpPager"></div>
+   </div>
+  </section>
+
+  <!-- ══════ 记忆备份：唯一能把记忆整个搬走的出口 ══════
+       2026-11-25 爸爸：「左侧单独多一个选项用来导出 不要放在通用设置里面」 -->
+  <section id="backup">
+   <div class="bk-page">
+    <div class="bk-head-main">
+      <h1>记 忆 备 份</h1>
+      <span class="bk-count" id="bkCount"></span>
+    </div>
+    <p class="bk-sub">
+      把原始数据（事件流 / 记忆库 / 本子）和导出产物一起打包成一个 zip。
+      这是唯一能把她的记忆整个搬走的出口 —— 页面其它地方都是只读。
+    </p>
+
+    <div class="bk-sec">
+      <div class="bk-sec-h"><span>原始数据</span><span class="bk-sec-n" id="bkRawSum"></span></div>
+      <p class="bk-sec-s">这些缺了就是真丢了。每项都标着它在磁盘上的真实位置。</p>
+      <div class="bk-files" id="bkRawFiles"><div class="bk-loading">正在读取…</div></div>
+    </div>
+
+    <div class="bk-sec">
+      <div class="bk-sec-h"><span>导出产物</span><span class="bk-sec-n" id="bkProdSum"></span></div>
+      <p class="bk-sec-s">对照用，不是原件。真要恢复，应该拿原始数据重跑导出脚本重建。</p>
+      <div class="bk-files" id="bkProdFiles"></div>
+    </div>
+
+    <div class="bk-actions">
+      <button class="bk-btn" id="bkBtn">⤓ 导出完整备份</button>
+      <span class="bk-note" id="bkNote"></span>
+    </div>
+
+    <p class="bk-warn">
+      备份是只读快照。真要恢复，先停掉 DSH —— 别让两边同时写。
+    </p>
    </div>
   </section>
 
@@ -7243,13 +7309,12 @@ function buildPanel(){
     slEl.appendChild(wrap);
   });
   renderPresets();
-
-  bindBackup();     // 2026-11-25 备份区
 }
 
 /* ══════════════════════════════════════════════════════════
-   备份导出（设置页）
+   记忆备份（独立页）
    2026-11-25 爸爸：「当前记忆是不是缺一个备份导出的功能」
+              然后：「左侧单独多一个选项用来导出 不要放在通用设置里面」
    页面其它地方全是只读 —— 这是唯一能把记忆整个搬走的出口。
    走 /api/backup，服务端现打 zip 直接下载（不落盘，不占空间）。
    ══════════════════════════════════════════════════════════ */
@@ -7263,24 +7328,46 @@ function fmtBytes(n) {
 }
 
 async function loadBackupInfo() {
-  const box = document.getElementById('bkFiles');
-  if (!box) return;
-  box.innerHTML = '<div class="bk-loading">正在读取…</div>';
+  const rawBox = document.getElementById('bkRawFiles');
+  const prodBox = document.getElementById('bkProdFiles');
+  if (!rawBox) return;
+  rawBox.innerHTML = '<div class="bk-loading">正在读取…</div>';
   try {
     const r = await fetch('/api/backup-info');
     const j = await r.json();
     if (!j || !j.ok) throw new Error(j && j.error || '读取失败');
     BK_INFO = j;
-    box.innerHTML = '';
-    for (const f of j.files) {
+
+    const mkRow = (f) => {
       const d = document.createElement('div');
-      d.className = 'bk-file' + (f.exists ? '' : ' miss') + (f.raw ? ' raw' : '');
+      d.className = 'bk-file' + (f.exists ? '' : ' miss');
       const base = f.path.split(/[\\/]/).filter(Boolean).pop() || '';
       const name = f.label + '  ' + base + (f.count != null ? '（' + f.count + ' 份）' : '');
       d.innerHTML = '<i class="bk-d"></i>'
         + '<span class="bk-n" title="' + esc(f.path) + '">' + esc(name) + '</span>'
         + '<span class="bk-s">' + (f.exists ? fmtBytes(f.size) : '缺失') + '</span>';
-      box.appendChild(d);
+      return d;
+    };
+
+    const raws = j.files.filter(f => f.raw);
+    const prods = j.files.filter(f => !f.raw);
+
+    rawBox.innerHTML = '';
+    for (const f of raws) rawBox.appendChild(mkRow(f));
+    if (prodBox) {
+      prodBox.innerHTML = '';
+      for (const f of prods) prodBox.appendChild(mkRow(f));
+    }
+
+    const rawSum = document.getElementById('bkRawSum');
+    if (rawSum) rawSum.textContent = fmtBytes(j.rawBytes) + ' · ' + raws.filter(f => f.exists).length + ' / ' + raws.length + ' 项';
+    const prodSum = document.getElementById('bkProdSum');
+    if (prodSum) prodSum.textContent = fmtBytes(j.totalBytes - j.rawBytes);
+
+    const cnt = document.getElementById('bkCount');
+    if (cnt) {
+      const okAll = j.files.filter(f => f.exists).length;
+      cnt.textContent = okAll + ' / ' + j.files.length + ' 项 · 共 ' + fmtBytes(j.totalBytes);
     }
     const note = document.getElementById('bkNote');
     if (note) {
@@ -7288,11 +7375,11 @@ async function loadBackupInfo() {
       note.className = 'bk-note';
     }
   } catch (e) {
-    box.innerHTML = '<div class="bk-loading">读取失败：' + esc(String(e.message || e)) + '</div>';
+    rawBox.innerHTML = '<div class="bk-loading">读取失败：' + esc(String(e.message || e)) + '</div>';
   }
 }
 
-function bindBackup() {
+function ensureBackup() {
   const btn = document.getElementById('bkBtn');
   if (!btn) return;
   loadBackupInfo();
@@ -8199,6 +8286,7 @@ function setView(v){
   const isStarmap = (v === 'starmap');
   const isExcluded = (v === 'excluded');
   const isTopics = (v === 'topics');
+  const isBackup = (v === 'backup');
   const isStats = (v === 'statspage');
   /* 2026-11-25：星图轨迹并进记忆轨迹做 Tab 了。
      老的 'startrack' 视图留着当别名，进来就切到 timeline + 星图 Tab，
@@ -8217,6 +8305,8 @@ function setView(v){
   if (exEl) exEl.classList.toggle('shown', isExcluded);
   const tpEl = document.getElementById('topics');
   if (tpEl) tpEl.classList.toggle('shown', !!isTopics);
+  const bkEl = document.getElementById('backup');
+  if (bkEl) bkEl.classList.toggle('shown', !!isBackup);
   const stEl = document.getElementById('statspage');
   if (stEl) stEl.classList.toggle('shown', isStats);
   /* 旧的 #startrack section 已经搬进 #timeline 里了，这里不再单独控制 */
@@ -8229,6 +8319,7 @@ function setView(v){
   if (isTimeline) { if (tlEl) tlEl.scrollTop = 0; ensureTimeline(); }
   if (isExcluded) { if (exEl) exEl.scrollTop = 0; ensureExcluded(); }
   if (isTopics) { if (tpEl) tpEl.scrollTop = 0; buildTopicIndex(); renderTopicPage(); }
+  if (isBackup) { if (bkEl) bkEl.scrollTop = 0; ensureBackup(); }
   if (isStats) { if (stEl) stEl.scrollTop = 0; ensureStats(); }
   /* 从旧入口（setView('startrack')）进来时，直接把 Tab 切到星图 */
   if (isStartrackAlias) { tlSetTab('graph', true); }

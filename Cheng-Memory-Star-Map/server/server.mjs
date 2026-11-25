@@ -670,9 +670,19 @@ const server = http.createServer(async (req, res) => {
         'graph-excluded.json     ' + path.join(MEMGRAPH_DIR, 'graph-excluded.json'),
         'vectors.json            ' + path.join(MEMGRAPH_DIR, 'vectors.json'),
         '',
+        '【恢复顺序 —— 澄 2026-11-25 定的，照这个来】',
+        '  1. mnemon.db 快照 + memories.json      ← 这是底，先放',
+        '  2. notes / works / appointments / diary / documents / inbox',
+        '     （各自独立的记录，顺序无所谓）',
+        '  3. events.jsonl                        ← 最后放',
+        '     它是只追加的流水，放早了会被当成新事件重放一遍。',
+        '',
         '注意：',
         '  · mnemon.db 是「快照」，不是文件拷贝。恢复时直接放回原位置即可，',
         '    不需要带 -wal / -shm（快照本身已经自洽）。',
+        '  · MEMORY.md / USER.md 是从 memories.json 推出来的投影，',
+        '    带上只是为了省一步重生成 —— 真冲突时以 memories.json 为准。',
+        '  · alma-inbox/ 是澄和 Alma 之间的来往信件，也算记录，别漏。',
         '  · documents/ 是她写得最完整的一套项目记录，比 events 流水成体系，',
         '    这一块别漏。',
         '  · works/ 里是真作品文件（带图），体积最大的一部分。',
@@ -778,6 +788,17 @@ const server = http.createServer(async (req, res) => {
       add(path.join(FISH_ROOT, 'inbox.md'), 'inbox.md', false);
       add(path.join(FISH_ROOT, 'inbox-state.json'), 'inbox-state.json', false);
 
+      /* alma-inbox：我和她之间的来往信件。
+         2026-11-25 澄：「那是我和你之间的来往，不算运行状态，得带上。」
+         它在 D:\大肥鱼工具\alma-inbox\，不在记忆根里。 */
+      addDir(path.join('D:', '大肥鱼工具', 'alma-inbox'), 'alma-inbox', { only: ['.md'] });
+
+      /* MEMORY.md / USER.md：从 memories.json 推出来的投影。
+         澄：「带上不多花几 KB，恢复时省一步重生成。」 */
+      const RUNTIME_DIR = path.dirname(P.memories);
+      add(path.join(RUNTIME_DIR, 'MEMORY.md'), 'MEMORY.md', false);
+      add(path.join(RUNTIME_DIR, 'USER.md'), 'USER.md', false);
+
       /* ── 导出产物（对照用，不是原件）── */
       add(path.join(MEMGRAPH_DIR, 'graph.json'), 'graph.json', false);
       add(path.join(MEMGRAPH_DIR, 'graph-excluded.json'), 'graph-excluded.json', false);
@@ -818,6 +839,9 @@ const server = http.createServer(async (req, res) => {
       { key: 'inbox',         label: '信箱',     path: path.join(FISH_ROOT, 'inbox.md'),       raw: true },
       { key: 'diary',         label: '日记',     path: path.join(FISH_ROOT, 'diary'),          raw: true, isDir: true },
       { key: 'documents',     label: '文档',     path: path.join(mh, 'documents'),             raw: true, isDir: true },
+      { key: 'almaInbox',     label: '来往信件', path: path.join('D:', '大肥鱼工具', 'alma-inbox'), raw: true, isDir: true },
+      { key: 'memoryMd',      label: 'MEMORY',   path: path.join(path.dirname(P.memories), 'MEMORY.md'), raw: true },
+      { key: 'userMd',        label: 'USER',     path: path.join(path.dirname(P.memories), 'USER.md'),   raw: true },
       { key: 'graph',         label: '星图',     path: path.join(MEMGRAPH_DIR, 'graph.json'), raw: false },
       { key: 'graphExcluded', label: '剔掉的',   path: path.join(MEMGRAPH_DIR, 'graph-excluded.json'), raw: false },
       { key: 'vectors',       label: '向量',     path: path.join(MEMGRAPH_DIR, 'vectors.json'), raw: false },

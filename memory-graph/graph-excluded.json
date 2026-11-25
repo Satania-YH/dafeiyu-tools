@@ -1629,6 +1629,33 @@
   "by": "WRAP_OPEN_RE"
  },
  {
+  "id": "heard:ev_01M891S7KVW72B10N753QN8KF6",
+  "ts": "2026-11-25T09:49:55.195Z",
+  "raw": "只有想专门接其中某一条、而直接说别人会看不出你在回谁时（比如那条已经被后面的话刷上去了、或者你在回某个人随口一提的事），才在那句话开头写 <reply:编号>，会以「引用回复」发出",
+  "reason": "injection-command",
+  "detail": "只有想专门接其中某一条、而直接说别人会看不出你在回谁时（比如那条已经被后面的话刷上去了、或者你在回某个人随口一提的事），才在那句话开头写 <reply:编号>，会以「引用回复」发出",
+  "why": "开头是系统注入指令「只有想专门接其中某一条」，纯指令不是话",
+  "by": "INJECTION_RE"
+ },
+ {
+  "id": "heard:ev_01M891X1VNP3SMBZHDT20TP5YE",
+  "ts": "2026-11-25T09:52:00.373Z",
+  "raw": "另外 D 盘那两个路径要改：events.jsonl 不在 D:\\dsh-fish（那个目录不存在），实际在 D:\\dsh-fish-home\\dsh-fish\\events.jsonl，3841 行，跟你数的 3840 对得上",
+  "reason": "self-said",
+  "detail": "另外 D 盘那两个路径要改：events.jsonl 不在 D:\\dsh-fish（那个目录不存在），实际在 D:\\dsh-fish-home\\dsh-fish\\events.jsonl，3841 行，跟你数的 3840 对得上",
+  "why": "这段字面出现在她自己的 utterance 里，属\"她说的被记成听到的\"；命中片段：at1725721096核完了三件事分开答1这六样不是全部你漏得最多的是CUse",
+  "by": "substring-of-utterance"
+ },
+ {
+  "id": "heard:ev_01M892G4RGYC18Y9XY0CCVJENS",
+  "ts": "2026-11-25T10:02:25.936Z",
+  "raw": "另外 D 盘那两个路径要改：events.jsonl 不在 D:\\dsh-fish（那个目录不存在），实际在 D:\\dsh-fish-home\\dsh-fish\\events.jsonl，3841 行，跟你数的 3840 对得上",
+  "reason": "self-said",
+  "detail": "另外 D 盘那两个路径要改：events.jsonl 不在 D:\\dsh-fish（那个目录不存在），实际在 D:\\dsh-fish-home\\dsh-fish\\events.jsonl，3841 行，跟你数的 3840 对得上",
+  "why": "这段字面出现在她自己的 utterance 里，属\"她说的被记成听到的\"；命中片段：at1725721096核完了三件事分开答1这六样不是全部你漏得最多的是CUse",
+  "by": "substring-of-utterance"
+ },
+ {
   "id": "mem:20261121T134222234Z",
   "reason": "mirror-of-ins",
   "detail": "折进 ins:bda07cf8-08f6-4225-94d2-6d7378f262d7 ｜ 澄发语音/唱歌用爸爸做的小鲸嗓子（Breeze TTS 2，voice xiaojing_d3）。2026-11-22 晚爸爸明确：「以后用新的工具说话和唱歌」——旧的 VoiceStudio/OmniVoice 声线（dafish-designed.wav）不再用。",
