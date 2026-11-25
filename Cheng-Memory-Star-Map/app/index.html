@@ -9698,33 +9698,147 @@ function drawStatsStarfield(allNodes, byKindAdded) {
       const c = it.hue;
       const cs = c[0] + ',' + c[1] + ',' + c[2];
 
-      const halo = ctx.createRadialGradient(it.x, it.y, 0, it.x, it.y, R * 3.1);
-      halo.addColorStop(0, 'rgba(' + cs + ',' + (0.28 * breath) + ')');
-      halo.addColorStop(0.45, 'rgba(' + cs + ',' + (0.09 * breath) + ')');
-      halo.addColorStop(1, 'rgba(' + cs + ',0)');
-      ctx.fillStyle = halo;
-      ctx.beginPath(); ctx.arc(it.x, it.y, R * 3.1, 0, 7); ctx.fill();
+      /* ══════════════════════════════════════════════════════════
+         分类星 · 华丽版
+         2026-11-25 爸爸：「我是说想做的更像星星一点 特效华丽一点」
+         —— 之前只做了「柔」，但柔不等于好看：一颗球加几根线，
+            没有星的样子，也没有光的层次。
 
+         真实的亮星看上去是这几层叠出来的（从外到内）：
+           ① 极淡的大范围弥散（星云感，几倍直径）
+           ② 十字星芒（衍射十字，长的那两端特别长）
+           ③ 短芒（45° 方向的四条，短的）
+           ④ 二层光晕（中等范围，颜色最饱和的地方）
+           ⑤ 核心（白热点，很小）
+           ⑥ 环绕的星尘（随机小点，慢慢转）
+         再叠上：
+           ⑦ 轨道环（一圈很淡的椭圆，像行星轨道）
+           ⑧ 呼吸脉冲（整颗随呼吸涨缩，不能匀速，要有停顿感）
+
+         都用 'lighter' 混合 —— 光是加法，叠出来才亮得自然。
+         ══════════════════════════════════════════════════════════ */
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.strokeStyle = 'rgba(' + cs + ',' + (0.30 * breath) + ')';
-      ctx.lineWidth = 1;
-      for (let k2 = 0; k2 < 4; k2++) {
-        const a = k2 * Math.PI / 2 + T * 0.1;
-        const len = R * (2.0 + 0.6 * Math.sin(T * 1.2 + it.phase + k2));
+
+      /* ── ① 弥散星云：范围大、极淡，给整颗一个"存在感"底子 ── */
+      const neb = ctx.createRadialGradient(it.x, it.y, R * 0.2, it.x, it.y, R * 5.2);
+      neb.addColorStop(0.00, 'rgba(' + cs + ',' + (0.16 * breath) + ')');
+      neb.addColorStop(0.35, 'rgba(' + cs + ',' + (0.075 * breath) + ')');
+      neb.addColorStop(0.68, 'rgba(' + cs + ',' + (0.022 * breath) + ')');
+      neb.addColorStop(1.00, 'rgba(' + cs + ',0)');
+      ctx.fillStyle = neb;
+      ctx.beginPath(); ctx.arc(it.x, it.y, R * 5.2, 0, 7); ctx.fill();
+
+      /* ── ⑦ 轨道环：两圈很淡的椭圆，慢慢反向转 ── */
+      for (let ring = 0; ring < 2; ring++) {
+        const rr = R * (1.9 + ring * 0.75);
+        const tilt = -0.34 + ring * 0.16 + Math.sin(T * 0.22 + it.phase) * 0.05;
+        const rotA = T * (0.10 - ring * 0.04) + it.phase;
+        ctx.save();
+        ctx.translate(it.x, it.y);
+        ctx.rotate(tilt);
         ctx.beginPath();
-        ctx.moveTo(it.x + Math.cos(a) * R * 0.95, it.y + Math.sin(a) * R * 0.95);
-        ctx.lineTo(it.x + Math.cos(a) * len, it.y + Math.sin(a) * len);
+        ctx.ellipse(0, 0, rr, rr * (0.30 + ring * 0.10), rotA, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(' + cs + ',' + ((0.10 - ring * 0.035) * breath) + ')';
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /* ── ②③ 星芒：十字长 + 45° 短 ──
+         用线性渐变从中心往外淡出，比硬线更像光。
+         长的两端慢慢摆（T*0.10），短的快一点反向。 */
+      const drawRay = (angle, len, width, alpha) => {
+        const ex = it.x + Math.cos(angle) * len;
+        const ey = it.y + Math.sin(angle) * len;
+        const lg = ctx.createLinearGradient(it.x, it.y, ex, ey);
+        lg.addColorStop(0, 'rgba(255,255,255,' + (alpha * 0.9) + ')');
+        lg.addColorStop(0.18, 'rgba(' + cs + ',' + (alpha * 0.65) + ')');
+        lg.addColorStop(0.55, 'rgba(' + cs + ',' + (alpha * 0.18) + ')');
+        lg.addColorStop(1, 'rgba(' + cs + ',0)');
+        ctx.strokeStyle = lg;
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(it.x - Math.cos(angle) * len * 0.16, it.y - Math.sin(angle) * len * 0.16);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+      };
+      /* 十字：主芒。4 条各画正反两向，所以只循环 2 次（0° 和 90°）就够。
+         之前循环 4 次其实画了 8 条反向重叠的，反而糊。 */
+      for (let q = 0; q < 2; q++) {
+        const a = q * Math.PI + T * 0.10 + it.phase * 0.3;
+        const len = R * (3.0 + 0.7 * Math.sin(T * 0.9 + it.phase + q));
+        /* 正反两向都画：光是从中心往两边射的 */
+        drawRay(a, len, 1.7, 0.58 * breath);
+        drawRay(a + Math.PI, len, 1.7, 0.58 * breath);
+      }
+      /* 45° 短芒：4 条短而弱，形成八芒 */
+      for (let q = 0; q < 2; q++) {
+        const a = q * Math.PI + Math.PI / 2 - T * 0.07;
+        const len = R * (1.5 + 0.3 * Math.sin(T * 1.4 + q));
+        drawRay(a, len, 1.0, 0.32 * breath);
+        drawRay(a + Math.PI, len, 1.0, 0.32 * breath);
+      }
+
+      /* ── ④ 二层光晕：颜色最饱和的一层 ── */
+      const glow = ctx.createRadialGradient(it.x, it.y, 0, it.x, it.y, R * 2.4);
+      glow.addColorStop(0.00, 'rgba(' + cs + ',' + (0.34 * breath) + ')');
+      glow.addColorStop(0.28, 'rgba(' + cs + ',' + (0.20 * breath) + ')');
+      glow.addColorStop(0.58, 'rgba(' + cs + ',' + (0.070 * breath) + ')');
+      glow.addColorStop(1.00, 'rgba(' + cs + ',0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(it.x, it.y, R * 2.4, 0, 7); ctx.fill();
+
+      /* ── ⑤ 核心：白热点，很小很实 ── */
+      /* 核心收小到 0.34R、纯白 —— 真正的亮星核心是个"点"，不是一个球。
+         外面那层才是有颜色的。 */
+      const hot = ctx.createRadialGradient(it.x, it.y, 0, it.x, it.y, R * 0.36);
+      hot.addColorStop(0.00, 'rgba(255,255,255,1)');
+      hot.addColorStop(0.34, 'rgba(255,255,255,' + (0.92 * breath) + ')');
+      hot.addColorStop(0.70, 'rgba(255,255,255,' + (0.42 * breath) + ')');
+      hot.addColorStop(1.00, 'rgba(255,255,255,0)');
+      ctx.fillStyle = hot;
+      ctx.beginPath(); ctx.arc(it.x, it.y, R * 0.36, 0, 7); ctx.fill();
+
+      /* 核心外面一圈有色紧致光 —— 给"颜色"这个信息一点存在感 */
+      const tight = ctx.createRadialGradient(it.x, it.y, R * 0.2, it.x, it.y, R * 1.0);
+      tight.addColorStop(0.00, 'rgba(' + cs + ',' + (0.55 * breath) + ')');
+      tight.addColorStop(0.42, 'rgba(' + cs + ',' + (0.28 * breath) + ')');
+      tight.addColorStop(1.00, 'rgba(' + cs + ',0)');
+      ctx.fillStyle = tight;
+      ctx.beginPath(); ctx.arc(it.x, it.y, R * 1.0, 0, 7); ctx.fill();
+
+      /* ── ⑧ 呼吸脉冲环：一圈往外扩散的光波，3.6 秒一轮 ──
+         这是「活」的感觉来源 —— 静止的星再漂亮也是贴纸。 */
+      const pulseT = ((T + it.phase * 0.9) % 3.6) / 3.6;      // 0→1
+      if (pulseT < 0.72) {
+        const pr = R * (0.9 + pulseT * 3.4);
+        const pa = (1 - pulseT / 0.72) * 0.28 * breath;
+        ctx.beginPath();
+        ctx.arc(it.x, it.y, pr, 0, 7);
+        ctx.strokeStyle = 'rgba(' + cs + ',' + pa + ')';
+        ctx.lineWidth = 1.4 * (1 - pulseT * 0.5);
         ctx.stroke();
       }
+
       ctx.restore();
 
-      const core = ctx.createRadialGradient(it.x, it.y, 0, it.x, it.y, R);
-      core.addColorStop(0, 'rgba(255,255,255,' + (0.82 * breath) + ')');
-      core.addColorStop(0.35, 'rgba(' + cs + ',' + (0.90 * breath) + ')');
-      core.addColorStop(1, 'rgba(' + cs + ',0.12)');
-      ctx.fillStyle = core;
-      ctx.beginPath(); ctx.arc(it.x, it.y, R, 0, 7); ctx.fill();
+      /* ── ⑥ 环绕星尘：一圈慢慢转的小亮点，不属于子星那批 ──
+         （子星代表"这段时间新增"，星尘是氛围，两者不能混） */
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const DUST = 14;
+      for (let d = 0; d < DUST; d++) {
+        const a = (d / DUST) * Math.PI * 2 + T * 0.16;
+        const dd = R * (1.25 + 0.55 * Math.sin(d * 2.3 + T * 0.4));
+        const dx = it.x + Math.cos(a) * dd;
+        const dy = it.y + Math.sin(a) * dd * 0.62;   // 压扁，像在盘面上
+        const dAlpha = (0.20 + 0.20 * Math.sin(T * 1.9 + d * 1.7)) * breath;
+        ctx.fillStyle = 'rgba(255,255,255,' + Math.max(0, dAlpha) + ')';
+        ctx.beginPath(); ctx.arc(dx, dy, 0.85, 0, 7); ctx.fill();
+      }
+      ctx.restore();
 
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -9736,14 +9850,23 @@ function drawStatsStarfield(allNodes, byKindAdded) {
         if (born <= 0) continue;
         const tw = 0.55 + 0.45 * Math.sin(T * 2.4 + sb.ph);
         const alpha = born * tw;
-        const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, sb.r * 4);
-        g.addColorStop(0, 'rgba(255,255,255,' + (0.55 * alpha) + ')');
-        g.addColorStop(0.4, 'rgba(' + cs + ',' + (0.62 * alpha) + ')');
-        g.addColorStop(1, 'rgba(' + cs + ',0)');
+        /* 子星：光晕也改成多档缓降，外圈拉大一点 ——
+           原来 0.4 处还有 0.62，一路掉到 1.0 的 0，也是硬边。 */
+        const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, sb.r * 4.4);
+        g.addColorStop(0.00, 'rgba(255,255,255,' + (0.58 * alpha) + ')');
+        g.addColorStop(0.22, 'rgba(' + cs + ',' + (0.50 * alpha) + ')');
+        g.addColorStop(0.50, 'rgba(' + cs + ',' + (0.20 * alpha) + ')');
+        g.addColorStop(0.75, 'rgba(' + cs + ',' + (0.06 * alpha) + ')');
+        g.addColorStop(1.00, 'rgba(' + cs + ',0)');
         ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(sx, sy, sb.r * 4, 0, 7); ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * alpha) + ')';
-        ctx.beginPath(); ctx.arc(sx, sy, sb.r * 0.55, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx, sy, sb.r * 4.4, 0, 7); ctx.fill();
+        /* 星核：加一点点柔边，别是个硬白点 */
+        const g2 = ctx.createRadialGradient(sx, sy, 0, sx, sy, sb.r * 0.95);
+        g2.addColorStop(0, 'rgba(255,255,255,' + (0.90 * alpha) + ')');
+        g2.addColorStop(0.6, 'rgba(255,255,255,' + (0.42 * alpha) + ')');
+        g2.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g2;
+        ctx.beginPath(); ctx.arc(sx, sy, sb.r * 0.95, 0, 7); ctx.fill();
       }
       ctx.restore();
 
