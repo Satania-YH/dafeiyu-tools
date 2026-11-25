@@ -7275,7 +7275,8 @@ async function loadBackupInfo() {
     for (const f of j.files) {
       const d = document.createElement('div');
       d.className = 'bk-file' + (f.exists ? '' : ' miss') + (f.raw ? ' raw' : '');
-      const name = f.label + '  ' + (f.path.split(/[\\/]/).pop() || '');
+      const base = f.path.split(/[\\/]/).filter(Boolean).pop() || '';
+      const name = f.label + '  ' + base + (f.count != null ? '（' + f.count + ' 份）' : '');
       d.innerHTML = '<i class="bk-d"></i>'
         + '<span class="bk-n" title="' + esc(f.path) + '">' + esc(name) + '</span>'
         + '<span class="bk-s">' + (f.exists ? fmtBytes(f.size) : '缺失') + '</span>';

@@ -643,25 +643,71 @@ const server = http.createServer(async (req, res) => {
         '这份 zip 装的是原始数据，不是整理后的结果。',
         '要恢复或搬到别处，把这些文件按下面的位置放回去就行。',
         '',
+        '【原始数据 —— 这些缺了就是真丢了】',
         '文件                    原始位置',
         '-'.repeat(70),
         'events.jsonl            ' + P.events,
         'mnemon.db               ' + P.mnemonDb,
+        'mnemon.db-wal           ' + P.mnemonDb + '-wal',
+        'mnemon.db-shm           ' + P.mnemonDb + '-shm',
         'memories.json           ' + P.memories,
+        'notes.json              ' + path.join(FISH_ROOT, 'notes.json'),
+        'works.json              ' + path.join(FISH_ROOT, 'works.json'),
+        'appointments.json       ' + path.join(FISH_ROOT, 'appointments.json'),
+        'home.json               ' + path.join(FISH_ROOT, 'home.json'),
+        'diary/*.md              ' + path.join(FISH_ROOT, 'diary') + path.sep,
+        '',
+        '【导出产物 —— 对照用，不是原件】',
         'graph.json              ' + path.join(MEMGRAPH_DIR, 'graph.json'),
         'graph-excluded.json     ' + path.join(MEMGRAPH_DIR, 'graph-excluded.json'),
         'vectors.json            ' + path.join(MEMGRAPH_DIR, 'vectors.json'),
         '',
         '注意：',
-        '  · graph / excluded / vectors 三份是「导出产物」，不是原始数据。',
-        '    真要恢复，应该拿 events.jsonl + mnemon.db 重跑 export-graph.py 重建。',
+        '  · mnemon.db 的三个文件（.db / -wal / -shm）必须一起拿。',
+        '    SQLite 的未提交事务写在 -wal 里，只拿主库会丢掉那一刻的写入。',
+        '    恢复时三个一起放回同目录。',
+        '  · graph / excluded / vectors 是「导出产物」。真要恢复，',
+        '    应该拿 events.jsonl + mnemon.db + 本子重跑 export-graph.py 重建。',
         '    留着这三份只是为了对照「当时是什么样」。',
         '  · 这是只读快照。恢复时请先停掉 DSH，别让两边同时写。',
       ].join(String.fromCharCode(10));
 
+      /* ── 原始数据 ── */
       add(P.events, 'events.jsonl', false);
+
+      /* mnemon.db 必须连 -wal / -shm 一起拿。
+         2026-11-25 自查发现：-wal 现在是 0 字节看着没事，但 SQLite 的
+         未提交事务就写在 -wal 里 —— 只拿主库，那一刻的写入会丢。
+         备份的意义就是「万一」，不能赌它刚好是空的。 */
       add(P.mnemonDb, 'mnemon.db', true);
+      add(P.mnemonDb + '-wal', 'mnemon.db-wal', true);
+      add(P.mnemonDb + '-shm', 'mnemon.db-shm', true);
+
       add(P.memories, 'memories.json', false);
+
+      /* ── 本子：这些才是「记录」，光有 events 流水是不够的 ──
+         2026-11-25 自查：原来只备了 events + mnemon，把 notes/works/
+         appointments/diary 全漏了。那些是她的便条（76 条正文）、作品、
+         约定、日记 —— 是记忆本体，不是运行状态。 */
+      add(path.join(FISH_ROOT, 'notes.json'), 'notes.json', false);
+      add(path.join(FISH_ROOT, 'works.json'), 'works.json', false);
+      add(path.join(FISH_ROOT, 'appointments.json'), 'appointments.json', false);
+      add(path.join(FISH_ROOT, 'home.json'), 'home.json', false);
+
+      /* diary/ 整个目录：一天一个 md，逐份打进去 */
+      try {
+        const diaryDir = path.join(FISH_ROOT, 'diary');
+        if (fs.existsSync(diaryDir)) {
+          const files = fs.readdirSync(diaryDir).filter(f => f.endsWith('.md')).sort();
+          for (const f of files) {
+            add(path.join(diaryDir, f), 'diary/' + f, false);
+          }
+        }
+      } catch (ex) {
+        report.push({ name: 'diary/', ok: false, why: String(ex && ex.message || ex) });
+      }
+
+      /* ── 导出产物（对照用，不是原件）── */
       add(path.join(MEMGRAPH_DIR, 'graph.json'), 'graph.json', false);
       add(path.join(MEMGRAPH_DIR, 'graph-excluded.json'), 'graph-excluded.json', false);
       add(path.join(MEMGRAPH_DIR, 'vectors.json'), 'vectors.json', true);
@@ -691,7 +737,14 @@ const server = http.createServer(async (req, res) => {
     const spec = [
       { key: 'events',        label: '原始事件', path: P.events,                              raw: true },
       { key: 'mnemonDb',      label: '记忆库',   path: P.mnemonDb,                            raw: true },
+      { key: 'mnemonWal',     label: '库·预写',  path: P.mnemonDb + '-wal',                   raw: true },
+      { key: 'mnemonShm',     label: '库·索引',  path: P.mnemonDb + '-shm',                   raw: true },
       { key: 'memoriesJson',  label: '常驻记忆', path: P.memories,                            raw: true },
+      { key: 'notes',         label: '便条',     path: path.join(FISH_ROOT, 'notes.json'),     raw: true },
+      { key: 'works',         label: '作品',     path: path.join(FISH_ROOT, 'works.json'),     raw: true },
+      { key: 'appointments',  label: '约定',     path: path.join(FISH_ROOT, 'appointments.json'), raw: true },
+      { key: 'home',          label: '鱼鱼窝',   path: path.join(FISH_ROOT, 'home.json'),      raw: true },
+      { key: 'diary',         label: '日记',     path: path.join(FISH_ROOT, 'diary'),          raw: true, isDir: true },
       { key: 'graph',         label: '星图',     path: path.join(MEMGRAPH_DIR, 'graph.json'), raw: false },
       { key: 'graphExcluded', label: '剔掉的',   path: path.join(MEMGRAPH_DIR, 'graph-excluded.json'), raw: false },
       { key: 'vectors',       label: '向量',     path: path.join(MEMGRAPH_DIR, 'vectors.json'), raw: false },
@@ -699,14 +752,25 @@ const server = http.createServer(async (req, res) => {
     const out = [];
     let total = 0, rawTotal = 0;
     for (const it of spec) {
-      let size = 0, mtime = null, exists = false;
+      let size = 0, mtime = null, exists = false, count = null;
       try {
-        const st = fs.statSync(it.path);
-        exists = true; size = st.size; mtime = st.mtime.toISOString();
+        if (it.isDir) {
+          // 目录：累加里面文件的大小，顺便报个份数
+          const names = fs.readdirSync(it.path).filter(f => f.endsWith('.md'));
+          exists = true;
+          count = names.length;
+          for (const n of names) {
+            try { size += fs.statSync(path.join(it.path, n)).size; } catch {}
+          }
+          try { mtime = fs.statSync(it.path).mtime.toISOString(); } catch {}
+        } else {
+          const st = fs.statSync(it.path);
+          exists = true; size = st.size; mtime = st.mtime.toISOString();
+        }
         total += size;
         if (it.raw) rawTotal += size;
       } catch {}
-      out.push({ key: it.key, label: it.label, path: it.path, exists, size, mtime, raw: it.raw });
+      out.push({ key: it.key, label: it.label, path: it.path, exists, size, mtime, raw: it.raw, count });
     }
     return json(res, { ok: true, files: out, totalBytes: total, rawBytes: rawTotal });
   }
