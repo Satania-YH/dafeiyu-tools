@@ -442,6 +442,47 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  /* ---------- 原始事件：按 id 查那一条 ----------
+     2026-11-25：星图上的星（utt:ev_xxx）和记忆轨迹的条目本来是两批事件，
+     对不上。但星 id 里的 ev_xxx 就是 events.jsonl 的原始 id ——
+     所以直接回原始文件里捞，这是唯一可靠的一对一。
+     长内容只给前 N 字，带 total 让前端知道截了。 */
+  if (url.pathname === '/api/event') {
+    const id = String(url.searchParams.get('id') || '').trim();
+    const maxChars = Math.min(20000, Number(url.searchParams.get('max')) || 4000);
+    if (!id) return json(res, { ok: false, error: 'missing id' }, 400);
+    try {
+      const raw = fs.readFileSync(P.events, 'utf8');
+      const lines = raw.split('\n');
+      for (let k = lines.length - 1; k >= 0; k--) {
+        const ln = lines[k];
+        if (!ln || ln.indexOf(id) < 0) continue;      // 先粗筛，省 JSON.parse
+        let e;
+        try { e = JSON.parse(ln); } catch { continue; }
+        if (e && e.id === id) {
+          const t = String(e.text || '');
+          return json(res, {
+            ok: true,
+            event: {
+              id: e.id, type: e.type, ts: e.ts, source: e.source,
+              topic: e.topic || null,
+              refs: Array.isArray(e.refs) ? e.refs : [],
+              flags: Array.isArray(e.flags) ? e.flags : [],
+              verdict: e.verdict ?? null,
+              confidence: e.confidence ?? null,
+              text: t.slice(0, maxChars),
+              textTotal: t.length,
+              truncated: t.length > maxChars,
+            },
+          });
+        }
+      }
+      return json(res, { ok: false, error: 'not found', id }, 404);
+    } catch (ex) {
+      return json(res, { ok: false, error: String(ex && ex.message || ex) }, 500);
+    }
+  }
+
   /* ---------- 内容层 ---------- */
   if (url.pathname === '/api/content') {
     // 2026-11-24：改成每次现读。这几个文件都很小（几十 KB），
