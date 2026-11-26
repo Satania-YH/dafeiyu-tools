@@ -77,6 +77,7 @@ const DRIVE_LABELS = {
   intimacy: '亲密',
   stress: '压力',
   joy: '愉悦',
+  suspense: '悬着',
 }
 
 /** 澄的 events.jsonl —— 她记自己经历的地方 */
@@ -243,11 +244,16 @@ export function apply(ctx) {
     const config = await readConfig()
     if (!config.enabled) {
       const state = await loadState(stateFile(config), Date.now())
+      if (state === null) return { config, state: null, changed: false, delta: {}, events: [], mode: 'calm' }
       return { config, state, changed: false, delta: {}, events: [], mode: deriveMode(state.drives, resolveParams(config.overrides).thresholds) }
     }
 
     const now = Date.now()
     let state = await loadState(stateFile(config), now)
+    // null = 文件存在但读不了（损坏/被锁）。跳过这一轮，不要用默认值覆盖。
+    if (state === null) {
+      return { config, state: null, changed: false, delta: {}, events: [], mode: 'calm' }
+    }
     // 实际生效的参数（默认常量 + 配置覆盖）
     const P = resolveParams(config.overrides)
 
@@ -662,11 +668,16 @@ export function apply(ctx) {
 
         // 记下这次注入的原文 —— 下一轮拿它比，
         // 一字不差就不再重复塞（防止会话历史里堆满同一句话）
+        //
+        // 这里必须真的写盘：下一轮 tick 会 loadState 从磁盘读，
+        // 只放内存的话去重记录就丢了（试过，测试直接挂）。
         try {
           const bySession = result.state.lastMoodTextBySession || {}
           bySession[String(sid || '')] = text
           result.state.lastMoodTextBySession = bySession
           await saveState(stateFile(config), result.state)
+          // 同步到 cache，避免下一次 tick 用到旧的那份
+          if (cached) cached.state = result.state
         } catch { /* 存不下也不影响这次注入 */ }
 
         // 关键：新建数组，不原地改
@@ -1029,10 +1040,26 @@ async function moodTrend(config, hours, bucketCount) {
 }
 
 /** 事件流水：从 history.jsonl 的 events 字段摊平 */
-  async function eventStream(config, limit) {
+  /**
+   * 事件流水。
+   *
+   * @param {object} config
+   * @param {object} opts { limit, since, until, mode, q }
+   *   - since/until：时间范围（毫秒）
+   *   - mode：只看某个模式
+   *   - q：文本搜索（在事件名和 deltaText 里找）
+   */
+  async function eventStream(config, opts = {}) {
+    const { limit = 100, since = 0, until = 0, mode = '', q = '' } = opts
     const rows = await readHistory(config)
+    const qLow = String(q || '').trim().toLowerCase()
     const flat = []
     for (const r of rows) {
+      // 时间筛选
+      if (since && r.ts < since) continue
+      if (until && r.ts > until) continue
+      // 模式筛选
+      if (mode && r.mode !== mode) continue
       const events = Array.isArray(r.events) ? r.events : []
       const delta = r.delta || {}
       // 把 delta 摊成一行文字
@@ -1042,6 +1069,11 @@ async function moodTrend(config, hours, bucketCount) {
         // 九维的中文名（MODES 是模式，不是维度，别混用）
         .map(([k, v]) => (DRIVE_LABELS[k] || k) + (v >= 0 ? ' +' : ' ') + v)
         .join('  ')
+      // 文本搜索：事件名 + delta 文字 + 模式名
+      if (qLow) {
+        const hay = ([...new Set(events)].join(' ') + ' ' + deltaText + ' ' + (MODES[r.mode] || MODES.calm).label).toLowerCase()
+        if (!hay.includes(qLow)) continue
+      }
       flat.push({
         ts: r.ts,
         mode: r.mode,
@@ -1053,7 +1085,24 @@ async function moodTrend(config, hours, bucketCount) {
       })
     }
     flat.sort((a, b) => b.ts - a.ts)
-    return { rows: flat.slice(0, limit), total: flat.length }
+
+    // 统计：筛选后各模式分布（给面板画小标签）
+    const modeCount = {}
+    for (const r of flat) modeCount[r.mode] = (modeCount[r.mode] || 0) + 1
+
+    return {
+      rows: flat.slice(0, limit),
+      total: flat.length,
+      // 可选筛选范围（面板的下拉用）
+      available: {
+        modes: Object.entries(modeCount)
+          .map(([m, c]) => ({ mode: m, label: (MODES[m] || MODES.calm).label, count: c }))
+          .sort((a, b) => b.count - a.count),
+        // 数据的时间跨度
+        oldest: flat.length > 0 ? flat[flat.length - 1].ts : 0,
+        newest: flat.length > 0 ? flat[0].ts : 0,
+      },
+    }
   }
 
   // ── HTTP 路由 ─────────────────────────────────────────────
@@ -1159,8 +1208,13 @@ async function moodTrend(config, hours, bucketCount) {
         // GET /events —— 事件流水：什么推了情绪
         if (req.method === 'GET' && sub === 'events') {
           const limit = Math.max(1, Math.min(500, Number(url.searchParams.get('limit')) || 100))
+          const sp = url.searchParams
+          const since = Number(sp.get('since')) || 0
+          const until = Number(sp.get('until')) || 0
+          const mode = String(sp.get('mode') || '')
+          const q = String(sp.get('q') || '')
           readConfig().then(async (config) => {
-            const out = await eventStream(config, limit)
+            const out = await eventStream(config, { limit, since, until, mode, q })
             sendJson(res, 200, { ok: true, ...out })
           }).catch((e) => sendJson(res, 500, { ok: false, error: String(e?.message ?? e) }))
           return

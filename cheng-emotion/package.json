@@ -1,7 +1,7 @@
 {
   "name": "cheng-emotion",
   "version": "0.3.0",
-  "description": "澄的情绪：九维驱动 + 心情面板。情绪来自 events.jsonl 的真实经历，不另建记忆。",
+  "description": "澄的情绪：十维驱动 + 心情面板。情绪来自 events.jsonl 的真实经历，不另建记忆。",
   "type": "module",
   "main": "index.js",
   "files": [

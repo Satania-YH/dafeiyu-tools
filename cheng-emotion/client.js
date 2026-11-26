@@ -594,37 +594,170 @@ window.__ModuleLoader__.load({
     }
 
     /** 事件流水 */
+    /** 事件流水的时间范围选项 */
+    const EVENT_RANGES = [
+      { h: 1, label: '今天' },      // 特殊：按自然日
+      { h: 6, label: '6 小时' },
+      { h: 24, label: '1 天' },
+      { h: 72, label: '3 天' },
+      { h: 168, label: '7 天' },
+      { h: -1, label: '按日期' },
+      { h: 0, label: '全部' },
+    ]
+
+    /** 本地日期 → 「YYYY-MM-DD」 */
+    function ymd(ms) {
+      const d = new Date(ms)
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    }
+
+    /** 「YYYY-MM-DD」→ 本地当天 00:00 的毫秒 */
+    function dayStartMs(str) {
+      const [y, m, d] = str.split('-').map(Number)
+      return new Date(y, m - 1, d, 0, 0, 0, 0).getTime()
+    }
+
     function EventsTab(props) {
-      const { events } = props
+      const { events, filters, setFilters, reload } = props
       if (!events || !events.ok) {
         return h('div', { style: S.hint }, '读不到事件')
       }
-      if (!events.rows || events.rows.length === 0) {
-        return h('div', { style: S.hint }, '还没有事件记录')
+
+      const rows = events.rows || []
+      const avail = events.available || {}
+      const modes = avail.modes || []
+      const rangeH = filters.rangeH
+
+      const setRange = (h) => {
+        // 切到「按日期」时默认今天
+        const next = (h === -1 && !filters.date)
+          ? { ...filters, rangeH: h, date: ymd(Date.now()) }
+          : { ...filters, rangeH: h }
+        setFilters(next)
+        reload(next)   // 把新条件直接传进去，避免读到旧 state
+      }
+      const setDate = (v) => {
+        const next = { ...filters, date: v }
+        setFilters(next)
+        reload(next)
+      }
+      const setMode = (m) => {
+        const next = { ...filters, mode: m }
+        setFilters(next)
+        reload(next)
       }
       return h('div', null,
+        // ── 筛选器 ──
         h('div', { style: S.card },
-          h('div', { style: S.cardTitle }, '事件流水'),
-          h('div', { style: { ...S.hint, marginBottom: '8px' } },
-            '共 ' + events.total + ' 条。每条是「什么推了情绪」。'),
-          (events.rows || []).slice(0, 80).map((e, i) =>
-            h('div', {
-              key: i,
-              style: { padding: '6px 0', borderBottom: i < 79 ? '1px solid rgba(128,128,128,0.08)' : 'none' },
-            },
-              h('div', { style: { display: 'flex', gap: '8px', alignItems: 'baseline' } },
-                h('span', { style: { ...S.mono, width: '48px', flexShrink: 0, opacity: 0.5 } },
-                  new Date(e.ts).toLocaleTimeString().slice(0, 5)),
-                h('span', { style: S.modePill }, e.label),
-                h('span', { style: { ...S.mono, flex: 1, opacity: 0.6, fontSize: '10.5px' } },
-                  (e.events || []).join(', ')),
-              ),
-              e.deltaText
-                ? h('div', { style: { ...S.mono, marginLeft: '56px', opacity: 0.55 } }, e.deltaText)
-                : null,
+          // 时间范围
+          h('div', { style: { display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap' } },
+            EVENT_RANGES.map((r) =>
+              h('button', {
+                key: r.h,
+                style: { ...S.tab, ...(rangeH === r.h ? S.tabOn : {}), padding: '4px 10px', fontSize: '12px' },
+                onClick: () => setRange(r.h),
+              }, r.label),
             ),
           ),
+          // 按日期选
+          rangeH === -1
+            ? h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' } },
+                h('span', { style: { ...S.hint, flexShrink: 0 } }, '哪一天：'),
+                h('input', {
+                  type: 'date',
+                  value: filters.date || ymd(Date.now()),
+                  onChange: (e) => setDate(e.target.value),
+                  style: {
+                    padding: '4px 8px', fontSize: '12px', borderRadius: '6px',
+                    border: '1px solid var(--border, rgba(128,128,128,0.28))',
+                    background: 'rgba(128,128,128,0.06)', color: 'inherit',
+                  },
+                }),
+                h('button', {
+                  style: { ...S.btn, padding: '4px 10px', fontSize: '11.5px' },
+                  onClick: () => setDate(ymd(Date.now())),
+                }, '今天'),
+                h('button', {
+                  style: { ...S.btn, padding: '4px 10px', fontSize: '11.5px' },
+                  onClick: () => setDate(ymd(Date.now() - 86400000)),
+                }, '昨天'),
+              )
+            : null,
+
+          // 模式筛选
+          modes.length > 1
+            ? h('div', { style: { display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' } },
+                h('span', { style: { ...S.hint, marginRight: '2px' } }, '模式：'),
+                h('button', {
+                  style: { ...S.tab, ...(filters.mode === '' ? S.tabOn : {}), padding: '3px 9px', fontSize: '11.5px' },
+                  onClick: () => setMode(''),
+                }, '全部'),
+                modes.map((m) =>
+                  h('button', {
+                    key: m.mode,
+                    style: {
+                      ...S.tab,
+                      ...(filters.mode === m.mode ? S.tabOn : {}),
+                      padding: '3px 9px', fontSize: '11.5px',
+                    },
+                    onClick: () => setMode(filters.mode === m.mode ? '' : m.mode),
+                  }, m.label + ' ' + m.count),
+                ),
+              )
+            : null,
+          // 搜索
+          h('input', {
+            type: 'search',
+            placeholder: '搜事件名 / 维度 / 模式…',
+            value: filters.q,
+            onChange: (e) => setFilters((f) => ({ ...f, q: e.target.value })),
+            onKeyDown: (e) => { if (e.key === 'Enter') reload() },
+            style: {
+              width: '100%', boxSizing: 'border-box',
+              padding: '6px 10px', fontSize: '12.5px',
+              borderRadius: '7px',
+              border: '1px solid var(--border, rgba(128,128,128,0.28))',
+              background: 'rgba(128,128,128,0.06)', color: 'inherit',
+            },
+          }),
+          // 状态行
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', marginTop: '8px', alignItems: 'baseline' } },
+            h('span', { style: { ...S.mono, opacity: 0.6 } },
+              '筛出 ' + events.total + ' 条'
+              + (rows.length < events.total ? '（显示前 ' + rows.length + '）' : '')),
+            h('button', { style: { ...S.btn, padding: '3px 10px', fontSize: '11.5px' }, onClick: reload }, '刷新'),
+          ),
+          // 数据跨度
+          avail.oldest && avail.newest
+            ? h('div', { style: { ...S.hint, marginTop: '4px' } },
+                '数据范围：' + new Date(avail.oldest).toLocaleString().slice(5, 16)
+                + ' → ' + new Date(avail.newest).toLocaleString().slice(5, 16))
+            : null,
         ),
+
+        // ── 列表 ──
+        rows.length === 0
+          ? h('div', { style: S.card }, h('div', { style: S.hint }, '这个条件下没有记录'))
+          : h('div', { style: S.card },
+              h('div', { style: S.cardTitle }, '事件'),
+              rows.slice(0, 80).map((e, i) =>
+                h('div', {
+                  key: i,
+                  style: { padding: '6px 0', borderBottom: i < 79 ? '1px solid rgba(128,128,128,0.08)' : 'none' },
+                },
+                  h('div', { style: { display: 'flex', gap: '8px', alignItems: 'baseline' } },
+                    h('span', { style: { ...S.mono, width: '48px', flexShrink: 0, opacity: 0.5 } },
+                      new Date(e.ts).toLocaleTimeString().slice(0, 5)),
+                    h('span', { style: S.modePill }, e.label),
+                    h('span', { style: { ...S.mono, flex: 1, opacity: 0.6, fontSize: '10.5px' } },
+                      (e.events || []).join(', ')),
+                  ),
+                  e.deltaText
+                    ? h('div', { style: { ...S.mono, marginLeft: '56px', opacity: 0.55 } }, e.deltaText)
+                    : null,
+                ),
+              ),
+            ),
       )
     }
 
@@ -1118,6 +1251,10 @@ window.__ModuleLoader__.load({
       const [injections, setInjections] = React.useState(null)
       const [trend, setTrend] = React.useState(null)
       const [trendHours, setTrendHours] = React.useState(24)
+      // 事件流水的筛选条件
+      const [eventFilters, setEventFilters] = React.useState({ rangeH: 24, mode: '', q: '' })
+      const eventFiltersRef = React.useRef(eventFilters)
+      eventFiltersRef.current = eventFilters
       const [error, setError] = React.useState('')
       const [busy, setBusy] = React.useState(false)
 
@@ -1244,6 +1381,34 @@ window.__ModuleLoader__.load({
         }
       }, [])
 
+      /** 按当前筛选条件重新拉事件 */
+      const reloadEvents = React.useCallback(async (override) => {
+        const f = override || eventFiltersRef.current
+        const params = new URLSearchParams()
+        params.set('limit', '100')
+
+        if (f.rangeH === -1) {
+          // 按日期：整天 [00:00, 次日 00:00)
+          const day = f.date || (() => {
+            const d = new Date()
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+          })()
+          const [y, m, dd] = day.split('-').map(Number)
+          const start = new Date(y, m - 1, dd, 0, 0, 0, 0).getTime()
+          params.set('since', String(start))
+          params.set('until', String(start + 86400000 - 1))
+        } else if (f.rangeH > 0) {
+          params.set('since', String(Date.now() - f.rangeH * 3600000))
+        }
+
+        if (f.mode) params.set('mode', f.mode)
+        if (f.q.trim()) params.set('q', f.q.trim())
+        try {
+          const next = await apiGet('events?' + params.toString())
+          setEvents(next)
+        } catch { /* 忽略 */ }
+      }, [])
+
       // 改「多久算过时」
       const setStaleDays = React.useCallback(async (days) => {
         try {
@@ -1314,7 +1479,7 @@ window.__ModuleLoader__.load({
                   : tab === 'timeline'
                     ? h(TimelineTab, { timeline })
                     : tab === 'events'
-                      ? h(EventsTab, { events })
+                      ? h(EventsTab, { events, filters: eventFilters, setFilters: setEventFilters, reload: reloadEvents })
                       : tab === 'injections'
                         ? h(InjectionsTab, { injections })
                         : h(TrendTab, { trend, hours: trendHours, setHours: loadTrend }),

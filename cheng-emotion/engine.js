@@ -162,6 +162,14 @@ export const EVENT_EFFECTS = {
   blame_hard:      { stress: 20.0, joy: -12.0, attachment: -3.0, reflection: 5.0 },
   apology:         { stress: -3.0, joy: 2.0, intimacy: 1.0 },
   comfort:         { stress: -6.0, joy: 3.0, intimacy: 2.5 },
+  // explain：轻微反刍。
+  //
+  // 用途是「星图里某个 topic 反复出现」时给一点反应。
+  // ⚠️ 2026-11-26 Codex 会审指出：stress -2 的语义和「未决事项增加压力」相反。
+  //    但这里**故意不改** —— 那条规则的意图不是「加压」，
+  //    而是「她安静地咀嚼这件事」，所以 reflection +1 才是主效果，
+  //    stress -2 表示「想清楚一点反而放松了些」。
+  //    真正的「压力」由 blamed / silent_* 那些事件负责。
   explain:         { stress: -2.0, reflection: 1.0 },
 
   // ── 她自己的行为 ──
@@ -340,18 +348,28 @@ export async function loadState(file, now = Date.now()) {
       recent: Array.isArray(parsed.recent) ? parsed.recent : [],
     }
   } catch (error) {
-    // 2026-11-26 Claude 会审指出：原来不区分「文件不存在」和「JSON 坏了」，
-    // 一律 defaultState，下一轮 saveState 就把默认状态写回去，旧状态永久消失。
-    //
-    // 现在：如果文件存在但读不了，先备份成 .corrupt-<时间戳>，
-    // 万一以后要手工恢复还有救。
+    /**
+     * 读失败 —— 分两种，处理方式完全不同（2026-11-26 Codex 会审指出）。
+     *
+     * ① 文件不存在 → 真·首次运行 → 返回 defaultState（正常）
+     * ② 文件存在但读不了（JSON 损坏 / 权限 / 被杀毒锁住）
+     *    → **返回 null**，让调用方跳过这一轮，不要用默认值覆盖。
+     *
+     * 为什么必须区分：
+     *   原来两种情况都返回 defaultState()。而 tick 拿到 state 后
+     *   无条件 saveState —— 一次瞬时读取失败（比如杀毒软件正锁着文件）
+     *   就把整份情绪状态换成默认值，永久丢失。
+     */
+    let exists = false
+    try { exists = existsSync(file) } catch { exists = false }
+
+    if (!exists) return defaultState(now)   // 真的没有 → 首次运行
+
+    // 文件在但读不了 → 备份一份，然后返回 null 表示「这轮跳过」
     try {
-      if (typeof existsSync === 'function' && existsSync(file)) {
-        const tar = file + '.corrupt-' + Date.now()
-        copyFileSync(file, tar)
-      }
-    } catch { /* 备份失败就算了，但不能阻止启动 */ }
-    return defaultState(now)
+      copyFileSync(file, file + '.corrupt-' + Date.now())
+    } catch { /* 备份失败也继续 */ }
+    return null
   }
 }
 
@@ -578,13 +596,29 @@ export function applyEvent(state, event, nowMs, opts = {}) {
       const used = usedOf(key)
       const room = Math.max(0, capOf - used)
       inc = Math.min(inc, room)
-      if (inc > 0) gainLog.push({ ts: nowMs, key, amount: inc })
     }
 
     if (inc === 0) continue
-    delta[key] = inc
+
+    // 记账必须在 clamp **之后**，按真正落地的增量算（2026-11-26 Codex 会审指出）。
+    //
+    // 原来是「上限算完就 push 一条 gainLog」，但那时还没 clamp ——
+    // joy 已经是 100，praise 仍记 +7 且返回 delta.joy=7，实际一点没涨。
+    // 结果是「24 小时净增」记的是毛正增益，不是实际增量，
+    // 额度被虚假消耗掉。
+    const before = drives[key] ?? (P.baseline[key] ?? BASELINE[key])
     const lo = (P.floor || FLOOR)[key] ?? 0
-    drives[key] = clamp((drives[key] ?? (P.baseline[key] ?? BASELINE[key])) + inc, lo, 100)
+    const after = clamp(before + inc, lo, 100)
+    const actual = after - before
+    if (actual === 0) continue   // 顶在天花板/地板上，一点没动
+
+    delta[key] = actual
+    drives[key] = after
+
+    // 只记真正涨上去的那部分
+    if (actual > 0 && (P.cap || DAILY_GAIN_CAP)[key] !== undefined) {
+      gainLog.push({ ts: nowMs, key, amount: actual })
+    }
   }
 
   return {
@@ -951,9 +985,24 @@ export function classifyHeard(text) {
   if (/对不起|抱歉|是我不好|我错了/.test(s)) return 'apology'
   if (/别难过|没事的|不用担心|抱抱|别怕|我陪/.test(s)) return 'comfort'
 
-  // ── 3. 责备（比夸奖优先判断，因为「你怎么这么可爱」这种要先排除）──
-  if (/不对|错了|怎么又|你怎么|不应该|失望|受不了|烦死/.test(s)) return 'blame_mild'
+  // ── 3. 责备 ──
+  //
+  // 2026-11-26 Codex 会审指出两个问题：
+  //   ① 「你怎么这么可爱」被 /你怎么/ 误判成责备
+  //   ② 「你怎么这么废物」本该是 blame_hard 却被降成 blame_mild
+  //
+  // 修法：
+  //   · 先排除「你怎么这么 + 褒义词」这种夸奖句式
+  //   · blame_hard 的判定挪到 blame_mild 前面（重的先判）
+
+  // 先看是不是「你怎么这么 + 褒义」—— 那是夸，不是骂
+  const HOW_PRAISE = /你怎么这么(可爱|厉害|棒|聪明|漂亮|好)/
+  if (HOW_PRAISE.test(s)) return 'praise'
+
+  // 重责先判（原来的顺序让「废物」被 mild 抢走）
   if (/滚|闭嘴|废物|没用|讨厌你|不想理/.test(s)) return 'blame_hard'
+
+  if (/不对|错了|怎么又|你怎么|不应该|失望|受不了|烦死/.test(s)) return 'blame_mild'
 
   // ── 4. 夸奖：先排除否定和转折 ──
   const PRAISE = /谢谢|厉害|好棒|喜欢你|可爱|真乖|了不起|辛苦了|做得好|聪明|漂亮/

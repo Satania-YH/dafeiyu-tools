@@ -686,3 +686,88 @@ describe('readSuspense 读失败返回 null（Claude 会审指出）', () => {
     fs.rmSync(dir, { recursive: true, force: true })
   })
 })
+
+// ── Codex 第二轮会审发现的（2026-11-26）───────────────────
+
+describe('loadState 读失败返回 null（Codex 会审）', () => {
+  test('文件不存在 → 返回 defaultState（正常）', async () => {
+    const { loadState } = await import('../engine.js')
+    const s = await loadState('C:/绝对不存在的路径/state.json')
+    assert.ok(s !== null, '文件不存在应该是新状态')
+    assert.ok(s.drives, '应该有 drives')
+  })
+
+  test('JSON 损坏 → 返回 null（不要覆盖）', async () => {
+    const { loadState } = await import('../engine.js')
+    const fs = await import('node:fs')
+    const os = await import('node:os')
+    const path = await import('node:path')
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'corrupt-'))
+    const f = path.join(dir, 'state.json')
+    fs.writeFileSync(f, '{这不是 JSON')
+
+    const s = await loadState(f)
+    assert.equal(s, null, '损坏应该返回 null，让调用方跳过而不是用默认值覆盖')
+
+    // 应该留了 .corrupt 备份
+    const backups = fs.readdirSync(dir).filter((x) => x.includes('corrupt'))
+    assert.ok(backups.length > 0, '应该备份了损坏的文件')
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+})
+
+describe('新节点按时间取最近的（Codex 会审的 slice(-8) 坑）', () => {
+  test('批量新节点时处理的是最新的，不是最旧的', async () => {
+    const { memorySignals } = await import('../memory-bridge.js')
+    const now = Date.now()
+    const nodes = []
+    // 300 个新节点，ts 越往后越新
+    for (let i = 0; i < 300; i++) {
+      nodes.push({
+        id: 'n' + i,
+        kind: 'insight',
+        degree: 1,
+        text: '这是一条想通了很久的事情，编号 ' + i,
+        ts: new Date(now - (300 - i) * 60000).toISOString(),  // i 越大越新
+      })
+    }
+
+    const r = memorySignals({ nodes }, null, now)
+    const recalls = r.events.filter((e) => e.name === 'her_recall')
+    assert.ok(recalls.length > 0, '应该产生 her_recall')
+    // 用 topic 判断处理的是哪几条（reason 里有 topic 名）
+    // 这里的数据没 topic，所以从 graphNodeId 看不出。
+    // 改成验证「处理的是 ts 最新的」：检查产生的 her_recall 的 ts
+    const recallTs = recalls.map((e) => e.ts)
+    const newest5min = now - 5 * 60000
+    assert.ok(
+      recallTs.every((t) => t >= newest5min),
+      '应该处理最近的节点（5 分钟内），实际 ts：' + recallTs.map((t) => new Date(t).toISOString()).join(', '),
+    )
+  })
+})
+
+describe('gainLog 按实际增量记账（Codex 会审）', () => {
+  test('天花板附近不虚报增量', () => {
+    const s = defaultState(NOW)
+    s.drives.joy = 99   // 快满了
+    const r = applyEvent(s, 'praise', NOW, { sid: 'a' })
+    // 实际最多只能涨 1
+    assert.ok((r.delta.joy || 0) <= 1.01, `delta 应该是实际增量，不该是 7：${r.delta.joy}`)
+    // 记账也只该记实际那点
+    const logged = (r.gainLog || []).filter((g) => g.key === 'joy').reduce((x, g) => x + g.amount, 0)
+    assert.ok(logged <= 1.5, `gainLog 也只该记实际增量：${logged}`)
+  })
+})
+
+describe('blame 分类修正（Codex 会审）', () => {
+  test('「你怎么这么可爱」是夸不是骂', () => {
+    assert.equal(classifyHeard('你怎么这么可爱'), 'praise')
+  })
+
+  test('「你怎么这么废物」是重责不是轻责', () => {
+    assert.equal(classifyHeard('你怎么这么废物'), 'blame_hard')
+  })
+})

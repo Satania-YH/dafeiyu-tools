@@ -184,13 +184,22 @@ export function memorySignals(graph, seen, nowMs = Date.now()) {
     // 那是向量聚类误收的碎片，不该触发情绪。
     const isClean = (n) => typeof n?.text === 'string' && n.text.trim().length >= 6
     let fresh = nodes.filter((n) => n?.id && !seenSet.has(n.id) && isClean(n))
-    // 超过 200 条时按时间倒序取最近的
-    if (fresh.length > 200) {
-      fresh = fresh
-        .slice()
-        .sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0))
-        .slice(0, 200)
-    }
+    /**
+     * 统一按「最新在前」排序（2026-11-26 Codex 会审指出这里有个坑）。
+     *
+     * 原来的流程是：
+     *   1. 超过 200 条时按 ts 倒序排 → 取前 200（最近的 200 个）✓
+     *   2. 然后 `for (const n of fresh.slice(-8))` → 取了**最旧的 8 个** ✗
+     *
+     * 于是最终处理的永远是那批里最老的 8 条，
+     * 「最近想通了什么」反而进不来。而且 nodeCount 已经推进到全量，
+     * 那些没处理的节点以后也不会补。
+     *
+     * 现在：一律倒序排好，然后取 `slice(0, N)` —— 拿最近的。
+     */
+    fresh.sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0))
+    if (fresh.length > 200) fresh = fresh.slice(0, 200)
+
     // 一次最多取 8 条：实测一次 84 个新节点会产生 22 条 her_diary，
     // 全喂进去会让反刍直接冲顶。情绪是「慢慢被这些事影响」，不是「一次性清算」。
     //
@@ -200,7 +209,7 @@ export function memorySignals(graph, seen, nowMs = Date.now()) {
     let recallFromFresh = 0
     const RECALL_MAX_PER_BATCH = 2
 
-    for (const n of fresh.slice(-8)) {
+    for (const n of fresh.slice(0, 8)) {
       const kind = n.kind || ''
       // 她「想通」的东西 → 反刍
       if (kind === 'insight' || kind === 'judgment') {
