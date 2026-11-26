@@ -1,0 +1,16 @@
+# 运行时数据（不该进库）
+state.json
+state.json.*
+history.jsonl
+injections.jsonl
+*.corrupt-*
+*.tmp
+*.rotate
+*.log
+
+# 依赖
+node_modules/
+
+# 系统
+.DS_Store
+Thumbs.db

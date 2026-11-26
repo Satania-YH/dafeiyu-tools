@@ -1,0 +1,8 @@
+# cheng-emotion bundle patch
+# 澄的情绪插件：host（九维驱动 + pre-step 注入 + HTTP API）+ client（心情面板）
+#
+# name 必须等于 package.json 的 name（cordis 按 name import 包）。
+# 纯 insert(id/name) 可热挂载，不用重启。
+- insert:
+    - id: cheng-emotion
+      name: cheng-emotion
