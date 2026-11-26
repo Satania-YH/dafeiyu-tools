@@ -147,8 +147,16 @@ export async function loadGraph(file) {
     cache = { file: target, mtime: st.mtimeMs, graph }
     return graph
   } catch {
-    // JSON 坏了（可能是导出中途）→ 用上一次的缓存
-    return cache.graph
+    /**
+     * JSON 坏了（可能是导出中途）→ 用上一次的缓存。
+     *
+     * ⚠️ 2026-11-26 Codex 会审指出：原来直接 `return cache.graph`，
+     *    不检查缓存是不是**同一个文件**的。配置从好图切到坏图路径时，
+     *    会继续拿旧图算情绪信号，产生来历不明的记忆信号。
+     *
+     * 现在：只有路径一致才复用，否则当作「读不到」返回 null。
+     */
+    return cache.file === target ? cache.graph : null
   }
 }
 

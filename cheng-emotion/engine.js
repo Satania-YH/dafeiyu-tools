@@ -8,7 +8,6 @@
  *   - BASELINE 基线、DECAY_RATE 每小时衰减
  *   - EVENT_EFFECTS 事件 → 增量表
  *   - HEAT 去重（1/(1+n/12)）、PRAISE_FATIGUE 夸奖疲劳、DAILY_GAIN_CAP 每日上限
- *   - MAX_CATCHUP_TICKS 久离线追帧上限（⚠️ 目前只声明未实现，见该常量注释）
  *
  * 但「事件」不用 LLM 判定，而是从 events.jsonl 的形状推出来：
  *   heard 出现     → 有人说话
@@ -137,14 +136,16 @@ export const DAILY_GAIN_CAP = {
 }
 
 /**
- * 服务停了很久后最多追 96 帧。
+ * 关于「久离线要不要追帧」——**不需要，所以没这个常量**。
  *
- * ⚠️ 2026-11-26 Claude 会审指出：这个常量声明后全工程没有引用，
- * 注释里写的「久离线追帧」逻辑其实不存在。
- * 保留导出（不给外部 import 报错），但明确标注为未实现 ——
- * 现在的实际行为是：长时间离线后 decay() 一次算完（指数衰减本身收敛，不会炸）。
+ * 原来的设计里有个 MAX_CATCHUP_TICKS = 96，但从没被引用过
+ * （2026-11-26 Claude / Codex 都指出过）。我检查后决定删掉而不是实现它，
+ * 理由是：decay() 用的是指数式 `1 - (1-rate)^hours`，
+ * 它本身就是「一次算完」的闭式解 —— 停 500 小时和停 5 小时走同一个公式，
+ * 结果一样收敛，不会有「漏掉 96 帧」这种事。
+ *
+ * 真正需要分帧的是「按帧累加」的线性衰减，那个写法才会漂。
  */
-export const MAX_CATCHUP_TICKS = 96
 
 /**
  * 事件 → 九维增量。
@@ -868,6 +869,19 @@ export function scanEvents(file, cursor, opts = {}) {
     } catch { /* 读不到就不判断 */ }
   }
 
+  /**
+   * 是否需要从头重读。
+   *
+   * 三个信号：文件变小了 / 时间戳倒退了 / 头部指纹变了。
+   *
+   * ⚠️ Codex 会审曾建议加「文件 generation」来防「大小不变但正文重写」。
+   *    我查了源头，**不需要**：
+   *      D:/dsh-fish-home/dsh-fish/updates/backup-v1.0.7/pkg/lib/store.js:5
+   *      「events.jsonl 事件流，一行一条，永远只追加」
+   *      第 244 行确实用的 fh.appendFile。
+   *    既然源头保证只追加，现有三个信号已经够用。
+   *    （如果哪天她的写入方式变了，这里要重新评估。）
+   */
   const needFullReread = shrunk || wentBackInTime || fingerprintChanged
   const start = needFullReread ? 0 : (prev.offset || 0)
   if (start >= st.size) {

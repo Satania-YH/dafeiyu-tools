@@ -1269,7 +1269,21 @@ window.__ModuleLoader__.load({
        * injections?limit=60 每次都要读整个 jsonl 再排序切片 —— 面板开着
        * 几个小时，等于反复读几十遍同一个文件。
        */
+      /**
+       * 防重叠的轮询（2026-11-26 Codex 会审指出）。
+       *
+       * 原来 setInterval 直接调 loadXxx：如果某次请求因为磁盘慢拖了 40 秒，
+       * 20 秒后的下一次又发出去 → 两个请求并行，慢的那个后回来
+       * 会把新的数据覆盖成旧的（乱序覆盖）。
+       *
+       * 现在：上一次没回来就跳过这一次（不是排队，是丢弃 —— 下次还会再来）。
+       */
+      const lightBusy = React.useRef(false)
+      const heavyBusy = React.useRef(false)
+
       const loadLight = React.useCallback(async () => {
+        if (lightBusy.current) return
+        lightBusy.current = true
         try {
           setError('')
           const [st, td] = await Promise.all([
@@ -1280,12 +1294,21 @@ window.__ModuleLoader__.load({
           setToday(td)
         } catch (e) {
           setError('读不到状态：' + (e && e.message ? e.message : String(e)))
+        } finally {
+          lightBusy.current = false
         }
       }, [])
 
-      const loadHeavy = React.useCallback(async () => {
+      /**
+       * 重型轮询。events / injections 这两个会读整个 jsonl 再排序切片，
+       * 只在真的切到那两页时才拉，常驻轮询里省掉。
+       */
+      const loadHeavy = React.useCallback(async (opts) => {
+        if (heavyBusy.current) return
+        heavyBusy.current = true
+        const wantStreams = !!(opts && opts.streams)
         try {
-          const [hi, gr, me, gq, pa, pv, tl, ev, inj, tr] = await Promise.all([
+          const jobs = [
             apiGet('history?days=7').catch(() => null),
             apiGet('growth').catch(() => null),
             apiGet('memory').catch(() => null),
@@ -1293,38 +1316,54 @@ window.__ModuleLoader__.load({
             apiGet('params').catch(() => null),
             apiGet('prompts').catch(() => null),
             apiGet('timeline?hours=24').catch(() => null),
-            apiGet('events?limit=100').catch(() => null),
-            apiGet('injections?limit=60').catch(() => null),
             apiGet('trend?hours=24&bucket=48').catch(() => null),
-          ])
-          setHistory(hi)
-          setGrowth(gr)
-          setMemory(me)
-          setGraph(gq)
-          setParams(pa)
-          setPrompts(pv)
-          setTimeline(tl)
-          setEvents(ev)
-          setInjections(inj)
-          setTrend(tr)
-        } catch { /* 重的失败不影响轻的 */ }
+          ]
+          if (wantStreams) {
+            jobs.push(apiGet('events?limit=100').catch(() => null))
+            jobs.push(apiGet('injections?limit=60').catch(() => null))
+          }
+          const res = await Promise.all(jobs)
+          setHistory(res[0])
+          setGrowth(res[1])
+          setMemory(res[2])
+          setGraph(res[3])
+          setParams(res[4])
+          setPrompts(res[5])
+          setTimeline(res[6])
+          setTrend(res[7])
+          if (wantStreams) {
+            setEvents(res[8])
+            setInjections(res[9])
+          }
+        } catch { /* 重的失败不影响轻的 */ } finally {
+          heavyBusy.current = false
+        }
       }, [])
 
       /** 外面用的「刷新」：两个都拉一遍 */
       const load = React.useCallback(async () => {
-        await Promise.all([loadLight(), loadHeavy()])
+        await Promise.all([loadLight(), loadHeavy({ streams: true })])
       }, [loadLight, loadHeavy])
 
       React.useEffect(() => {
         loadLight()
         loadHeavy()
         const lightTimer = setInterval(loadLight, 20000)
-        const heavyTimer = setInterval(loadHeavy, 60000)
+        const heavyTimer = setInterval(() => loadHeavy(), 60000)
         return () => {
           clearInterval(lightTimer)
           clearInterval(heavyTimer)
         }
       }, [loadLight, loadHeavy])
+
+      /**
+       * 切到「流水」或「注入」页时才拉那两份 jsonl。
+       * 这样常驻轮询不会反复读整份 events.jsonl / injections.jsonl。
+       */
+      React.useEffect(() => {
+        if (tab === 'events' || tab === 'injections') loadHeavy({ streams: true })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [tab])
 
       const patch = React.useCallback(async (key, value) => {
         setBusy(true)

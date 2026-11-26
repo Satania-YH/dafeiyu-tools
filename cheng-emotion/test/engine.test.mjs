@@ -771,3 +771,23 @@ describe('blame 分类修正（Codex 会审）', () => {
     assert.equal(classifyHeard('你怎么这么废物'), 'blame_hard')
   })
 })
+
+// ── Codex 二轮剩余的 🟢（2026-11-26）───────────────
+
+describe('星图缓存路径检查（Codex 会审）', () => {
+  test('源码里 catch 分支必须校验路径一致', async () => {
+    const fs = await import('node:fs')
+    const src = fs.readFileSync(new URL('../memory-bridge.js', import.meta.url), 'utf8')
+    assert.ok(
+      src.includes('cache.file === target ? cache.graph : null'),
+      'JSON 坏时不能无条件复用缓存 —— 换了路径就会拿旧图算信号',
+    )
+  })
+})
+
+describe('已删除的死常量（Codex / Claude 会审）', () => {
+  test('MAX_CATCHUP_TICKS 不再存在', async () => {
+    const mod = await import('../engine.js')
+    assert.equal(mod.MAX_CATCHUP_TICKS, undefined, '声明未实现的常量会误导后来的读者')
+  })
+})
