@@ -67,7 +67,7 @@ export const DECAY_RATE = {
   reflection: 0.03,
   duty: 0.03,
   social: 0.04,
-  fatigue: 0.05,
+  fatigue: 0.12,
   intimacy: 0.01,
   stress: 0.05,
   joy: 0.05,
@@ -156,8 +156,8 @@ export const EVENT_EFFECTS = {
   // ── 对话类 ──
   // curiosity 从 0.5 降到 0.2：实测 201 条 user_msg × 0.5 = 100，
   // 三天就把「好奇」顶到 87。光是「有人跟我说话」不该让人好奇心爆棚。
-  user_msg:        { social: 1.8, joy: 1.0, curiosity: 0.2, fatigue: 0.6, intimacy: 0.1 },
-  owner_msg:       { social: 2.2, joy: 1.4, curiosity: 0.6, fatigue: 0.6, intimacy: 0.25 },
+  user_msg:        { social: 1.8, joy: 1.0, curiosity: 0.2, fatigue: 0.15, intimacy: 0.1 },
+  owner_msg:       { social: 2.2, joy: 1.4, curiosity: 0.6, fatigue: 0.15, intimacy: 0.25 },
   praise:          { joy: 7.0, intimacy: 3.5, stress: -3.0, attachment: 1.6 },
   blame_mild:      { stress: 6.0, joy: -4.0, reflection: 2.0 },
   blame_hard:      { stress: 20.0, joy: -12.0, attachment: -3.0, reflection: 5.0 },
@@ -178,7 +178,7 @@ export const EVENT_EFFECTS = {
   // 说话是消耗，不是尽责。duty 只在「真的做完一件事」时才涨。
   // social 从 -1.2 降到 -0.3：实测 677 次说话把社交榨干到地板 8.0。
   // 跟人说话本来就是社交满足，只有「单方面说太多」才该稍微扣一点。
-  her_spoke:       { social: -0.3, fatigue: 0.5 },
+  her_spoke:       { social: -0.3, fatigue: 0.3 },
   her_tool_ok:     { duty: 2.0, curiosity: 1.0, joy: 0.8 },
   her_tool_fail:   { stress: 4.0, duty: -1.0, joy: -1.5 },
   her_diary:       { reflection: 3.0, joy: 1.5 },
@@ -301,6 +301,7 @@ export function defaultState(now = Date.now()) {
      * 代替原来的「自然日累计」—— 后者零点硬清零，太机械。
      */
     gainLog: [],
+    gainStart: {},   // 额度窗口内各维的起点值（算净消耗用）
     /** 最近事件热度（key = 事件名，value = [时间戳]） */
     heat: {},
     /** 最近夸奖时间戳（用于疲劳） */
@@ -338,6 +339,9 @@ export async function loadState(file, now = Date.now()) {
         : (parsed.praiseAt || {}),
       // 兼容旧字段：老版本是 dailyGain{key:amount}，没有时间戳。
       // 折成一条「刚发生的」记录，让它自然滑出窗口就行。
+      gainStart: (parsed.gainStart && typeof parsed.gainStart === 'object' && !Array.isArray(parsed.gainStart))
+        ? parsed.gainStart
+        : {},
       gainLog: Array.isArray(parsed.gainLog)
         ? parsed.gainLog
         : Object.entries(parsed.dailyGain || {}).map(([key, amount]) => ({
@@ -575,11 +579,74 @@ export function applyEvent(state, event, nowMs, opts = {}) {
   const prevLog = Array.isArray(state.gainLog) ? state.gainLog : []
   // 只留窗口内的，顺手清理
   const gainLog = prevLog.filter((g) => g && Number.isFinite(g.ts) && nowMs - g.ts < WINDOW_MS)
-  // 每个维度在窗口内已经用了多少
+
+  /**
+   * 窗口起点快照 { 维度: 窗口开始时的值 }。
+   *
+   * 用途见下面 usedOf 的注释：算「净消耗」需要知道「从哪儿涨起来的」。
+   * 维护规则：
+   *   · 窗口内第一次出现某个维度的增量 → 把**当前值**记为起点
+   *   · 窗口清空（所有记录都滑出）→ 整份快照作废
+   * 老状态没有这个字段时，usedOf 会退化成「当前 − 毛增量」，
+   * 等价于「假设从没衰减过」——虽然偏保守，但不会崩。
+   */
+  const prevStart = (state.gainStart && typeof state.gainStart === 'object') ? state.gainStart : {}
+  const gainStart = { ...prevStart }
+  // 窗口内已无记录的维度，起点快照要清掉（否则会一直占着旧值）
+  const keysInWindow = new Set(gainLog.map((g) => g.key))
+  for (const k of Object.keys(gainStart)) {
+    if (!keysInWindow.has(k)) delete gainStart[k]
+  }
+  // 第一次记账时记起点
+  const ensureStart = (key) => {
+    if (!Number.isFinite(gainStart[key])) {
+      gainStart[key] = drives[key] ?? (P.baseline || BASELINE)[key] ?? 0
+    }
+  }
+  /**
+   * 每个维度在窗口内「已经用掉多少额度」。
+   *
+   * ⚠️ 2026-11-26 模拟发现的两个坑：
+   *
+   *   坑 1：只累加毛增量（旧写法）。
+   *     涨 19.5、衰减掉 10，账上仍记 19.5 → 额度虚耗。
+   *     疲劳一小时 +19.5，额度 60 三小时吃光，
+   *     之后 22 小时聊多少都不涨，完全失真。
+   *
+   *   坑 2：拿「当前值 − 基线」当净增。
+   *     joy 从 30 涨到 37（基线 50），Math.max(0, 37-50)=0
+   *     → 明明涨了 7，却算成一点没消耗，额度永远用不完。
+   *
+   * 正确口径：**净消耗 = 毛增量 − 因衰减回吐的部分**
+   *
+   * 回吐怎么算？gainLog 里有每条增量，把它按时间累加起来
+   * 就是「如果一点不衰减，现在应该到多少」= 理论峰值。
+   *   理论峰值 = 窗口起点值 + 毛增量
+   *   实际值   = drives[key]
+   *   回吐     = max(0, 理论峰值 − 实际值)
+   *
+   * 但「窗口起点值」没存。用第一版状态推：起点 = 当前 − 毛增量 + 回吐，
+   * 这是循环定义。所以干脆**不推起点**，改用：
+   *   净消耗 = min(毛增量, 当前值 − 窗口起点)  → 起点未知
+   *
+   * 最终选最稳的写法：直接存「窗口起点快照」。
+   * 它是纯派生数据，多存 10 个数字而已。
+   */
   const usedOf = (key) => {
-    let sum = 0
-    for (const g of gainLog) if (g.key === key) sum += g.amount
-    return sum
+    let gross = 0
+    for (const g of gainLog) if (g.key === key) gross += g.amount
+    if (gross === 0) return 0
+
+    // 窗口起点值（进入窗口那一刻的值）。没记录时退化为「当前 − 毛增量」
+    const startVal = (gainStart && Number.isFinite(gainStart[key]))
+      ? gainStart[key]
+      : (drives[key] ?? 0) - gross
+
+    const cur = drives[key] ?? 0
+    // 净涨了多少（可能为负：衰减掉了）
+    const net = cur - startVal
+    if (net <= 0) return 0          // 全衰减回去了，额度全回来
+    return Math.min(gross, net)     // 最多算毛增量
   }
 
   // 4. 计算实际增量
@@ -617,6 +684,12 @@ export function applyEvent(state, event, nowMs, opts = {}) {
     const actual = after - before
     if (actual === 0) continue   // 顶在天花板/地板上，一点没动
 
+    // 起点必须在**赋值之前**记 —— 记的是「涨之前是多少」
+    // （2026-11-26 踩过：写在 drives[key]=after 之后，起点变成了 37 而不是 30）
+    if (actual > 0 && (P.cap || DAILY_GAIN_CAP)[key] !== undefined) {
+      ensureStart(key)
+    }
+
     delta[key] = actual
     drives[key] = after
 
@@ -633,6 +706,7 @@ export function applyEvent(state, event, nowMs, opts = {}) {
     heat,
     praiseAt: praiseAll,
     gainLog,
+    gainStart,
     // 必须推进：否则下一次 applyEvent 会从最早的时间点重新衰减一遍，
     // 把刚积累的情绪又抹回去（实测踩过）。
     decayedAt: nowMs,
@@ -656,7 +730,7 @@ export const MODE_THRESHOLDS = {
   lonely: 20,
   lonelyAttach: 30,
   /** fatigue >= 这个值 → 累 */
-  tired: 65,
+  tired: 70,
   /** joy >= 这个值 → 开心 */
   happy: 68,
   /**
