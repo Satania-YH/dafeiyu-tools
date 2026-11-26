@@ -158,12 +158,77 @@ async function readConfig() {
   }
 }
 
+/**
+ * 参数范围表 —— 唯一真相。
+ *
+ * 2026-11-26 Codex 会审指出：之前只有 `/params` 做范围校验，
+ * `POST /config` 和工具的 set 直接 writeConfig，`decay: 2` 能进引擎
+ * → `1-(1-2)^hours` = `(-1)^hours`，正负来回跳，数值直接 NaN。
+ *
+ * 现在所有写入口都过这一个函数。
+ */
+const PARAM_RANGES = {
+  decay: [0, 1],
+  baseline: [0, 100],
+  floor: [0, 100],
+  cap: [0, 500],
+  thresholds: [0, 100],
+}
+
+/**
+ * 把 overrides 里的数值夹到合法范围，丢掉非法值。
+ * @returns {{ok: boolean, value: object, dropped: string[]}}
+ */
+function sanitizeOverrides(raw) {
+  const dropped = []
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, value: {}, dropped: ['overrides 不是对象'] }
+  }
+  const value = {}
+  for (const [group, [lo, hi]] of Object.entries(PARAM_RANGES)) {
+    const src = raw[group]
+    if (src === undefined) continue
+    if (!src || typeof src !== 'object' || Array.isArray(src)) {
+      dropped.push(group + ' 不是对象')
+      continue
+    }
+    const clean = {}
+    for (const [k, v] of Object.entries(src)) {
+      const n = Number(v)
+      if (!Number.isFinite(n)) { dropped.push(`${group}.${k}=${v} 不是有限数`); continue }
+      if (n < lo || n > hi) { dropped.push(`${group}.${k}=${n} 超出 [${lo},${hi}]`); continue }
+      clean[k] = n
+    }
+    if (Object.keys(clean).length > 0) value[group] = clean
+  }
+  return { ok: true, value, dropped }
+}
+
 async function writeConfig(patch) {
+  /**
+   * overrides 一律过范围校验（唯一入口，/params 和 /config 都走这里）。
+   *
+   * ⚠️ writeConfig 是模块级函数，拿不到 apply() 里的 ctx，
+   *    所以这里不写日志，把 dropped 挂到返回值上让调用方记。
+   *    （第一版我错写成 ctx.logger，直接 ReferenceError → 所有写配置都 500）
+   */
+  let dropped = []
+  if (patch && typeof patch === 'object' && patch.overrides !== undefined) {
+    const r = sanitizeOverrides(patch.overrides)
+    if (!r.ok) throw new Error('overrides 必须是对象')
+    dropped = r.dropped
+    patch = { ...patch, overrides: r.value }
+  }
   const file = configPath()
   const current = await readConfig()
   const next = { ...current, ...patch }
   await mkdir(path.dirname(file), { recursive: true })
   await writeFile(file, JSON.stringify(next, null, 2), 'utf8')
+  // 返回值保持是 config 本身（调用点都用它当 config 用），
+  // 丢弃记录挂在不可枚举属性上 —— JSON 序列化时不会带出去。
+  Object.defineProperty(next, 'droppedParams', {
+    value: dropped, enumerable: false, writable: true, configurable: true,
+  })
   return next
 }
 
@@ -302,6 +367,7 @@ export function apply(ctx) {
 
 
     const before = { ...state.drives }
+    const beforeRecentLen = (state.recent || []).length   // 判「要不要写盘」用
     for (const e of all) {
       const r = applyEvent(state, e.name, e.ts, { intensity: e.intensity, params: P, sid: e.sid })
       if (!r.applied) {
@@ -403,7 +469,29 @@ export function apply(ctx) {
       ].slice(0, 20)
     }
 
-    await saveState(stateFile(config), state)
+    /**
+     * 只在「确实变了」时写盘（2026-11-26 Codex 会审指出）。
+     *
+     * 原来每个 tick 无条件 saveState：面板轻量轮询 20 秒一次、
+     * 兜底 60 秒一次、每轮 pre-step 一次 —— 一天下来上万次 44KB 原子重写，
+     * 既费磁盘又放大并发写冲突。
+     *
+     * 判断「变了」的口径：
+     *   · 有 delta（维度动了）
+     *   · 模式变了
+     *   · 有新事件（recent 可能更新了）
+     *   · recent 长度变了
+     *   · suspenseInfo 变了
+     * 否则只是衰减走了个时间戳，下次读回来重算即可，不写。
+     */
+    const recentLenChanged = (state.recent || []).length !== (beforeRecentLen || 0)
+    const shouldSave = Object.keys(deltas).length > 0
+      || prevMode !== state.mode
+      || all.length > 0
+      || recentLenChanged
+    if (shouldSave) {
+      await saveState(stateFile(config), state)
+    }
     if (Object.keys(deltas).length > 0 || prevMode !== state.mode) {
       await appendHistory(historyFile(config), {
         ts: now,
@@ -557,8 +645,14 @@ export function apply(ctx) {
       const prev = bySession[sessionKey]
       if (prev === text) return ''
 
-      // ② 太频繁 → 不塞（除非内容变了，那就是真变化）
-      if (prev !== undefined && last && Date.now() - last.ts < MIN_GAP_MS) return ''
+      // ② 这个会话上一次注入太近 → 不塞
+      //
+      // 2026-11-26 Codex 会审指出：原来是全局 `state.lastInjected.ts`，
+      // 会话 A 刚注入过，会话 B 的真实变化也会被压 30 分钟。
+      // 现在改成按会话记时间（存在 lastMoodInjectAt 里）。
+      const atBySession = state.lastMoodInjectAt || {}
+      const prevAt = atBySession[sessionKey]
+      if (prevAt && Date.now() - prevAt < MIN_GAP_MS) return ''
 
       return text
     } catch {
@@ -672,9 +766,27 @@ export function apply(ctx) {
         // 这里必须真的写盘：下一轮 tick 会 loadState 从磁盘读，
         // 只放内存的话去重记录就丢了（试过，测试直接挂）。
         try {
+          const skey = String(sid || '')
+
+          // ① 记这次注入的原文
           const bySession = result.state.lastMoodTextBySession || {}
-          bySession[String(sid || '')] = text
+          bySession[skey] = text
+          // 上限清理（2026-11-26 Codex 会审：原来无上限增长）
+          const tkeys = Object.keys(bySession)
+          if (tkeys.length > 20) {
+            for (const k of tkeys.slice(0, tkeys.length - 20)) delete bySession[k]
+          }
           result.state.lastMoodTextBySession = bySession
+
+          // ② 记这个会话的注入时间（频率闸按会话，不再用全局 lastInjected.ts）
+          const atBySession = result.state.lastMoodInjectAt || {}
+          atBySession[skey] = Date.now()
+          const akeys = Object.keys(atBySession)
+          if (akeys.length > 20) {
+            for (const k of akeys.slice(0, akeys.length - 20)) delete atBySession[k]
+          }
+          result.state.lastMoodInjectAt = atBySession
+
           await saveState(stateFile(config), result.state)
           // 同步到 cache，避免下一次 tick 用到旧的那份
           if (cached) cached.state = result.state

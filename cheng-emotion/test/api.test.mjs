@@ -284,6 +284,7 @@ describe('pre-step 注入', () => {
     try {
       const s = JSON.parse(fs.readFileSync(st, 'utf8'))
       s.lastMoodTextBySession = {}
+      s.lastMoodInjectAt = {}    // 频率闸按会话之后新增的字段，也要清
       s.lastInjected = null
       fs.writeFileSync(st, JSON.stringify(s, null, 2))
     } catch { /* 还没有状态文件，无所谓 */ }
@@ -368,5 +369,98 @@ describe('多会话隔离（Codex 会审指出）', () => {
     // A 第二次（内容没变）→ 跳过
     const a2 = await fn({ agent: agentA, step: 1 }, mk)
     assert.equal(a2.messages.length, 1, 'A 内容没变时不该重复')
+  })
+})
+
+// ── Codex 二轮会审的剩余条目（2026-11-26）───────────────
+
+describe('参数范围校验是唯一入口（Codex 会审）', () => {
+  let M
+  before(() => { M = mountPlugin() })
+
+  test('/config 拒绝非法 decay，保留合法值', async () => {
+    const r = await M.call('POST', 'config', JSON.stringify({
+      overrides: { decay: { joy: 2, attachment: 0.005 } },
+    }))
+    assert.equal(r.status, 200)
+    const cfg = JSON.parse(r.body).config
+    assert.equal(cfg?.overrides?.decay?.joy, undefined, 'decay=2 会让 (1-rate) 变负，必须拒绝')
+    assert.equal(cfg?.overrides?.decay?.attachment, 0.005, '合法值应该保留')
+  })
+
+  test('/config 拒绝超范围 baseline', async () => {
+    const r = await M.call('POST', 'config', JSON.stringify({
+      overrides: { baseline: { joy: 500 } },
+    }))
+    assert.equal(r.status, 200)
+    const cfg = JSON.parse(r.body).config
+    assert.equal(cfg?.overrides?.baseline?.joy, undefined, '500 超出 [0,100]')
+  })
+
+  test('/params 超范围返回 400', async () => {
+    const r = await M.call('POST', 'params', JSON.stringify({ group: 'decay', key: 'joy', value: 5 }))
+    assert.equal(r.status, 400, 'decay=5 必须拒绝')
+  })
+})
+
+describe('频率闸按会话（Codex 会审）', () => {
+  let M
+  before(() => { M = mountPlugin() })
+
+  /** 清掉去重记录（含按会话的注入时间） */
+  async function resetDedup() {
+    const st = stateFile()
+    try {
+      const s2 = JSON.parse(fs.readFileSync(st, 'utf8'))
+      s2.lastMoodTextBySession = {}
+      s2.lastMoodInjectAt = {}
+      s2.lastInjected = null
+      fs.writeFileSync(st, JSON.stringify(s2, null, 2))
+    } catch { /* 还没有状态文件 */ }
+  }
+
+  /**
+   * 核心：会话 B 的第一句不该被「会话 A 刚注入过」压住。
+   *
+   * 只断言这一点，不去断言「A 第二次不注入」——
+   * 那取决于 recent[0].reasons 会不会变，是另一个测试的事。
+   * 之前我把两件事写在一条测试里，结果因为 reason 变了就挂。
+   */
+  test('另一个会话能拿到自己的第一句', async () => {
+    await resetDedup()
+    const fn = M.handlers['agent/pre-step']?.[0]
+    const mk = async () => ({ kind: 'enter', messages: [{ role: 'user', content: [{ type: 'text', text: 'x' }] }] })
+
+    // 会话 A 注入一次
+    const a1 = await fn({ agent: M.fakeAgent, step: 1 }, mk)
+    assert.ok(a1 && a1.messages.length > 0, '会话 A 第一次该注入')
+
+    // 会话 B 紧接着来 —— 旧版会被全局 30 分钟闸压住，新版应该照常注入
+    const other = { session: { header: { id: 'session-other' }, id: 'session-other' } }
+    const b = await fn({ agent: other, step: 1 }, mk)
+    assert.ok(b && b.messages.length > 0, '会话 B 不该被会话 A 的注入压住')
+
+    // 磁盘上应该两个会话都留了记录
+    const st = JSON.parse(fs.readFileSync(stateFile(), 'utf8'))
+    assert.ok(st.lastMoodInjectAt?.['session-test'], 'A 的注入时间该记下来')
+    assert.ok(st.lastMoodInjectAt?.['session-other'], 'B 的注入时间该记下来')
+  })
+})
+
+describe('无变化时不写盘（Codex 会审）', () => {
+  let M
+  before(() => { M = mountPlugin() })
+
+  test('连续 tick 不改变 mtime', async () => {
+    await M.call('GET', 'state')
+    await new Promise((r) => setTimeout(r, 150))
+    const m0 = fs.statSync(stateFile()).mtimeMs
+
+    for (let i = 0; i < 3; i++) {
+      await M.call('GET', 'state')
+      await new Promise((r) => setTimeout(r, 80))
+    }
+    const m1 = fs.statSync(stateFile()).mtimeMs
+    assert.equal(m1, m0, '没有事件、没有模式变化时不该重写 44KB')
   })
 })
