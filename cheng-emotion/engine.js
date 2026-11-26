@@ -385,7 +385,11 @@ export async function loadState(file, now = Date.now()) {
  */
 export async function saveState(file, state) {
   await mkdir(path.dirname(file), { recursive: true })
-  const tmp = file + '.tmp'
+  // 临时文件名必须唯一（2026-11-26 Codex 会审指出）。
+  //
+  // 原来固定是 `state.json.tmp`：两个并发写会互相删对方的临时文件，
+  // 后 rename 的那个可能拿到半截内容。用随机后缀各写各的。
+  const tmp = file + '.tmp-' + Math.random().toString(36).slice(2, 10)
   const json = JSON.stringify(state, null, 2)
   // writeFile 带 flush:true 会在关闭前 fsync（Node 21+ 支持）
   try {
