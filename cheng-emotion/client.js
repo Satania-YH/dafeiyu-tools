@@ -241,6 +241,37 @@ window.__ModuleLoader__.load({
             : h('div', { style: S.hint }, '还没算出来，点刷新试试'),
         ),
 
+        // ── 悬着明细：哪条她能推、哪条在等人 ──
+        data && data.suspenseInfo && data.suspenseInfo.count > 0
+          ? h('div', { style: S.card },
+              h('div', { style: S.cardTitle }, '悬着的具体来源'),
+              h('div', { style: { ...S.hint, marginBottom: '8px' } },
+                '共 ' + data.suspenseInfo.count + ' 件　·　'
+                + '自己能推进 ' + (data.suspenseInfo.selfCount || 0) + ' 件（权重高）　·　'
+                + '在等人 ' + (data.suspenseInfo.otherCount || 0) + ' 件（封顶 12）'),
+              (data.suspenseInfo.items || []).map((it, i) =>
+                h('div', {
+                  key: i,
+                  style: { padding: '6px 0', borderBottom: i < (data.suspenseInfo.items.length - 1) ? '1px solid rgba(128,128,128,0.1)' : 'none' },
+                },
+                  h('div', { style: { display: 'flex', gap: '8px', alignItems: 'baseline' } },
+                    h('span', {
+                      style: {
+                        ...S.mono, flexShrink: 0, padding: '1px 6px', borderRadius: '4px',
+                        background: it.kind === 'waiting_self' ? 'rgba(192,112,60,0.22)' : 'rgba(128,128,128,0.14)',
+                        color: it.kind === 'waiting_self' ? '#c0703c' : 'inherit',
+                      },
+                    }, it.kind === 'waiting_self' ? '能推进' : '等别人'),
+                    h('span', { style: { flex: 1, fontSize: '12.5px' } }, it.waiting || ''),
+                    it.ageDays > 0
+                      ? h('span', { style: { ...S.mono, flexShrink: 0, opacity: 0.45 } }, it.ageDays + ' 天')
+                      : null,
+                  ),
+                ),
+              ),
+            )
+          : null,
+
         h('div', { style: S.card },
           h('div', { style: S.cardTitle }, '近 7 天'),
           h(TrendChart, { rows: hist }),

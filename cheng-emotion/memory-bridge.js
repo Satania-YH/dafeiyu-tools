@@ -50,6 +50,44 @@ export const DEFAULT_NOTES = 'D:/dsh-fish-home/dsh-fish/notes.json'
  *
  * 现在：文件不存在 = 真的是 0 条（正常）；读失败/JSON 损坏 = null（让调用方保留旧值）。
  */
+/**
+ * 这条 waiting 是「等别人」还是「自己能推进」？
+ *
+ * 2026-11-26 用户实测发现：10 条 waiting 让 suspense 卡在 95 不下来，
+ * 但翻内容发现 8 条是「等爸爸决定要不要装/要不要做」——
+ * 她**没有权力关掉这些**，只能一直等。
+ *
+ * 那和「悬着」不是一回事：
+ *   · 等别人 → 被动，她做不了什么 → 不该一直推高她的悬着
+ *   · 自己能推进 → 主动，拖着才是真的悬 → 这才是信号
+ *
+ * 判据（按优先级）：
+ *   1. 有「等/待/看爸爸/等你」→ 等别人
+ *   2. 有「要不要/是否/决定」→ 多半在等别人拍板
+ *   3. 其余 → 她能推进
+ *
+ * @returns {'waiting_other'|'waiting_self'}
+ */
+function classifyWaiting(text) {
+  const t = String(text || '')
+
+  // ① 明确在等某个外部条件（最宽的一条）
+  //    「等 X 才…」「等 X 生效」「等 X 好」
+  if (/等[^，。；]{0,20}(才|生效|好|完|到)/.test(t)) return 'waiting_other'
+
+  // ② 等具体的人
+  if (/等(爸爸|你|他|她|对方|回复|回音|决定|确认|消息|通知)/.test(t)) return 'waiting_other'
+  if (/(看|听|问)爸爸/.test(t)) return 'waiting_other'
+
+  // ③ 等一个外部事件（不是她能直接干的）
+  if (/等(插件|重启|部署|上线|发布|建好|发群号)/.test(t)) return 'waiting_other'
+
+  // ④ 问句型的「要不要」，多半在等人拍板
+  if (/(要不要|是否|行不行|好不好|哪个|等他定)/.test(t)) return 'waiting_other'
+
+  return 'waiting_self'
+}
+
 export function readSuspense(file) {
   const target = file || DEFAULT_NOTES
   // 文件不存在 = 真的没有便条（正常情况，不是错误）
@@ -91,10 +129,12 @@ export function readSuspense(file) {
       const ageDays = Number.isFinite(parsed) && parsed > 0
         ? Math.max(0, Math.round((Date.now() - parsed) / 86400000))
         : 0
+      const kind = classifyWaiting(r.waiting)
       return {
         waiting: String(r.waiting).slice(0, 80),
         created: r.created || '',
         ageDays,
+        kind,   // waiting_other（等别人）| waiting_self（自己能推进）
       }
     }),
     newestAt,

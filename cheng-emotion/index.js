@@ -400,13 +400,44 @@ export function apply(ctx) {
         // readSuspense 返回 null 表示「读失败」，不是「0 条」
         // 这时保留上一次的值，不要掉回基线 10
         if (sus === null) throw new Error('notes 读不到')
-        state.suspenseInfo = {
-          count: sus.count,
-          items: (sus.items || []).slice(0, 3),
-        }
-        const oldest = (sus.items || []).reduce((m, x) => Math.max(m, x.ageDays || 0), 0)
-        const raw = 10 + sus.count * 7 + Math.min(oldest, 7) * 3
+        /**
+         * 悬着的算法（2026-11-26 用户实测后重写）。
+         *
+         * ⚠️ 原来的问题：`10 + count*7 + min(oldest,7)*3`
+         *    → 10 条「等爸爸决定要不要装插件」的 note = 10+70+15 = 95
+         *    → **恒定 95，永远悬着**，因为她没权力关掉这些 note。
+         *    面板上 8 小时全是「悬着」，用户直接问「怎么一直悬着也不解决」。
+         *
+         * 根因：把「她在等别人」和「她自己拖着没做」混成一个数。
+         *   等别人 → 她做不了什么，不该一直推高她的悬着
+         *   自己能推进 → 拖着才是真信号
+         *
+         * 新算法：
+         *   · waiting_self（自己能推进）：每条 +8，这才是主信号
+         *   · waiting_other（等别人）：每条 +1.5，封顶 12（等久了会烦，但不是主导）
+         *   · 「最老挂了多久」只对 self 生效（等别人的年龄不该累加压力）
+         */
+        const items = sus.items || []
+        const selfItems = items.filter((x) => x.kind === 'waiting_self')
+        const otherItems = items.filter((x) => x.kind !== 'waiting_self')
+
+        const oldestSelf = selfItems.reduce((m, x) => Math.max(m, x.ageDays || 0), 0)
+        const otherWeight = Math.min(12, otherItems.length * 1.5)
+        const raw = 10 + selfItems.length * 8 + Math.min(oldestSelf, 7) * 3 + otherWeight
+
         state.drives.suspense = Math.max(0, Math.min(100, raw))
+
+        // 面板要能看出「哪些是等她能推的、哪些是在等人」
+        state.suspenseInfo = {
+          count: items.length,
+          selfCount: selfItems.length,
+          otherCount: otherItems.length,
+          // 优先展示自己能推进的（那是她该动的事）
+          items: [
+            ...selfItems.slice(0, 3),
+            ...otherItems.slice(0, 2),
+          ].slice(0, 4),
+        }
       } catch { /* 读不到就保持上一次的值 */ }
     }
 
@@ -1284,6 +1315,8 @@ async function moodTrend(config, hours, bucketCount) {
               recent: (s.recent || []).slice(0, 10),
               updatedAt: s.updatedAt,
               injectedAt: s.lastInjected?.ts ?? null,
+              // 悬着的明细：让她自己和用户都能看出「哪条是她能推的、哪条是在等人」
+              suspenseInfo: s.suspenseInfo || null,
               // 面板要显示「她这一轮实际看到的那句话」
               moodText: moodTextFor(s, r.config),
               config: r.config,

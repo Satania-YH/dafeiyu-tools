@@ -791,3 +791,69 @@ describe('已删除的死常量（Codex / Claude 会审）', () => {
     assert.equal(mod.MAX_CATCHUP_TICKS, undefined, '声明未实现的常量会误导后来的读者')
   })
 })
+
+// ── suspense 公式重写（2026-11-26 用户实测）───────────
+
+describe('waiting 分类（等别人 vs 自己能推进）', () => {
+  test('等爸爸决定 → waiting_other', async () => {
+    const { readSuspense } = await import('../memory-bridge.js')
+    const fs = await import('node:fs')
+    const os = await import('node:os')
+    const path = await import('node:path')
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sus-'))
+    const f = path.join(dir, 'notes.json')
+    fs.writeFileSync(f, JSON.stringify([
+      { status: 'open', waiting: '等爸爸挑要不要装哪个', created: new Date().toISOString() },
+      { status: 'open', waiting: '等 DSH 重启才生效', created: new Date().toISOString() },
+      { status: 'open', waiting: '要不要加这个功能', created: new Date().toISOString() },
+    ]))
+    const r = readSuspense(f)
+    assert.equal(r.items.length, 3)
+    assert.ok(r.items.every((x) => x.kind === 'waiting_other'), '三条都该判成等别人')
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  test('自己能推进的事 → waiting_self', async () => {
+    const { readSuspense } = await import('../memory-bridge.js')
+    const fs = await import('node:fs')
+    const os = await import('node:os')
+    const path = await import('node:path')
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sus2-'))
+    const f = path.join(dir, 'notes.json')
+    fs.writeFileSync(f, JSON.stringify([
+      { status: 'open', waiting: '把记忆页面做完', created: new Date().toISOString() },
+      { status: 'open', waiting: '写完那篇日记', created: new Date().toISOString() },
+    ]))
+    const r = readSuspense(f)
+    assert.ok(r.items.every((x) => x.kind === 'waiting_self'), '自己能做的不该算等别人')
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  test('10 条全是等别人 → suspense 不该顶到 95', async () => {
+    const { readSuspense } = await import('../memory-bridge.js')
+    const fs = await import('node:fs')
+    const os = await import('node:os')
+    const path = await import('node:path')
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sus3-'))
+    const f = path.join(dir, 'notes.json')
+    const old = new Date(Date.now() - 5 * 86400000).toISOString()
+    const list = []
+    for (let i = 0; i < 10; i++) {
+      list.push({ status: 'open', waiting: `等爸爸决定第 ${i} 件事`, created: old })
+    }
+    fs.writeFileSync(f, JSON.stringify(list))
+    const r = readSuspense(f)
+    const self = r.items.filter((x) => x.kind === 'waiting_self')
+    const other = r.items.filter((x) => x.kind === 'waiting_other')
+    const oldestSelf = self.reduce((m, x) => Math.max(m, x.ageDays || 0), 0)
+    const raw = 10 + self.length * 8 + Math.min(oldestSelf, 7) * 3 + Math.min(12, other.length * 1.5)
+
+    assert.ok(raw <= 45, `10 条全在等别人，悬着应该是有上限的（实际 ${raw}）`)
+    assert.ok(raw > 10, '等久了还是会烦，不该完全为 0')
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+})
