@@ -464,3 +464,78 @@ describe('无变化时不写盘（Codex 会审）', () => {
     assert.equal(m1, m0, '没有事件、没有模式变化时不该重写 44KB')
   })
 })
+
+describe('去重不能永久锁死（2026-11-26 实测 bug）', () => {
+  let M
+  before(() => { M = mountPlugin() })
+
+  async function resetDedup() {
+    const st = stateFile()
+    try {
+      const s2 = JSON.parse(fs.readFileSync(st, 'utf8'))
+      s2.lastMoodTextBySession = {}
+      s2.lastMoodInjectAt = {}
+      s2.lastInjected = null
+      fs.writeFileSync(st, JSON.stringify(s2, null, 2))
+    } catch { /* 还没有状态文件 */ }
+  }
+
+  /** 把某会话的「上次注入时间」拨回去 */
+  function shiftLastInject(sid, msAgo) {
+    const st = stateFile()
+    const s2 = JSON.parse(fs.readFileSync(st, 'utf8'))
+    s2.lastMoodInjectAt = s2.lastMoodInjectAt || {}
+    s2.lastMoodInjectAt[sid] = Date.now() - msAgo
+    fs.writeFileSync(st, JSON.stringify(s2, null, 2))
+  }
+
+  test('心情没变、但已经很久没提过 → 应该重新提一次', async () => {
+    await resetDedup()
+    const fn = M.handlers['agent/pre-step']?.[0]
+    const mk = async () => ({ kind: 'enter', messages: [{ role: 'user', content: [{ type: 'text', text: 'x' }] }] })
+
+    const first = await fn({ agent: M.fakeAgent, step: 1 }, mk)
+    assert.ok(first.messages.length > 0, '第一次该注入')
+
+    // 模拟 35 分钟过去（超过 MIN_GAP_MS 30 分钟，心情没变）
+    shiftLastInject('session-test', 35 * 60 * 1000)
+
+    const again = await fn({ agent: M.fakeAgent, step: 2 }, mk)
+    assert.ok(
+      again.messages.length > 0,
+      '心情没变但过了 30 分钟应该重提 —— 否则她永远不知道自己现在什么状态',
+    )
+  })
+
+  test('刚说过同样的话 → 不重复（防止历史里堆满同一句）', async () => {
+    await resetDedup()
+    const fn = M.handlers['agent/pre-step']?.[0]
+    const mk = async () => ({ kind: 'enter', messages: [{ role: 'user', content: [{ type: 'text', text: 'x' }] }] })
+
+    const first = await fn({ agent: M.fakeAgent, step: 1 }, mk)
+    assert.ok(first.messages.length > 0, '第一次该注入')
+
+    // 立刻再来一次。mk 本身带 1 条消息，所以「没追加」= length 仍是 1
+    const second = await fn({ agent: M.fakeAgent, step: 2 }, mk)
+    assert.equal(second.messages.length, 1, '刚说过就该跳过（只留原始那 1 条）')
+  })
+
+  test('旧状态只有 lastMoodTextBySession、没有 lastMoodInjectAt 时不锁死', async () => {
+    // 模拟升级前留下的状态：只记了文本，没记时间
+    await resetDedup()
+    const fn = M.handlers['agent/pre-step']?.[0]
+    const mk = async () => ({ kind: 'enter', messages: [{ role: 'user', content: [{ type: 'text', text: 'x' }] }] })
+
+    const first = await fn({ agent: M.fakeAgent, step: 1 }, mk)
+    assert.ok(first.messages.length > 0, '第一次该注入')
+
+    // 手动删掉时间记录，只留文本（模拟旧版状态）
+    const st = stateFile()
+    const s2 = JSON.parse(fs.readFileSync(st, 'utf8'))
+    delete s2.lastMoodInjectAt
+    fs.writeFileSync(st, JSON.stringify(s2, null, 2))
+
+    const again = await fn({ agent: M.fakeAgent, step: 2 }, mk)
+    assert.ok(again.messages.length > 0, '没有时间记录时不该被文本去重挡住')
+  })
+})

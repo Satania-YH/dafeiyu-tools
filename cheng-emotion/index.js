@@ -615,6 +615,16 @@ export function apply(ctx) {
    * 情绪没变的时候，本来就不需要每轮告诉她。
    */
   const MIN_GAP_MS = 30 * 60 * 1000
+  /**
+   * 「同样的话」的压制窗口。
+   *
+   * 只用来防止「连着几轮反复塞同一句」，不是用来管频率 ——
+   * 频率归 MIN_GAP_MS（30 分钟）管。
+   *
+   * 取 5 分钟：一轮对话通常也就几分钟，
+   * 压住这几轮就够，再长就会变成「重启后发现心情行没了」那个 bug。
+   */
+  const SHORT_REPEAT_MS = 5 * 60 * 1000
 
   function moodTextFor(state, config, sid) {
     try {
@@ -640,19 +650,41 @@ export function apply(ctx) {
       }
       if (suffix) text += ' ' + suffix
 
-      // ① 这个会话的内容没变 → 不重复塞
-      const bySession = state.lastMoodTextBySession || {}
-      const prev = bySession[sessionKey]
-      if (prev === text) return ''
-
-      // ② 这个会话上一次注入太近 → 不塞
-      //
-      // 2026-11-26 Codex 会审指出：原来是全局 `state.lastInjected.ts`，
-      // 会话 A 刚注入过，会话 B 的真实变化也会被压 30 分钟。
-      // 现在改成按会话记时间（存在 lastMoodInjectAt 里）。
       const atBySession = state.lastMoodInjectAt || {}
       const prevAt = atBySession[sessionKey]
-      if (prevAt && Date.now() - prevAt < MIN_GAP_MS) return ''
+      const sinceLast = prevAt ? Date.now() - prevAt : Infinity
+
+      /**
+       * ① 这个会话上一次注入太近 → 不塞。
+       *
+       * 2026-11-26 Codex 会审指出：原来是全局 `state.lastInjected.ts`，
+       * 会话 A 注入后会话 B 的真实变化也被压 30 分钟。
+       * 现在按会话记时间（lastMoodInjectAt）。
+       *
+       * 注意这里**先判时间、再判内容** —— 顺序反了会出大问题，见 ②。
+       */
+      if (sinceLast < MIN_GAP_MS) return ''
+
+      /**
+       * ② 内容和上次一样 → 不重复塞（但**只挡一小会儿**）。
+       *
+       * ⚠️ 2026-11-26 实测踩到的坑（用户重启后发现心情行没了）：
+       *    原来这条是**独立的第一道闸**，只比较文本、完全不看时间：
+       *      if (prev === text) return ''
+       *    结果某个会话注入过一句之后，只要心情一直没变，
+       *    它就**永远**不再注入 —— 重启、开新话题都没用，
+       *    因为 lastMoodTextBySession 把那一句记住了。
+       *
+       *    实测证据：session-16233100 在 16:23 注入过一次，
+       *    之后 30 分钟里被时间闸挡，再往后就被这道文本闸永久挡死。
+       *
+       * 现在：同样内容只压 SHORT_REPEAT_MS（5 分钟）——
+       * 也就是「连着两三轮别重复」，但过了 5 分钟就正常重提。
+       * 配合上面的 MIN_GAP_MS（30 分钟）实际生效的就是 30 分钟一次。
+       */
+      const bySession = state.lastMoodTextBySession || {}
+      const prev = bySession[sessionKey]
+      if (prev === text && sinceLast < SHORT_REPEAT_MS) return ''
 
       return text
     } catch {
